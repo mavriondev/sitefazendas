@@ -1,3 +1,4 @@
+export {};
 const arquivos = ["unitarios", "api"];
 let falhas = 0;
 for (const a of arquivos) {
