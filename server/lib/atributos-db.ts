@@ -1,0 +1,65 @@
+import type { Db } from "../db";
+import { defAtributo } from "../../shared/atributos";
+import { estadoAutomatico, validarConfirmacao, type Achado } from "../../shared/confianca";
+
+export interface EntradaManual {
+  achado: string; valor?: unknown; fonte?: string; observacao?: string;
+  confirmado_por?: string; publico?: boolean;
+}
+
+/** Valida a entrada manual de um atributo. Devolve erro (texto) ou null. */
+export function validarEntradaManual(chave: string, e: EntradaManual): string | null {
+  const def = defAtributo(chave);
+  if (!def) return "Atributo desconhecido.";
+  if (e.achado !== "detectado" && e.achado !== "nao_detectado") return "achado deve ser detectado ou nao_detectado.";
+  if (e.confirmado_por) {
+    const erro = validarConfirmacao({ achado: e.achado, origem: e.confirmado_por });
+    if (erro) return erro;
+  }
+  if (e.achado === "detectado") {
+    if (def.tipo === "numero") {
+      if (typeof e.valor !== "number" || !Number.isFinite(e.valor)) return `${def.rotulo}: informe um número.`;
+      if (e.valor < -1000 || e.valor > 1e7) return `${def.rotulo}: valor fora do intervalo.`;
+    } else if (typeof e.valor !== "string" || !e.valor.trim()) return `${def.rotulo}: informe o texto.`;
+    else if (e.valor.length > 500) return `${def.rotulo}: texto muito longo.`;
+  }
+  if (e.publico && !def.publicavel) return `"${def.rotulo}" nunca pode ser público.`;
+  if (typeof e.observacao === "string" && e.observacao.length > 500) return "Observação muito longa.";
+  return null;
+}
+
+export async function gravarManual(db: Db, fazendaId: number, chave: string, e: EntradaManual): Promise<void> {
+  const confirmado = !!e.confirmado_por;
+  const valor = e.achado === "detectado" ? e.valor : null;
+  await db.query(
+    `INSERT INTO fazenda_atributos (fazenda_id, chave, estado, achado, valor_json, fonte, observacao, confirmado_por, consultado_em, publico)
+     VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,$8, now(), $9)
+     ON CONFLICT (fazenda_id, chave) DO UPDATE SET
+       estado = EXCLUDED.estado, achado = EXCLUDED.achado, valor_json = EXCLUDED.valor_json, fonte = EXCLUDED.fonte,
+       observacao = EXCLUDED.observacao, confirmado_por = EXCLUDED.confirmado_por, consultado_em = now(), publico = EXCLUDED.publico`,
+    [
+      fazendaId, chave, confirmado ? "confirmado" : "indicado", e.achado, JSON.stringify(valor ?? null),
+      confirmado ? `Confirmado por ${e.confirmado_por}` : (e.fonte?.trim() || "Informado pelo corretor (sem documento)"),
+      e.observacao?.trim() || null, e.confirmado_por ?? null, !!e.publico,
+    ],
+  );
+}
+
+/** Leitura AUTOMÁTICA (Hub etc.). Nunca sobrescreve confirmação humana. Devolve "gravado" ou "mantido". */
+export async function gravarAutomatico(
+  db: Db, fazendaId: number, chave: string,
+  p: { achado: Achado; valor?: unknown; fonte: string; observacao?: string },
+): Promise<"gravado" | "mantido"> {
+  const atual = await db.query<{ estado: string }>("SELECT estado FROM fazenda_atributos WHERE fazenda_id=$1 AND chave=$2", [fazendaId, chave]);
+  if (atual.rows[0]?.estado === "confirmado") return "mantido";
+  const estado = estadoAutomatico(p.achado);
+  await db.query(
+    `INSERT INTO fazenda_atributos (fazenda_id, chave, estado, achado, valor_json, fonte, observacao, confirmado_por, consultado_em, publico)
+     VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,NULL, now(), FALSE)
+     ON CONFLICT (fazenda_id, chave) DO UPDATE SET
+       estado = EXCLUDED.estado, achado = EXCLUDED.achado, valor_json = EXCLUDED.valor_json, fonte = EXCLUDED.fonte,
+       observacao = EXCLUDED.observacao, confirmado_por = NULL, consultado_em = now()`,
+    [fazendaId, chave, estado, p.achado, JSON.stringify(p.achado === "indeterminado" ? null : (p.valor ?? null)), p.fonte, p.observacao ?? null],
+  );
+  return "gravado";
+}
