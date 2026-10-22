@@ -219,11 +219,66 @@ export async function rodar() {
     assert.equal((await ana.get("/api/auth/eu")).json.usuario, null);
     assert.equal((await admin.put("/api/admin/usuarios/1", { bloqueado: true })).status, 400); // admin não se bloqueia
 
+    // ---------- senha: trocar, redefinir por link do admin ----------
+    const bia = cliente();
+    await bia.post("/api/auth/registrar", { nome: "Bia", email: "bia@x.com", senha: "senha-boa-123", whatsapp: "31999991111", aceite: true });
+    assert.equal((await bia.put("/api/auth/senha", { senha_atual: "errada", senha_nova: "nova-senha-456" })).status, 400);
+    assert.equal((await bia.put("/api/auth/senha", { senha_atual: "senha-boa-123", senha_nova: "curta" })).status, 400);
+    assert.equal((await bia.put("/api/auth/senha", { senha_atual: "senha-boa-123", senha_nova: "nova-senha-456" })).status, 200);
+    assert.equal((await cliente().post("/api/auth/entrar", { email: "bia@x.com", senha: "nova-senha-456" })).status, 200);
+    const idBia = (await admin.get("/api/admin/usuarios")).json.usuarios.find((u: any) => u.email === "bia@x.com").id;
+    assert.equal((await bia.post(`/api/admin/usuarios/${idBia}/link-senha`)).status, 403);   // só admin gera link
+    const lk = await admin.post(`/api/admin/usuarios/${idBia}/link-senha`);
+    assert.equal(lk.status, 200);
+    const tok = String(lk.json.caminho).split("token=")[1];
+    assert.equal((await anon.post("/api/auth/redefinir", { token: "x".repeat(48), senha: "outra-senha-789" })).status, 400);
+    assert.equal((await anon.post("/api/auth/redefinir", { token: tok, senha: "curta" })).status, 400);
+    assert.equal((await anon.post("/api/auth/redefinir", { token: tok, senha: "outra-senha-789" })).status, 200);
+    assert.equal((await anon.post("/api/auth/redefinir", { token: tok, senha: "outra-senha-000" })).status, 400);  // uso único
+    assert.equal((await cliente().post("/api/auth/entrar", { email: "bia@x.com", senha: "outra-senha-789" })).status, 200);
+    const lk2 = await admin.post(`/api/admin/usuarios/${idBia}/link-senha`);
+    await t.db.query("UPDATE usuarios SET reset_expira = now() - interval '1 minute' WHERE id=$1", [idBia]);
+    assert.equal((await anon.post("/api/auth/redefinir", { token: String(lk2.json.caminho).split("token=")[1], senha: "outra-senha-789" })).status, 400); // expirado
+
+    // ---------- excluir usuário (LGPD) ----------
+    await bia.post("/api/public/contato", { nome: "Bia", whatsapp: "31999991111", mensagem: "oi" });
+    assert.equal((await admin.del("/api/admin/usuarios/1")).status, 400);                      // não exclui a si mesmo
+    assert.equal((await bia.del(`/api/admin/usuarios/${idBia}`)).status, 403);
+    assert.equal((await admin.del(`/api/admin/usuarios/${idBia}`)).status, 200);
+    assert.equal((await cliente().post("/api/auth/entrar", { email: "bia@x.com", senha: "outra-senha-789" })).status, 401);
+    const cts = (await admin.get("/api/admin/contatos")).json.contatos;
+    assert.ok(cts.every((c: any) => c.nome !== "Bia" && c.mensagem !== "oi"));                  // contatos anonimizados
+
+    // ---------- mapa de região, robots, sitemap ----------
+    await admin.put(`/api/admin/fazendas/${id}`, { latitude: -16.89, longitude: -43.01, mostrar_regiao: true });
+    const dr = (await anon.get(`/api/public/fazendas/${d.slug}`)).json;
+    assert.ok(dr.regiao_mapa && dr.regiao_mapa.raio_km >= 10);
+    assert.notEqual(dr.regiao_mapa.lat, -16.89);
+    assert.ok(!JSON.stringify(dr).includes("-16.89") && !JSON.stringify(dr).includes("-43.01"));
+    const rb = await anon.get("/robots.txt");
+    assert.ok(rb.texto.includes("Disallow: /admin") && rb.texto.includes("Sitemap:"));
+    const sm = await anon.get("/sitemap.xml");
+    assert.ok(sm.texto.includes(`/fazenda/${d.slug}`) && !sm.texto.includes("admin"));
+
+    // polígono manual (fazenda sem CAR) preenche o ponto de referência privado
+    const semCar = (await admin.post("/api/admin/fazendas", { titulo: "Sem CAR" })).json.id;
+    assert.equal((await admin.put(`/api/admin/fazendas/${semCar}`, { geojson: "{ruim" })).status, 400);
+    assert.equal((await admin.put(`/api/admin/fazendas/${semCar}`, { geojson: POLI })).status, 200);
+    const fz2 = (await admin.get(`/api/admin/fazendas/${semCar}`)).json.fazenda;
+    assert.ok(fz2.geojson && fz2.latitude != null);
+    assert.equal((await admin.del(`/api/admin/fazendas/${semCar}`)).status, 200);
+
+    // ---------- excluir fazenda ----------
+    assert.equal((await admin.del(`/api/admin/fazendas/${id}`)).status, 409);                   // publicada: não exclui direto
+
     // ---------- arquivar tira da vitrine ----------
     await admin.post(`/api/admin/fazendas/${id}/status`, { status: "arquivada" });
     assert.equal((await anon.get("/api/public/fazendas")).json.total, 0);
     assert.equal((await anon.get(`/api/public/fazendas/${d.slug}`)).status, 404);
     assert.equal((await anon.get("/api/public/home")).json.slides[0].link, null);       // slide não aponta para fazenda fora do ar
+    assert.equal((await anon.get("/sitemap.xml")).texto.includes(d.slug), false);          // arquivada sai do sitemap
+    assert.equal((await admin.del(`/api/admin/fazendas/${id}`)).status, 200);
+    assert.equal((await admin.get(`/api/admin/fazendas/${id}`)).status, 404);
   } finally {
     await t.fechar();
   }

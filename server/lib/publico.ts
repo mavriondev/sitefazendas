@@ -5,13 +5,14 @@ import type { Db } from "../db";
 import { defAtributo } from "../../shared/atributos";
 import { faixaNumero, classeRelevo, faixaDistanciaKm, faixaArea } from "../../shared/faixas";
 import { formaSvgAnonima } from "./forma";
+import { regiaoAproximada } from "./regiao";
 import { vazaDadoSensivel, type DadosPrivados } from "./sigilo";
 
 export interface FazendaRow {
   id: number; slug: string; titulo: string; status: string; destaque: boolean; destaque_ordem: number;
   descricao_publica: string | null; regiao_publica: string | null; culturas: string[];
   area_ha: string | number | null; area_exibicao: "exata" | "faixa"; preco_exibicao: string | null;
-  mostrar_mapa: boolean; whatsapp_proprio: string | null;
+  mostrar_mapa: boolean; mostrar_regiao: boolean; regiao_ang: number; regiao_dist: number; whatsapp_proprio: string | null;
   car_codigo: string | null; municipio: string | null; uf: string | null;
   latitude: number | null; longitude: number | null; geojson: any; notas_internas: string | null;
   publicado_em: string | null;
@@ -28,7 +29,7 @@ export interface FazendaPublica {
   slug: string; titulo: string; descricao: string; regiao: string; culturas: string[];
   area: string | null; preco: string | null; destaque: boolean;
   capa: string | null; fotos: Array<{ url: string; legenda: string | null }>;
-  atributos: AtributoPublico[]; forma: { d: string; viewBox: string } | null; whatsapp: string | null;
+  atributos: AtributoPublico[]; forma: { d: string; viewBox: string } | null; regiao_mapa: { lat: number; lon: number; raio_km: number } | null; whatsapp: string | null;
 }
 
 function textoDoValor(v: unknown): string | null {
@@ -86,6 +87,7 @@ export function projetarFazendaPublica(f: FazendaRow, atributos: AtributoRow[], 
     fotos: fotosOrd.map((x) => ({ url: `/uploads/${x.arquivo}`, legenda: x.legenda })),
     atributos: atributos.map(atributoParaPublico).filter((x): x is AtributoPublico => x !== null),
     forma: f.mostrar_mapa && f.geojson ? formaSvgAnonima(f.geojson) : null,
+    regiao_mapa: f.mostrar_regiao ? regiaoAproximada(f.latitude, f.longitude, f.regiao_ang, f.regiao_dist) : null,
     whatsapp: f.whatsapp_proprio || whatsappPadrao || null,
   };
 }
@@ -113,6 +115,7 @@ export function validarPublicacao(f: FazendaRow, fotos: FotoRow[], atributos: At
     else if (def.tipo === "texto") for (const m of vazaDadoSensivel(textoDoValor(a.valor_json), priv)) p.push(`O atributo "${def.rotulo}" ${m}.`);
   }
   if (f.mostrar_mapa && !f.geojson) p.push("O mapa está ligado, mas não há polígono cadastrado.");
+  if (f.mostrar_regiao && (f.latitude == null || f.longitude == null)) p.push("O mapa de região está ligado, mas faltam latitude e longitude.");
   return p;
 }
 

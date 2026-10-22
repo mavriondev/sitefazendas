@@ -37,7 +37,8 @@ export interface AtributoPublico { chave: string; rotulo: string; texto: string;
 export interface FazendaPublica {
   slug: string; titulo: string; descricao: string; regiao: string; culturas: string[]; area: string | null; preco: string | null;
   destaque: boolean; capa: string | null; fotos: Array<{ url: string; legenda: string | null }>;
-  atributos: AtributoPublico[]; forma: { d: string; viewBox: string } | null; whatsapp: string | null;
+  atributos: AtributoPublico[]; forma: { d: string; viewBox: string } | null;
+  regiao_mapa: { lat: number; lon: number; raio_km: number } | null; whatsapp: string | null;
 }
 
 export const soDigitos = (s: string) => s.replace(/\D/g, "");

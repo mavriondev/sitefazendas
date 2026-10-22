@@ -50,6 +50,7 @@ export function aplicarCamposFazenda(f: FazendaRow, b: Record<string, any>): { e
   if ("area_exibicao" in b) { if (!["exata", "faixa"].includes(b.area_exibicao)) return e("area_exibicao inválida."); n.area_exibicao = b.area_exibicao; }
   if ("preco_exibicao" in b) n.preco_exibicao = txt(b.preco_exibicao, 80);
   if ("mostrar_mapa" in b) n.mostrar_mapa = b.mostrar_mapa === true;
+  if ("mostrar_regiao" in b) n.mostrar_regiao = b.mostrar_regiao === true;
   if ("destaque" in b) n.destaque = b.destaque === true;
   if ("destaque_ordem" in b) { if (!Number.isInteger(b.destaque_ordem)) return e("Ordem inválida."); n.destaque_ordem = b.destaque_ordem; }
   if ("whatsapp_proprio" in b) {
@@ -67,14 +68,18 @@ export function aplicarCamposFazenda(f: FazendaRow, b: Record<string, any>): { e
   }
   if ("geojson" in b) {
     if (b.geojson === null || b.geojson === "") n.geojson = null;
-    else { const g = validarGeoJsonPoligono(b.geojson); if (!g) return e("Polígono inválido (use Polygon/MultiPolygon em GeoJSON)."); n.geojson = g; }
+    else {
+      const g = validarGeoJsonPoligono(b.geojson); if (!g) return e("Polígono inválido (use Polygon/MultiPolygon em GeoJSON).");
+      n.geojson = g;
+      if (n.latitude == null && n.longitude == null) { const c = centroAproximado(g); if (c) { n.latitude = c.lat; n.longitude = c.lon; } } // referência privada
+    }
   }
   if ("notas_internas" in b) n.notas_internas = txt(b.notas_internas, 4000);
   return { novo: n };
 }
 
 const COLUNAS_EDITAVEIS = [
-  "titulo", "descricao_publica", "regiao_publica", "culturas", "area_ha", "area_exibicao", "preco_exibicao", "mostrar_mapa",
+  "titulo", "descricao_publica", "regiao_publica", "culturas", "area_ha", "area_exibicao", "preco_exibicao", "mostrar_mapa", "mostrar_regiao",
   "destaque", "destaque_ordem", "whatsapp_proprio", "car_codigo", "municipio", "uf", "latitude", "longitude", "geojson", "notas_internas",
 ] as const;
 
@@ -122,10 +127,10 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     await db.query(
       `UPDATE fazendas SET titulo=$2, descricao_publica=$3, regiao_publica=$4, culturas=$5, area_ha=$6, area_exibicao=$7, preco_exibicao=$8,
          mostrar_mapa=$9, destaque=$10, destaque_ordem=$11, whatsapp_proprio=$12, car_codigo=$13, municipio=$14, uf=$15,
-         latitude=$16, longitude=$17, geojson=$18::jsonb, notas_internas=$19, atualizado_em=now() WHERE id=$1`,
+         latitude=$16, longitude=$17, geojson=$18::jsonb, notas_internas=$19, mostrar_regiao=$20, atualizado_em=now() WHERE id=$1`,
       [id, n.titulo, n.descricao_publica, n.regiao_publica, n.culturas, n.area_ha, n.area_exibicao, n.preco_exibicao,
         n.mostrar_mapa, n.destaque, n.destaque_ordem, n.whatsapp_proprio, n.car_codigo, n.municipio, n.uf,
-        n.latitude, n.longitude, n.geojson ? JSON.stringify(n.geojson) : null, n.notas_internas],
+        n.latitude, n.longitude, n.geojson ? JSON.stringify(n.geojson) : null, n.notas_internas, n.mostrar_regiao],
     );
   }
 
@@ -152,6 +157,17 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
       if (prob.length) return res.status(409).json({ message: "A edição deixaria a fazenda publicada fora das regras.", problemas: prob });
     }
     await salvarCampos(id, ap.novo!);
+    res.json({ ok: true });
+  });
+
+
+  app.delete("/api/admin/fazendas/:id", exigirAdmin, async (req, res) => {
+    const id = idDe(req);
+    const c = await carregar(db, id);
+    if (!c) return res.status(404).json({ message: "Fazenda não encontrada." });
+    if (c.f.status === "publicada") return res.status(409).json({ message: "Despublique ou arquive a fazenda antes de excluir." });
+    await db.query("DELETE FROM fazendas WHERE id=$1", [id]); // fotos e atributos saem em cascata
+    for (const f of c.fotos) apagarArquivo(f.arquivo);
     res.json({ ok: true });
   });
 
@@ -384,6 +400,32 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
       await db.query("UPDATE usuarios SET nivel_acesso=$2 WHERE id=$1", [id, b.nivel_acesso]);
     }
     if ("bloqueado" in b) await db.query("UPDATE usuarios SET bloqueado=$2 WHERE id=$1", [id, b.bloqueado === true]);
+    res.json({ ok: true });
+  });
+
+
+  // Link de redefinição de senha (uso único, 1 hora). O admin envia ao usuário pelo WhatsApp.
+  app.post("/api/admin/usuarios/:id/link-senha", exigirAdmin, async (req, res) => {
+    const id = idDe(req);
+    if (!(await db.query("SELECT 1 FROM usuarios WHERE id=$1", [id])).rowCount) return res.status(404).json({ message: "Usuário não encontrado." });
+    const token = crypto.randomBytes(24).toString("hex");
+    await db.query("UPDATE usuarios SET reset_hash=$2, reset_expira=now() + interval '1 hour' WHERE id=$1", [id, crypto.createHash("sha256").update(token).digest("hex")]);
+    res.json({ caminho: `/redefinir-senha?token=${token}`, expira_em_minutos: 60 });
+  });
+
+  // Exclusão de usuário (LGPD): remove a conta e anonimiza os contatos feitos por ela. Registros de apresentação são mantidos (prova de intermediação).
+  app.delete("/api/admin/usuarios/:id", exigirAdmin, async (req, res) => {
+    const id = idDe(req);
+    const eu = (req as any).usuario;
+    if (id === eu.id) return res.status(400).json({ message: "Você não pode excluir a própria conta." });
+    const u = await db.query<{ papel: string }>("SELECT papel FROM usuarios WHERE id=$1", [id]);
+    if (!u.rows[0]) return res.status(404).json({ message: "Usuário não encontrado." });
+    if (u.rows[0].papel === "admin") {
+      const n = await db.query<{ n: string }>("SELECT COUNT(*) AS n FROM usuarios WHERE papel='admin'");
+      if (Number(n.rows[0].n) <= 1) return res.status(400).json({ message: "Não é possível excluir o único administrador." });
+    }
+    await db.query("UPDATE contatos SET nome='Removido', whatsapp=NULL, email=NULL, mensagem=NULL WHERE usuario_id=$1", [id]);
+    await db.query("DELETE FROM usuarios WHERE id=$1", [id]);
     res.json({ ok: true });
   });
 

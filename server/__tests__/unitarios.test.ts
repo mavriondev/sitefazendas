@@ -5,6 +5,7 @@ import { formaSvgAnonima } from "../lib/forma";
 import { faixaNumero, classeRelevo, faixaDistanciaKm, faixaArea } from "../../shared/faixas";
 import { estadoAutomatico, estaVencida, validarConfirmacao } from "../../shared/confianca";
 import { gerarSlug } from "../lib/slug";
+import { regiaoAproximada, RAIO_REGIAO_KM } from "../lib/regiao";
 import { validarGeoJsonPoligono } from "../lib/geojson";
 import { normalizarImovelHub } from "../lib/hub";
 import { anonimizarImovel, ajustarFiltros, filtroSuficiente, tokenDoImovel } from "../lib/pesquisa";
@@ -114,7 +115,7 @@ export async function rodar() {
   const fz: FazendaRow = {
     id: 1, slug: "fazenda-x-1", titulo: "Fazenda X", status: "publicada", destaque: false, destaque_ordem: 0,
     descricao_publica: "Boa terra no Norte de Minas.", regiao_publica: "Norte de Minas Gerais", culturas: ["soja"],
-    area_ha: 1454, area_exibicao: "exata", preco_exibicao: null, mostrar_mapa: true, whatsapp_proprio: null,
+    area_ha: 1454, area_exibicao: "exata", preco_exibicao: null, mostrar_mapa: true, mostrar_regiao: false, regiao_ang: 0.3, regiao_dist: 0.5, whatsapp_proprio: null,
     car_codigo: priv.car_codigo, municipio: "Botumirim", uf: "MG", latitude: -16.8923, longitude: -43.0121,
     geojson: poly, notas_internas: "dono: Fulano 99999-0000", publicado_em: null,
   };
@@ -151,4 +152,17 @@ export async function rodar() {
   assert.ok(validarPublicacao(fz, fotos, [at("sobreposicoes", { valor_json: "x" })]).length > 0);
   assert.ok(validarPublicacao(fz, fotos, [at("energia", { estado: "sem_dado", achado: "indeterminado" })]).length > 0);
   assert.ok(validarPublicacao({ ...fz, geojson: null }, fotos, []).some((p) => /mapa/i.test(p)));
+
+  // ---- mapa de região aproximada: nunca a posição real, sempre contendo a fazenda
+  const reg = regiaoAproximada(-16.8923, -43.0121, 0.3, 0.5)!;
+  assert.notEqual(reg.lat, -16.8923);
+  const kmEntre = (a: number, b: number, c: number, d: number) => Math.hypot((a - c) * 111.32, (b - d) * 111.32 * Math.cos((a * Math.PI) / 180));
+  const dist = kmEntre(reg.lat, reg.lon, -16.8923, -43.0121);
+  assert.ok(dist >= 1.5 && dist <= 5.5, `deslocamento fora do esperado: ${dist}`);
+  assert.ok(dist < RAIO_REGIAO_KM);
+  assert.deepEqual(regiaoAproximada(-16.8923, -43.0121, 0.3, 0.5), reg);              // estável: não dá para tirar a média
+  assert.equal(regiaoAproximada(null, null, 0.3, 0.5), null);
+  assert.equal(JSON.stringify(projetarFazendaPublica({ ...fz, mostrar_regiao: false }, [], [])).includes("regiao_mapa\":{"), false);
+  assert.ok(projetarFazendaPublica({ ...fz, mostrar_regiao: true }, [], []).regiao_mapa);
+  assert.ok(validarPublicacao({ ...fz, mostrar_regiao: true, latitude: null, longitude: null }, fotos, []).some((p) => /região|latitude/i.test(p)));
 }

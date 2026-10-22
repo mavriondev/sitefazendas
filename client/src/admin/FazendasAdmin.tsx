@@ -29,7 +29,8 @@ export default function FazendasAdmin() {
           {lista.map((f) => (
             <tr key={f.id}>
               <td>{f.destaque ? "★ " : ""}{f.titulo}</td><td>{ROTULO[f.status] ?? f.status}</td><td>{f.fotos}</td><td>{f.car_codigo ? "sim" : "—"}</td>
-              <td><Link to={`/admin/fazendas/${f.id}`}>Editar</Link></td>
+              <td><Link to={`/admin/fazendas/${f.id}`}>Editar</Link>{" "}
+                {f.status !== "publicada" && <a href="#excluir" onClick={async (e) => { e.preventDefault(); if (!confirm(`Excluir "${f.titulo}" definitivamente?`)) return; try { await api.del(`/api/admin/fazendas/${f.id}`); setLista(lista.filter((x) => x.id !== f.id)); } catch (x) { setErro(x); } }}>Excluir</a>}</td>
             </tr>
           ))}
           {lista.length === 0 && <tr><td colSpan={5} className="suave">Nenhuma fazenda cadastrada.</td></tr>}

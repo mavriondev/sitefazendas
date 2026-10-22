@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import rateLimit from "express-rate-limit";
 import type { Db } from "../db";
+import crypto from "node:crypto";
 import { confereSenha, hashSenha, limparTelefone, validarEmail, validarSenha } from "../auth";
 
 export function registrarRotasAuth(app: Express, db: Db, opts: { limitar: boolean }) {
@@ -46,6 +47,34 @@ export function registrarRotasAuth(app: Express, db: Db, opts: { limitar: boolea
     await new Promise<void>((ok, ko) => req.session.regenerate((err) => (err ? ko(err) : ok()))); // evita fixação de sessão
     req.session.usuarioId = u.id;
     await db.query("UPDATE usuarios SET ultimo_login_em = now() WHERE id = $1", [u.id]);
+    res.json({ ok: true });
+  });
+
+
+  // Trocar a própria senha (logado).
+  app.put("/api/auth/senha", limite, async (req, res) => {
+    const u = (req as any).usuario;
+    if (!u) return res.status(401).json({ message: "Faça login." });
+    const { senha_atual, senha_nova } = req.body ?? {};
+    const r = await db.query<{ senha_hash: string }>("SELECT senha_hash FROM usuarios WHERE id = $1", [u.id]);
+    if (typeof senha_atual !== "string" || !(await confereSenha(senha_atual, r.rows[0].senha_hash))) return res.status(400).json({ message: "Senha atual incorreta." });
+    const erro = validarSenha(senha_nova);
+    if (erro) return res.status(400).json({ message: erro });
+    await db.query("UPDATE usuarios SET senha_hash = $2, reset_hash = NULL, reset_expira = NULL WHERE id = $1", [u.id, await hashSenha(senha_nova)]);
+    res.json({ ok: true });
+  });
+
+  // Redefinir com o link de uso único gerado pelo admin (sem e-mail; o link vai por WhatsApp).
+  app.post("/api/auth/redefinir", limite, async (req, res) => {
+    const { token, senha } = req.body ?? {};
+    const invalido = () => res.status(400).json({ message: "Link inválido ou expirado. Peça um novo ao corretor." });
+    if (typeof token !== "string" || token.length < 20 || token.length > 200) return invalido();
+    const erro = validarSenha(senha);
+    if (erro) return res.status(400).json({ message: erro });
+    const hash = crypto.createHash("sha256").update(token).digest("hex");
+    const r = await db.query<{ id: number }>("SELECT id FROM usuarios WHERE reset_hash = $1 AND reset_expira > now() AND NOT bloqueado", [hash]);
+    if (!r.rows[0]) return invalido();
+    await db.query("UPDATE usuarios SET senha_hash = $2, reset_hash = NULL, reset_expira = NULL WHERE id = $1", [r.rows[0].id, await hashSenha(senha)]);
     res.json({ ok: true });
   });
 

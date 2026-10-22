@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { api, linkWhatsapp, type FazendaPublica } from "../api";
 import { useSite } from "../contexto";
 import { Erro, Ok } from "../components/Avisos";
+import { MapaRegiao } from "../components/MapaRegiao";
 
 export default function FazendaDetalhe() {
   const { slug } = useParams();
@@ -17,6 +18,8 @@ export default function FazendaDetalhe() {
     setF(null); setNaoAchou(false); setFoto(0);
     void api.get<FazendaPublica>(`/api/public/fazendas/${slug}`).then(setF).catch(() => setNaoAchou(true));
   }, [slug]);
+
+  useEffect(() => { if (f) document.title = `${f.titulo} — ${config?.nome_site ?? ""}`; }, [f, config]);
 
   if (naoAchou) return <div className="container pagina"><h1>Fazenda não encontrada</h1><Link to="/fazendas">Ver outras fazendas</Link></div>;
   if (!f) return <div className="container pagina"><p className="suave">Carregando…</p></div>;
@@ -57,6 +60,13 @@ export default function FazendaDetalhe() {
                 ))}
               </div>
               <p className="suave pequeno">“Indicado” vem de bases públicas e modelos, não de medição em campo; não confirma condições reais. “Confirmado” foi verificado pelo corretor com vendedor, documento ou visita.</p>
+            </div>
+          )}
+          {f.regiao_mapa && (
+            <div className="painel">
+              <h3>Região</h3>
+              <MapaRegiao lat={f.regiao_mapa.lat} lon={f.regiao_mapa.lon} raioKm={f.regiao_mapa.raio_km} />
+              <p className="suave pequeno">Área ampla de referência (raio de {f.regiao_mapa.raio_km} km). A fazenda fica dentro dela, mas não no centro. A localização exata é informada em atendimento.</p>
             </div>
           )}
           {f.forma && (

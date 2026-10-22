@@ -27,7 +27,7 @@ export default function FazendaEditor() {
       <div className="abas">{(["dados", "atributos", "fotos", "publicar"] as Aba[]).map((a) => (
         <button key={a} className={aba === a ? "ativa" : ""} onClick={() => setAba(a)}>{{ dados: "Dados", atributos: "Dados da terra", fotos: "Fotos", publicar: "Publicação" }[a]}</button>))}</div>
       <Erro erro={erro} />{ok && <Ok>{ok}</Ok>}
-      {aba === "dados" && <Dados f={f} acao={acao} id={id!} />}
+      {aba === "dados" && <Dados key={String(f.atualizado_em)} f={f} acao={acao} id={id!} />}
       {aba === "atributos" && <Atributos d={d} acao={acao} id={id!} />}
       {aba === "fotos" && <Fotos d={d} acao={acao} id={id!} />}
       {aba === "publicar" && <Publicar d={d} acao={acao} id={id!} />}
@@ -39,7 +39,7 @@ function Dados({ f, acao, id }: { f: any; acao: any; id: string }) {
   const [v, setV] = useState({
     titulo: f.titulo ?? "", regiao_publica: f.regiao_publica ?? "", culturas: (f.culturas ?? []).join(", "), area_ha: f.area_ha ?? "",
     area_exibicao: f.area_exibicao, preco_exibicao: f.preco_exibicao ?? "", descricao_publica: f.descricao_publica ?? "",
-    destaque: f.destaque, destaque_ordem: f.destaque_ordem ?? 0, mostrar_mapa: f.mostrar_mapa, whatsapp_proprio: f.whatsapp_proprio ?? "",
+    destaque: f.destaque, destaque_ordem: f.destaque_ordem ?? 0, mostrar_mapa: f.mostrar_mapa, mostrar_regiao: f.mostrar_regiao, geojson_novo: "", whatsapp_proprio: f.whatsapp_proprio ?? "",
     car_codigo: f.car_codigo ?? "", municipio: f.municipio ?? "", uf: f.uf ?? "", latitude: f.latitude ?? "", longitude: f.longitude ?? "", notas_internas: f.notas_internas ?? "",
   });
   const [sug, setSug] = useState("");
@@ -53,6 +53,7 @@ function Dados({ f, acao, id }: { f: any; acao: any; id: string }) {
     void acao(() => api.put(`/api/admin/fazendas/${id}`, {
       ...v, culturas: v.culturas.split(",").map((s: string) => s.trim()).filter(Boolean), area_ha: num(v.area_ha),
       latitude: num(v.latitude), longitude: num(v.longitude), destaque_ordem: Number(v.destaque_ordem) || 0,
+      geojson_novo: undefined, ...(v.geojson_novo.trim() ? { geojson: v.geojson_novo.trim() } : {}),
     }));
   };
   const sugerir = async () => {
@@ -71,9 +72,15 @@ function Dados({ f, acao, id }: { f: any; acao: any; id: string }) {
         </div>
         <label htmlFor="desc">Descrição pública</label><textarea id="desc" rows={6} value={v.descricao_publica} onChange={set("descricao_publica")} />
         <label className="linha" style={{ fontWeight: 400 }}><input type="checkbox" style={{ width: "auto" }} checked={v.destaque} onChange={set("destaque")} />Destaque na home</label>
-        <label className="linha" style={{ fontWeight: 400 }}><input type="checkbox" style={{ width: "auto" }} checked={v.mostrar_mapa} onChange={set("mostrar_mapa")} />Mostrar silhueta do imóvel</label>
+        <div style={{ maxWidth: 200 }}>{T("destaque_ordem", "Ordem do destaque (menor primeiro)", { inputMode: "numeric" })}</div>
+        <label className="linha" style={{ fontWeight: 400 }}><input type="checkbox" style={{ width: "auto" }} checked={v.mostrar_mapa} onChange={set("mostrar_mapa")} />Mostrar silhueta do imóvel (exige polígono)</label>
+        <label className="linha" style={{ fontWeight: 400 }}><input type="checkbox" style={{ width: "auto" }} checked={v.mostrar_regiao} onChange={set("mostrar_regiao")} />Mostrar mapa da região aproximada (círculo de 12 km; exige latitude e longitude)</label>
         <h3>Dados privados (nunca aparecem no site)</h3>
         <div className="filtros">{T("car_codigo", "Código do CAR")}{T("municipio", "Município")}{T("uf", "UF", { maxLength: 2 })}{T("latitude", "Latitude")}{T("longitude", "Longitude")}</div>
+        <label htmlFor="gj">Polígono (GeoJSON) — {f.geojson ? "já cadastrado; cole outro para substituir" : "não cadastrado"}</label>
+        <textarea id="gj" rows={3} placeholder='{"type":"Polygon","coordinates":[[[-43.1,-16.9],...]]}' value={v.geojson_novo} onChange={set("geojson_novo")} />
+        <p className="suave pequeno">Use quando a fazenda não tem CAR. Só Polygon/MultiPolygon. Nunca aparece no site; a silhueta, se ligada, é redesenhada sem escala nem localização.</p>
+        {f.geojson && <button type="button" className="btn sec" onClick={() => acao(() => api.put(`/api/admin/fazendas/${id}`, { geojson: null, mostrar_mapa: false }), "Polígono removido.")}>Remover polígono</button>}
         <label htmlFor="nt">Notas internas</label><textarea id="nt" rows={3} value={v.notas_internas} onChange={set("notas_internas")} />
         <button className="btn" type="submit">Salvar</button>
       </form>

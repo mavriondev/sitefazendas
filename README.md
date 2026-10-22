@@ -22,6 +22,13 @@ Banco, chaves e domínio **próprios** — este projeto não compartilha banco c
 | `SITE_URL` | recomendado | endereço público (links de compartilhamento) |
 | `PORT` | não | padrão 5000 |
 
+## Contas e senhas
+- Sem serviço de e-mail: quem esquece a senha pede um link ao corretor (WhatsApp); no painel, Usuários → "Link de nova senha" (uso único, 1 hora).
+- Excluir usuário (LGPD) apaga a conta e anonimiza os contatos feitos por ela; registros de apresentação são mantidos.
+
+## Mapa de região (opcional por fazenda)
+Círculo de 12 km com centro deslocado 2–5 km (direção fixa e aleatória, guardada no banco). Nunca a posição real. Usa tiles do OpenStreetMap (permitidos no CSP).
+
 ## Rodar
 ```
 npm install

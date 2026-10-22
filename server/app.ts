@@ -38,7 +38,7 @@ export function criarApp(o: OpcoesApp): Express {
     contentSecurityPolicy: {
       useDefaults: true,
       directives: {
-        "img-src": ["'self'", "data:"],
+        "img-src": ["'self'", "data:", "https://tile.openstreetmap.org"],
         "style-src": ["'self'", "'unsafe-inline'"],
         "script-src": ["'self'"],
         "connect-src": ["'self'"],
@@ -64,6 +64,23 @@ export function criarApp(o: OpcoesApp): Express {
   registrarRotasPublicas(app, o.db, { limitar: o.limitar });
   registrarRotasAdmin(app, o.db, exigirAdmin, { uploadsDir: o.uploadsDir, hub: o.hub, fetchIA: o.fetchIA });
   registrarRotasPesquisa(app, o.db, exigirLogin, { hub: o.hub, segredo: o.segredo });
+
+
+  // robots.txt e sitemap.xml (só fazendas publicadas). Painel e API ficam fora dos buscadores.
+  const baseDe = (req: Request) => (o.siteUrl || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
+  app.get("/robots.txt", (req, res) => {
+    res.type("text/plain").send(`User-agent: *\nDisallow: /admin\nDisallow: /api/\nDisallow: /entrar\nDisallow: /cadastro\nDisallow: /redefinir-senha\nSitemap: ${baseDe(req)}/sitemap.xml\n`);
+  });
+  app.get("/sitemap.xml", async (req, res, next) => {
+    try {
+      const base = baseDe(req);
+      const r = await o.db.query<{ slug: string; atualizado_em: string }>("SELECT slug, atualizado_em FROM fazendas WHERE status='publicada' ORDER BY id");
+      const urls = [`<url><loc>${esc(base)}/</loc></url>`, `<url><loc>${esc(base)}/fazendas</loc></url>`,
+        ...r.rows.map((x) => `<url><loc>${esc(`${base}/fazenda/${x.slug}`)}</loc><lastmod>${new Date(x.atualizado_em).toISOString().slice(0, 10)}</lastmod></url>`)];
+      res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>\n`);
+    } catch (e) { next(e); }
+  });
+  app.use(["/admin", "/redefinir-senha"], (_req, res, next) => { res.setHeader("X-Robots-Tag", "noindex, nofollow"); next(); });
 
   app.use("/uploads", express.static(o.uploadsDir, { index: false, dotfiles: "deny", maxAge: "7d", fallthrough: false }));
 

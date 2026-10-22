@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { api } from "../api";
+import { api, linkWhatsapp } from "../api";
 import { useSite } from "../contexto";
-import { Erro } from "../components/Avisos";
+import { Erro, Ok } from "../components/Avisos";
 
 export function Entrar() {
   const { recarregar } = useSite();
@@ -26,6 +26,7 @@ export function Entrar() {
         <button className="btn" disabled={env} type="submit">Entrar</button>
       </form>
       <p>Ainda não tem conta? <Link to="/cadastro">Cadastre-se</Link></p>
+      <EsqueciSenha />
     </div>
   );
 }
@@ -57,6 +58,66 @@ export function Cadastro() {
         <button className="btn" disabled={env} type="submit">Criar conta</button>
       </form>
       <p>Já tem conta? <Link to="/entrar">Entrar</Link></p>
+    </div>
+  );
+}
+
+function EsqueciSenha() {
+  const { config } = useSite();
+  const wa = linkWhatsapp(config?.whatsapp_padrao, "Olá! Esqueci minha senha do site e preciso de um link para redefinir.");
+  return (
+    <p className="suave pequeno">
+      Esqueceu a senha? {wa ? <a href={wa} target="_blank" rel="noopener noreferrer">Peça um link de redefinição pelo WhatsApp</a> : "Peça um link de redefinição ao corretor."}
+    </p>
+  );
+}
+
+export function RedefinirSenha() {
+  const [p] = useSearchParams();
+  const token = p.get("token") ?? "";
+  const [senha, setSenha] = useState("");
+  const [erro, setErro] = useState<unknown>(null);
+  const [feito, setFeito] = useState(false);
+  const enviar = async (e: React.FormEvent) => {
+    e.preventDefault(); setErro(null);
+    try { await api.post("/api/auth/redefinir", { token, senha }); setFeito(true); } catch (x) { setErro(x); }
+  };
+  if (feito) return <div className="container pagina" style={{ maxWidth: 440 }}><Ok>Senha alterada.</Ok><p><Link to="/entrar">Entrar</Link></p></div>;
+  return (
+    <div className="container pagina" style={{ maxWidth: 440 }}>
+      <h1>Nova senha</h1>
+      <form className="painel" onSubmit={enviar}>
+        <Erro erro={erro} />
+        <label htmlFor="ns">Nova senha</label><input id="ns" type="password" required autoComplete="new-password" value={senha} onChange={(e) => setSenha(e.target.value)} />
+        <button className="btn" type="submit" disabled={!token}>Salvar</button>
+      </form>
+    </div>
+  );
+}
+
+export function MinhaConta() {
+  const { usuario, carregando } = useSite();
+  const [v, setV] = useState({ senha_atual: "", senha_nova: "" });
+  const [erro, setErro] = useState<unknown>(null);
+  const [ok, setOk] = useState(false);
+  if (carregando) return null;
+  if (!usuario) return <div className="container pagina"><p><Link to="/entrar?de=/conta">Entre</Link> para ver sua conta.</p></div>;
+  const enviar = async (e: React.FormEvent) => {
+    e.preventDefault(); setErro(null); setOk(false);
+    try { await api.put("/api/auth/senha", v); setOk(true); setV({ senha_atual: "", senha_nova: "" }); } catch (x) { setErro(x); }
+  };
+  return (
+    <div className="container pagina" style={{ maxWidth: 440 }}>
+      <h1>Minha conta</h1>
+      <p>{usuario.nome} · {usuario.email}</p>
+      <form className="painel" onSubmit={enviar}>
+        <h3>Trocar senha</h3>
+        <Erro erro={erro} />{ok && <Ok>Senha alterada.</Ok>}
+        <label htmlFor="sa">Senha atual</label><input id="sa" type="password" required autoComplete="current-password" value={v.senha_atual} onChange={(e) => setV({ ...v, senha_atual: e.target.value })} />
+        <label htmlFor="sn">Nova senha</label><input id="sn" type="password" required autoComplete="new-password" value={v.senha_nova} onChange={(e) => setV({ ...v, senha_nova: e.target.value })} />
+        <button className="btn" type="submit">Trocar</button>
+      </form>
+      <p className="suave pequeno">Para excluir sua conta e seus dados, fale com o corretor.</p>
     </div>
   );
 }

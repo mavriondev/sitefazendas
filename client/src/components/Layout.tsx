@@ -18,7 +18,7 @@ export function Layout() {
             {usuario?.papel === "admin" && <NavLink to="/admin">Painel</NavLink>}
             {usuario ? (
               <>
-                <span className="pequeno">Olá, {usuario.nome.split(" ")[0]}</span>
+                <NavLink to="/conta">{usuario.nome.split(" ")[0]}</NavLink>
                 <a href="#sair" onClick={(e) => { e.preventDefault(); void sair(); }}>Sair</a>
               </>
             ) : (

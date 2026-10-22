@@ -122,6 +122,13 @@ export const MIGRACOES: string[] = [
     resultados INTEGER,
     criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
+  // Redefinição de senha sem e-mail: o admin gera um link de uso único (guardamos só o hash do token).
+  `ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS reset_hash TEXT`,
+  `ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS reset_expira TIMESTAMPTZ`,
+  // Mapa de região aproximada (opcional): círculo grande com centro deslocado de forma fixa e aleatória.
+  `ALTER TABLE fazendas ADD COLUMN IF NOT EXISTS mostrar_regiao BOOLEAN NOT NULL DEFAULT FALSE`,
+  `ALTER TABLE fazendas ADD COLUMN IF NOT EXISTS regiao_ang REAL NOT NULL DEFAULT random()`,
+  `ALTER TABLE fazendas ADD COLUMN IF NOT EXISTS regiao_dist REAL NOT NULL DEFAULT random()`,
   `CREATE INDEX IF NOT EXISTS idx_pesquisa_consultas_usuario ON pesquisa_consultas (usuario_id, criado_em DESC)`,
 ];
 
