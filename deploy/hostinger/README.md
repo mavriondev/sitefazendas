@@ -4,7 +4,8 @@ Domínio principal: **fazendasgramogol.com.br**, com `www` redirecionado ao prin
 
 ## Preparação, sem publicar o aplicativo
 
-O servidor utiliza Debian, Nginx e PM2 e hospeda outros produtos. Não substituir
+O servidor utiliza Debian, Nginx e PM2 para outros produtos. A Gramogol utiliza
+um serviço systemd próprio, `gramogol.service`. Não substituir
 `nginx.conf`, o site padrão, os vhosts de outros produtos ou a lista de processos PM2.
 
 O arquivo `nginx-http.conf` atende exclusivamente aos dois nomes deste domínio:
@@ -67,7 +68,49 @@ Esta preparação **não instala nem publica o aplicativo**. Antes de trocar o v
    de API, painel ou uploads privados.
 
 Se a validação do novo vhost falhar, restaurar o backup antes de recarregar.
-Nenhum certificado foi emitido como parte da preparação inicial.
+Nenhum certificado foi emitido como parte da preparação inicial; a ativação
+posterior está descrita abaixo.
+
+## Instalação ativa
+
+O domínio está ativo em **https://fazendasgramogol.com.br**, com redirecionamentos
+de HTTP e de `www`. O painel fica em **https://fazendasgramogol.com.br/admin**.
+
+- Aplicativo: `/opt/gramogol`, executado pelo usuário exclusivo `gramogol`.
+- Serviço: `gramogol.service`, habilitado no boot e com reinício em caso de falha.
+  A configuração em `gramogol.service` neste diretório documenta a unidade instalada.
+- Banco: PostgreSQL local, banco e papel exclusivos `gramogol`, sem superusuário.
+- Fotos persistentes: `/var/lib/gramogol/uploads`, fora do build.
+- Configuração privada: `/etc/gramogol/runtime.json`, proprietário root,
+  grupo gramogol, modo 640; nunca copiar para Git ou para arquivos públicos.
+  Contém as variáveis de execução, incluindo os segredos próprios do banco
+  e da sessão. `start.cjs` carrega o arquivo sem expor valores nos argumentos.
+- Porta interna: `127.0.0.1:5005`; não abrir para acesso externo.
+- Certificado Let's Encrypt para os dois nomes, com renovação pelo `certbot.timer`
+  e hook `/etc/letsencrypt/renewal-hooks/deploy/gramogol-nginx`.
+- O conteúdo e o administrador foram transferidos da prévia na instalação inicial.
+  Sessões e registros de solicitações não foram transferidos; links de recuperação
+  de senha foram invalidados. As fazendas de demonstração continuam identificadas
+  como fictícias.
+
+Operação (via SSH; saídas de logs podem conter dados e não devem ser compartilhadas
+sem revisão):
+
+```sh
+systemctl status gramogol --no-pager
+journalctl -u gramogol -n 50 --no-pager
+curl --fail http://127.0.0.1:5005/api/saude
+systemctl restart gramogol
+certbot renew --cert-name fazendasgramogol.com.br --dry-run --no-random-sleep-on-renew
+```
+
+O código instalado corresponde à branch `ajustes-alinhamento-gramogol` do
+repositório standalone. Não integrar a main nem modificar outros serviços como
+efeito colateral de uma atualização. Não reimportar o banco da prévia em atualizações:
+isso substituiria as edições feitas na produção.
+
+Backups externos criptografados e teste de restauração ainda precisam ser
+configurados; renovação de certificado não substitui backup de conteúdo.
 
 ## Segurança antes de liberar acesso público
 

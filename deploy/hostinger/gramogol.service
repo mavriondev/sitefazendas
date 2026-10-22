@@ -1,0 +1,23 @@
+[Unit]
+Description=Gramogol Fazendas portal
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=gramogol
+Group=gramogol
+WorkingDirectory=/opt/gramogol
+ExecStart=/usr/bin/node /opt/gramogol/deploy/hostinger/start.cjs
+Restart=on-failure
+RestartSec=5
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/gramogol/uploads
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target
