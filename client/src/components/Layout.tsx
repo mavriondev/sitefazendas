@@ -4,11 +4,12 @@ import { ArrowUpRight, Clock, Mail, MapPin, MessageCircle } from "lucide-react";
 import { useSite } from "../contexto";
 import { linkWhatsapp } from "../api";
 import { IMAGENS } from "./Agrezen";
+import { AccountDropdown } from "./AccountDropdown";
 import "../agrezen.css";
 import "../agrezen-integration.css";
 
 export function Layout() {
-  const {config, usuario, sair} = useSite();
+  const {config, usuario} = useSite();
   const {pathname} = useLocation();
   useEffect(()=>{window.scrollTo(0,0);},[pathname]);
   const nome = config?.nome_site || "Gramogol Fazendas";
@@ -20,13 +21,15 @@ export function Layout() {
     <header className="ga-head"><div className="ga-wrap ga-head-inner">
       <Link to="/" aria-label={`${nome} — Início`}><img className="ga-logo" src={IMAGENS+"logo-gramogol-claro.png"} alt={nome}/></Link>
       <nav className="ga-nav" aria-label="Principal">
-        <NavLink to="/" end>Início</NavLink><NavLink to="/fazendas">Fazendas</NavLink><NavLink to="/sobre">Sobre</NavLink>
+        <NavLink to="/" end>Início</NavLink><NavLink to="/sobre">Sobre</NavLink>
         <NavLink to="/parceiros">Parceiros</NavLink><NavLink to="/venda-sua-fazenda">Venda sua fazenda</NavLink><NavLink to="/contato">Contato</NavLink>
         {config?.modulo_pesquisa_ativo && <NavLink to="/pesquisa">Pesquisa de terras</NavLink>}
         {usuario?.papel === "admin" && <NavLink to="/admin">Painel</NavLink>}
-        {usuario ? <><NavLink to="/conta">{usuario.nome.split(" ")[0]}</NavLink><button className="ga-nav-sair" onClick={()=>void sair()}>Sair</button></> : <><NavLink to="/entrar">Entrar</NavLink><NavLink to="/cadastro">Cadastrar</NavLink></>}
       </nav>
-      <Link className="ga-btn ga-head-cta" to="/fazendas">Ver fazendas <ArrowUpRight aria-hidden="true"/></Link>
+      <div className="ga-head-actions">
+        <Link className="ga-btn ga-head-cta" to="/fazendas">Ver fazendas <ArrowUpRight aria-hidden="true"/></Link>
+        <AccountDropdown />
+      </div>
     </div></header>
     <main id="conteudo"><Outlet/></main>
     {zap && <a className="ga-floating-whatsapp" href={zap} target="_blank" rel="noopener noreferrer" aria-label="Falar com o corretor no WhatsApp"><MessageCircle aria-hidden="true"/></a>}
