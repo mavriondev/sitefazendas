@@ -20,7 +20,6 @@ export default function Home() {
   const [pausa,setPausa] = useState(false);
   useEffect(()=>{
     let ativo=true;
-    document.title=config?.nome_site || "Gramogol Fazendas";
     void api.get("/api/public/home").then(r=>{if(ativo)setDados(r);}).catch(()=>{if(ativo)setErro(true);});
     void api.get("/api/public/parceiros").then(r=>{if(ativo)setParceiros(r.parceiros);}).catch(()=>{});
     return()=>{ativo=false;};

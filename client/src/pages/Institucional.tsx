@@ -7,7 +7,6 @@ import { Secoes, useConteudo, LinkConteudo, fundoConteudo } from "../components/
 export function TopoConteudo({ pagina, titulo }: { pagina: string; titulo?: string }) {
   const { texto:t } = useConteudo(pagina);
   const cabecalho = titulo ?? t("topo.titulo");
-  useEffect(() => { document.title = cabecalho; }, [cabecalho]);
   return <section className="topo-pagina cms-topo" data-cms-secao="topo" style={fundoConteudo(t("topo.imagem"))}>
     <div className="container"><span className="rotulo-sec">{t("topo.rotulo")}</span><h1>{cabecalho}</h1>{t("topo.texto")&&<p className="cms-rich-text">{t("topo.texto")}</p>}</div>
   </section>;

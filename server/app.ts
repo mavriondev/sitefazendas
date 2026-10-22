@@ -9,8 +9,9 @@ import { registrarRotasAuth } from "./routes/auth";
 import { registrarRotasPublicas } from "./routes/public";
 import { registrarRotasAdmin } from "./routes/admin";
 import { registrarRotasPesquisa } from "./routes/pesquisa";
-import { lerConfig } from "./config";
-import { obterPublicaPorSlug } from "./lib/publico";
+import { lerSeo, origemSeo, resolverSeo, tagsSeo } from "./lib/seo";
+import { PAGINAS_SEO } from "../shared/seo";
+import { registrarRotasSeo } from "./routes/seo";
 import type { Hub } from "./lib/hub";
 import { caminhoDoArquivo } from "./lib/arquivos";
 import rateLimit from "express-rate-limit";
@@ -87,21 +88,26 @@ export function criarApp(o: OpcoesApp): Express {
   registrarRotasConteudo(rotas, o.db, o.uploadsDir);
   registrarRotasAdmin(rotas, o.db, exigirAdmin, { uploadsDir: o.uploadsDir, hub: o.hub, fetchIA: o.fetchIA });
   registrarRotasPesquisa(rotas, o.db, exigirLogin, { hub: o.hub, segredo: o.segredo });
+  registrarRotasSeo(rotas, o.db, o.uploadsDir, o.siteUrl);
 
 
   // robots.txt e sitemap.xml (só fazendas publicadas). Painel e API ficam fora dos buscadores.
-  const baseDe = (req: Request) => (o.siteUrl || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
-  app.get("/robots.txt", (req, res) => {
-    res.type("text/plain").send(`User-agent: *\nDisallow: /admin\nDisallow: /api/\nDisallow: /entrar\nDisallow: /cadastro\nDisallow: /redefinir-senha\nSitemap: ${baseDe(req)}/sitemap.xml\n`);
+  rotas.get("/robots.txt", async (_req, res) => {
+    const seo=await lerSeo(o.db),base=origemSeo(seo.url_base)||origemSeo(o.siteUrl||"",true);
+    res.setHeader("Cache-Control","no-store");
+    res.type("text/plain").send(`User-agent: *\n${seo.bloquear_indexacao?"Disallow: /\n":"Disallow: /admin\nDisallow: /api/\nDisallow: /entrar\nDisallow: /cadastro\nDisallow: /conta\nDisallow: /pesquisa\nDisallow: /redefinir-senha\n"}${base?`Sitemap: ${base}/sitemap.xml\n`:""}`);
   });
   app.get("/sitemap.xml", async (req, res, next) => {
     try {
-      const base = baseDe(req);
+      const seo=await lerSeo(o.db),base=origemSeo(seo.url_base)||origemSeo(o.siteUrl||"",true);
+      res.setHeader("Cache-Control","no-store");
+      if(!base) return res.status(503).type("text/plain").send("Configure o domínio HTTPS em SEO e buscadores para gerar o sitemap.");
       const r = await o.db.query<{ slug: string; atualizado_em: string }>("SELECT slug, atualizado_em FROM fazendas WHERE status='publicada' ORDER BY id");
-      const fixas = ["/", "/fazendas", "/sobre", "/parceiros", "/venda-sua-fazenda", "/contato"];
+      const indexavel=(c:string)=>!seo.bloquear_indexacao&&!seo.paginas[c]?.nao_indexar;
+      const fixas = PAGINAS_SEO.map(p=>p.caminho).filter(indexavel);
       const urls = [
         ...fixas.map((c) => `<url><loc>${esc(base + c)}</loc></url>`),
-        ...r.rows.map((x) => `<url><loc>${esc(`${base}/fazenda/${x.slug}`)}</loc><lastmod>${new Date(x.atualizado_em).toISOString().slice(0, 10)}</lastmod></url>`),
+        ...r.rows.filter(x=>indexavel(`/fazenda/${x.slug}`)).map((x) => `<url><loc>${esc(`${base}/fazenda/${x.slug}`)}</loc><lastmod>${new Date(x.atualizado_em).toISOString().slice(0, 10)}</lastmod></url>`),
       ];
       res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>\n`);
     } catch (e) { next(e); }
@@ -119,7 +125,20 @@ export function criarApp(o: OpcoesApp): Express {
            EXISTS (SELECT 1 FROM fazenda_fotos p JOIN fazendas f ON f.id=p.fazenda_id WHERE p.arquivo=$1 AND f.status='publicada')
            OR EXISTS (SELECT 1 FROM slides s WHERE s.arquivo=$1 AND s.ativo)
            OR EXISTS (SELECT 1 FROM parceiros pr WHERE pr.arquivo=$1 AND pr.ativo)
-           OR EXISTS (SELECT 1 FROM site_midias m WHERE m.arquivo=$1 AND m.publicado) AS publico`,
+           OR EXISTS (SELECT 1 FROM site_midias m WHERE m.arquivo=$1 AND m.publicado)
+           OR EXISTS (
+             SELECT 1 FROM seo_midias m JOIN configuracoes c ON c.chave='seo_site'
+             WHERE m.arquivo=$1 AND (
+               c.valor->>'imagem_padrao'='/uploads/'||m.arquivo OR EXISTS (
+                 SELECT 1 FROM jsonb_each(c.valor->'paginas') p
+                 WHERE p.value->>'imagem'='/uploads/'||m.arquivo AND (
+                   p.key NOT LIKE '/fazenda/%' OR EXISTS (
+                     SELECT 1 FROM fazendas f WHERE '/fazenda/'||f.slug=p.key AND f.status='publicada'
+                   )
+                 )
+               )
+             )
+           ) AS publico`,
         [nome],
       );
       const publico = !!r.rows[0]?.publico;
@@ -134,28 +153,16 @@ export function criarApp(o: OpcoesApp): Express {
   // Front-end compilado + metadados de compartilhamento (WhatsApp/Facebook leem o HTML, não rodam JS).
   if (o.clientDir && fs.existsSync(path.join(o.clientDir, "index.html"))) {
     const indexHtml = fs.readFileSync(path.join(o.clientDir, "index.html"), "utf8");
+    app.get("/index.html", (_req,res)=>res.redirect(301,"/"));
     app.use(express.static(o.clientDir, { index: false, maxAge: "1h" }));
-    app.get("/fazenda/:slug", async (req, res, next) => {
+    app.get(/^\/(?!api(?:\/|$)|uploads(?:\/|$)).*/, async (req, res, next) => {
       try {
-        const cfg = await lerConfig(o.db);
-        const f = await obterPublicaPorSlug(o.db, String(req.params.slug), cfg.whatsapp_padrao);
-        if (!f) return res.status(404).type("html").send(indexHtml.replace("<!--OG-->", ""));
-        const base = (o.siteUrl || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
-        const desc = esc((f.descricao || "").replace(/\s+/g, " ").slice(0, 200));
-        const tags = [
-          `<title>${esc(f.titulo)} — ${esc(cfg.nome_site)}</title>`,
-          `<meta name="description" content="${desc}">`,
-          `<meta property="og:type" content="website">`,
-          `<meta property="og:title" content="${esc(f.titulo)}">`,
-          `<meta property="og:description" content="${desc}">`,
-          `<meta property="og:url" content="${esc(`${base}/fazenda/${f.slug}`)}">`,
-          f.capa ? `<meta property="og:image" content="${esc(base + f.capa)}">` : "",
-          `<meta name="twitter:card" content="summary_large_image">`,
-        ].join("\n");
-        res.type("html").send(indexHtml.replace("<!--OG-->", tags));
+        const m=await resolverSeo(o.db,req.path,o.siteUrl);
+        res.setHeader("Cache-Control","no-store");
+        if(!m.indexar) res.setHeader("X-Robots-Tag","noindex, nofollow");
+        res.status(m.status).type("html").send(indexHtml.replace(/<title>[\s\S]*?<\/title>/i,"").replace("<!--OG-->",()=>tagsSeo(m)));
       } catch (e) { next(e); }
     });
-    app.get(/^\/(?!api\/|uploads\/).*/, (_req, res) => res.type("html").send(indexHtml.replace("<!--OG-->", "")));
   }
 
   app.use((req, res) => res.status(404).json({ message: "Não encontrado." }));

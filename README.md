@@ -3,6 +3,9 @@
 **Edição pelo painel:** consulte [Como editar o site](CONTEUDO-DO-SITE.md) para
 gerenciar textos, imagens, menus e a ordem/visibilidade das seções.
 
+**SEO:** consulte [SEO pelo painel](SEO-DO-SITE.md) para gerenciar metadados,
+indexação, compartilhamento, verificações e sitemap.
+
 Vitrine pública de fazendas + painel do corretor + (opcional) pesquisa de terras sobre a Hub API do Mavrion Connect.
 Banco, chaves e domínio **próprios** — este projeto não compartilha banco com o Mavrion Connect.
 

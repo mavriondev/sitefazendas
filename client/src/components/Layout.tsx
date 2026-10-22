@@ -5,6 +5,7 @@ import { useSite } from "../contexto";
 import { linkWhatsapp } from "../api";
 import { useConteudo, LinkConteudo, Secoes, fundoConteudo } from "./Conteudo";
 import { AccountDropdown } from "./AccountDropdown";
+import { SeoPagina } from "./SeoPagina";
 import "../agrezen.css";
 import "../agrezen-integration.css";
 import "../conteudo-publico.css";
@@ -22,6 +23,7 @@ export function Layout() {
   const detail = pathname.startsWith("/fazenda/") && fazendaConteudo.ordem[0] === "topo";
   const menu=ordem.filter(id=>id.startsWith("menu_"));
   return <div className={`gramogol-agrezen site-public ${home?"is-home":""} ${detail?"is-detail":""}`}>
+    <SeoPagina/>
     <a className="pular-conteudo" href="#conteudo">Pular para o conteúdo</a>
     <header className="ga-head"><div className="ga-wrap ga-head-inner">
       <div>{visivel("marca")&&<Link to="/" aria-label={`${nome} — Início`}>{t("marca.logo")?<img className="ga-logo" src={t("marca.logo")} alt={nome}/>:nome}</Link>}</div>

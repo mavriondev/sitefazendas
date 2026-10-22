@@ -16,6 +16,7 @@ import ConfigAdmin from "./admin/ConfigAdmin";
 import UsuariosAdmin from "./admin/UsuariosAdmin";
 import ContatosAdmin from "./admin/ContatosAdmin";
 import ConteudoAdmin from "./admin/ConteudoAdmin";
+import SeoAdmin from "./admin/SeoAdmin";
 
 export default function App() {
   return (
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="usuarios" element={<UsuariosAdmin />} />
           <Route path="config" element={<ConfigAdmin />} />
           <Route path="conteudo" element={<ConteudoAdmin />} />
+          <Route path="seo" element={<SeoAdmin />} />
         </Route>
         <Route path="*" element={<div className="container pagina"><h1>Página não encontrada</h1></div>} />
       </Route>

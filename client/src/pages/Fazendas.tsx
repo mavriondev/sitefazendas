@@ -24,7 +24,7 @@ export default function Fazendas() {
   const [opcoes, setOpcoes] = useState<{ regioes: string[]; culturas: string[] }>({ regioes: [], culturas: [] });
   const [erro, setErro] = useState(false);
 
-  useEffect(() => { document.title = "Fazendas à venda"; void api.get("/api/public/filtros").then(setOpcoes).catch(() => {}); }, []);
+  useEffect(() => { void api.get("/api/public/filtros").then(setOpcoes).catch(() => {}); }, []);
   useEffect(() => {
     // Links antigos não devem aplicar um filtro que já não existe na interface.
     if (params.has("relevo")) {

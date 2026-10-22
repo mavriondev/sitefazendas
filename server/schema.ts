@@ -157,6 +157,11 @@ export const MIGRACOES: string[] = [
     publicado BOOLEAN NOT NULL DEFAULT FALSE,
     criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
+  `CREATE TABLE IF NOT EXISTS seo_midias (
+    arquivo TEXT PRIMARY KEY CHECK (arquivo ~ '^[a-f0-9]{32}\\.(jpg|png)$'),
+    publicado BOOLEAN NOT NULL DEFAULT FALSE,
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`,
 ];
 
 export async function migrar(db: Db): Promise<void> {

@@ -21,7 +21,7 @@ export default function FazendaDetalhe() {
   const [aviso,setAviso]=useState("");
   useEffect(()=>{
     let ativo=true;setF(null);setErro(null);setOutras([]);setAviso("");
-    void api.get<FazendaPublica>(`/api/public/fazendas/${encodeURIComponent(slug || "")}`).then(r=>{if(ativo){setF(r);document.title=`${r.titulo} — ${config?.nome_site || "Gramogol Fazendas"}`;}}).catch(e=>{if(ativo)setErro(e);});
+    void api.get<FazendaPublica>(`/api/public/fazendas/${encodeURIComponent(slug || "")}`).then(r=>{if(ativo)setF(r);}).catch(e=>{if(ativo)setErro(e);});
     void api.get("/api/public/fazendas?limite=60").then(r=>{if(ativo)setOutras(r.fazendas);}).catch(()=>{});
     return()=>{ativo=false;};
   },[slug,config?.nome_site]);
