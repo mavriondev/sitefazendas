@@ -4,10 +4,18 @@
 .site-public h1,.site-public h2,.site-public h3,.site-public h4 { font-family: "Instrument Sans",sans-serif; }
 .site-public .ga-head { height: auto; min-height: 90px; }
 .site-public .ga-head-inner { min-height: 90px; gap: 20px; padding-block: 16px; }
-.site-public .ga-nav { display: flex; flex-wrap: wrap; gap: 10px 18px; }
+.site-public .ga-nav { display: flex; flex: 1; min-width: 0; flex-wrap: wrap; gap: 10px 18px; }
 .site-public .ga-nav a { white-space: nowrap; }
 .site-public .ga-nav a.active { color: var(--ga-lime); }
-.ga-nav-sair { border: 0; background: transparent; color: inherit; padding: 0; font: inherit; }
+.ga-head-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; margin-left: auto; }
+.ga-account { position: relative; flex-shrink: 0; }
+.ga-account-trigger { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid #ffffff7a; border-radius: 14px; color: white; background: #173c25aa; }
+.ga-account-trigger svg { width: 22px; height: 22px; }
+.ga-account-trigger:hover,.ga-account-trigger[aria-expanded=true] { background: #35551e; border-color: var(--ga-lime); }
+.ga-account-panel { position: absolute; top: calc(100% + 10px); right: 0; z-index: 10; width: 180px; padding: 8px; border: 1px solid var(--ga-line); border-radius: 14px; background: white; color: var(--ga-green-deep); box-shadow: 0 12px 30px #0d241740; font: 600 14px "Instrument Sans",sans-serif; }
+.ga-account-panel a,.ga-account-panel button { display: flex; align-items: center; width: 100%; min-height: 44px; padding: 10px 12px; border: 0; border-radius: 8px; background: transparent; color: inherit; text-align: left; text-decoration: none; font: inherit; }
+.ga-account-panel a:hover,.ga-account-panel button:hover { background: var(--ga-cream); }
+.site-public .ga-account-panel :focus-visible { outline-color: #496d23; outline-offset: -3px; }
 .site-public .ga-head-cta { flex-shrink: 0; font-size: 13px; }
 .site-public:not(.is-home):not(.is-detail) .ga-head { position: relative; background: #173c25; }
 .site-public .ga-btn { text-decoration: none; }
@@ -70,7 +78,7 @@
 .pular-conteudo:focus { top: 10px; }
 @media(max-width:1100px) {
   .site-public .ga-head-inner { flex-wrap: wrap; gap: 12px; }
-  .site-public .ga-nav { order: 3; margin: 0; width: 100%; gap: 12px 20px; justify-content: center; }
+  .site-public .ga-nav { order: 3; flex-basis: 100%; margin: 0; width: 100%; gap: 12px 20px; justify-content: center; }
   .site-public .ga-head-cta { margin-left: auto; }
   .site-public .ga-hero-content { padding-top: 155px; }
   .site-public .ga-page-banner { padding-top: 185px; }
@@ -79,6 +87,7 @@
 }
 @media(max-width:680px) {
   .site-public .ga-head-inner { padding-block: 12px; }
+  .ga-head-actions { gap: 8px; }
   .site-public .ga-nav { font-size: 12px; gap: 8px 13px; }
   .site-public .ga-logo { width: 141px; }
   .site-public .ga-head-cta { display: inline-flex; padding: 10px 12px; min-height: 42px; font-size: 12px; }
@@ -105,4 +114,9 @@
   .site-public .ga-nav { position: static; flex-direction: row; align-items: center; background: transparent; box-shadow: none; border-radius: 0; padding: 0; left: auto; right: auto; top: auto; }
   .site-public .ga-nav a { padding: 3px 0; border: 0; font-size: 12px; }
   .site-public .ga-hero { padding-top: 0; }
+}
+@media(max-width:380px) {
+  .site-public .ga-head-inner { gap: 8px; }
+  .site-public .ga-logo { width: 100px; }
+  .site-public .ga-head-cta svg { display: none; }
 }
