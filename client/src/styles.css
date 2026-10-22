@@ -94,14 +94,26 @@ input[type=checkbox] { width: auto; margin-right: 8px; }
 .filtros label { margin-top: 0; }
 
 /* painel admin */
-.admin-layout { display: grid; grid-template-columns: 210px 1fr; gap: 20px; }
+.admin-layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 20px; }
+.admin-layout > * { min-width: 0; }
 @media (max-width: 800px) { .admin-layout { grid-template-columns: 1fr; } }
 .admin-menu { background: var(--papel); border: 1px solid var(--linha); border-radius: var(--raio); padding: 8px; align-self: start; }
 .admin-menu a { display: block; padding: 8px 10px; border-radius: 6px; text-decoration: none; color: var(--texto); }
-.admin-menu a.ativo, .admin-menu a:hover { background: #e9f0ea; color: var(--verde-esc); font-weight: 600; }
+.admin-menu a.active, .admin-menu a.ativo { background: #e9f0ea; color: var(--verde-esc); font-weight: 700; }
+.admin-menu a:hover { background: #f1f4eb; color: var(--verde-esc); }
 table { width: 100%; border-collapse: collapse; font-size: .92rem; } th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--linha); vertical-align: top; }
 th { color: var(--suave); font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; }
-.tabela-rolagem { overflow-x: auto; }
+.tabela-rolagem { max-width: 100%; overflow-x: auto; }
+.tabela-responsiva td { overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .tabela-responsiva, .tabela-responsiva tbody { display: block; }
+  .tabela-responsiva thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .tabela-responsiva tr { display: block; margin-bottom: 16px; padding: 12px; background: var(--papel); border: 1px solid var(--linha); border-radius: var(--raio); }
+  .tabela-responsiva td { display: block; max-width: 100%; padding: 8px 0; border: 0; }
+  .tabela-responsiva td + td { border-top: 1px solid var(--linha); }
+  .tabela-responsiva td[data-rotulo]::before { content: attr(data-rotulo); display: block; margin-bottom: 4px; font-size: .75rem; font-weight: 700; color: var(--suave); text-transform: uppercase; }
+  .tabela-responsiva .btn { max-width: 100%; white-space: normal; }
+}
 .abas { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 2px solid var(--linha); margin-bottom: 16px; }
 .abas button { background: none; border: 0; padding: 10px 14px; font: inherit; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; color: var(--suave); }
 .abas button.ativo { color: var(--verde-esc); border-bottom-color: var(--verde); font-weight: 700; }

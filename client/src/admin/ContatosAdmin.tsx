@@ -23,20 +23,21 @@ export default function ContatosAdmin() {
     <>
       <h1>Contatos</h1>
       <Erro erro={erro} />
-      <table className="tabela">
-        <thead><tr><th>Quando</th><th>Quem</th><th>Origem / interesse</th><th>Mensagem</th><th></th></tr></thead>
+      <div className="tabela-rolagem" role="region" aria-label="Lista de contatos" tabIndex={0}>
+      <table className="tabela tabela-responsiva">
+        <thead><tr><th>Quando</th><th>Quem</th><th>Origem / interesse</th><th>Mensagem</th><th>Ações</th></tr></thead>
         <tbody>{l.map((c) => {
           const wa = linkWhatsapp(c.whatsapp, `Olá ${c.nome}, aqui é sobre seu interesse${c.fazenda_titulo ? ` na fazenda ${c.fazenda_titulo}` : ""}.`);
           return (
             <tr key={c.id}>
-              <td>{new Date(c.criado_em).toLocaleString("pt-BR")}</td>
-              <td>{c.nome}<br />{wa ? <a href={wa} target="_blank" rel="noopener noreferrer">{c.whatsapp}</a> : c.whatsapp}{c.email && <><br />{c.email}</>}</td>
-              <td><span className="etiqueta">{({ vitrine: "Fazenda", pesquisa: "Pesquisa", contato: "Contato", anuncio: "Quer vender" } as Record<string, string>)[c.origem] ?? c.origem}</span><br />{c.fazenda_titulo ?? (c.pesquisa_cod_imovel ? `(${c.pesquisa_uf}) CAR ${c.pesquisa_cod_imovel}` : "")}</td>
-              <td style={{ whiteSpace: "pre-line" }}>{c.mensagem}</td>
-              <td><button className="btn sec" onClick={() => status(c.id, c.status === "novo" ? "atendido" : "novo")}>{c.status === "novo" ? "Marcar atendido" : "Reabrir"}</button></td>
+              <td data-rotulo="Quando">{new Date(c.criado_em).toLocaleString("pt-BR")}</td>
+              <td data-rotulo="Quem">{c.nome}<br />{wa ? <a href={wa} target="_blank" rel="noopener noreferrer">{c.whatsapp}</a> : c.whatsapp}{c.email && <><br />{c.email}</>}</td>
+              <td data-rotulo="Origem / interesse"><span className="etiqueta">{({ vitrine: "Fazenda", pesquisa: "Pesquisa", contato: "Contato", anuncio: "Quer vender" } as Record<string, string>)[c.origem] ?? c.origem}</span><br />{c.fazenda_titulo ?? (c.pesquisa_cod_imovel ? `(${c.pesquisa_uf}) CAR ${c.pesquisa_cod_imovel}` : "")}</td>
+              <td data-rotulo="Mensagem" style={{ whiteSpace: "pre-line" }}>{c.mensagem}</td>
+              <td data-rotulo="Ações"><button className="btn sec" onClick={() => status(c.id, c.status === "novo" ? "atendido" : "novo")}>{c.status === "novo" ? "Marcar atendido" : "Reabrir"}</button></td>
             </tr>);
         })}{l.length === 0 && <tr><td colSpan={5} className="suave">Nenhum contato ainda.</td></tr>}</tbody>
-      </table>
+      </table></div>
       <h2>Registro de apresentações</h2>
       <p className="suave">Anote a quem e quando você apresentou cada terra (prova de intermediação).</p>
       <form className="painel filtros" onSubmit={registrar}>
@@ -48,8 +49,9 @@ export default function ContatosAdmin() {
         <div><label>Observação</label><input value={nova.observacao} onChange={(e) => setNova({ ...nova, observacao: e.target.value })} /></div>
         <button className="btn" type="submit">Registrar</button>
       </form>
-      <table className="tabela"><thead><tr><th>Data</th><th>Comprador</th><th>Imóvel</th><th>Canal</th></tr></thead>
-        <tbody>{ap.map((a) => <tr key={a.id}><td>{new Date(a.apresentado_em).toLocaleString("pt-BR")}</td><td>{a.comprador_nome}</td><td>{a.fazenda_titulo ?? a.pesquisa_token}</td><td>{a.canal}</td></tr>)}</tbody></table>
+      <div className="tabela-rolagem" role="region" aria-label="Registro de apresentações" tabIndex={0}>
+      <table className="tabela tabela-responsiva"><thead><tr><th>Data</th><th>Comprador</th><th>Imóvel</th><th>Canal</th></tr></thead>
+        <tbody>{ap.map((a) => <tr key={a.id}><td data-rotulo="Data">{new Date(a.apresentado_em).toLocaleString("pt-BR")}</td><td data-rotulo="Comprador">{a.comprador_nome}</td><td data-rotulo="Imóvel">{a.fazenda_titulo ?? a.pesquisa_token}</td><td data-rotulo="Canal">{a.canal}</td></tr>)}</tbody></table></div>
     </>
   );
 }

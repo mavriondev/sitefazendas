@@ -13,7 +13,8 @@ const ROTULOS: Record<string, string> = {
 
 export default function Fazendas() {
   const [params, setParams] = useSearchParams();
-  const pagina = Math.max(1, Number(params.get("pagina")) || 1);
+  const numeroPagina = Number(params.get("pagina"));
+  const pagina = Number.isFinite(numeroPagina) ? Math.max(1, Math.floor(numeroPagina)) : 1;
   const [form, setForm] = useState<Record<string, string>>(() => Object.fromEntries(CAMPOS.map((c) => [c, params.get(c) ?? ""])));
   const [flags, setFlags] = useState<Record<string, boolean>>(() => Object.fromEntries(FLAGS.map((c) => [c, params.get(c) === "1"])));
   const [dados, setDados] = useState<{ total: number; fazendas: FazendaPublica[] } | null>(null);
@@ -22,11 +23,17 @@ export default function Fazendas() {
 
   useEffect(() => { document.title = "Fazendas à venda"; void api.get("/api/public/filtros").then(setOpcoes).catch(() => {}); }, []);
   useEffect(() => {
+    let ativo = true;
+    setForm(Object.fromEntries(CAMPOS.map((c) => [c, params.get(c) ?? ""])));
+    setFlags(Object.fromEntries(FLAGS.map((c) => [c, params.get(c) === "1"])));
     setErro(false); setDados(null);
     const q = new URLSearchParams(params);
     q.delete("pagina");
     q.set("limite", String(POR_PAGINA)); q.set("deslocamento", String((pagina - 1) * POR_PAGINA));
-    void api.get(`/api/public/fazendas?${q.toString()}`).then(setDados).catch(() => setErro(true));
+    void api.get(`/api/public/fazendas?${q.toString()}`)
+      .then((resposta) => { if (ativo) setDados(resposta); })
+      .catch(() => { if (ativo) setErro(true); });
+    return () => { ativo = false; };
   }, [params, pagina]);
 
   const aplicar = (e?: React.FormEvent) => {
