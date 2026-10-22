@@ -62,8 +62,8 @@ export default function Home() {
         </section>
       )}
       <section className="faixa"><div className="container">
-        <div><span className="rotulo-sec" style={{ color: "var(--lima)" }}>Atendimento direto</span><h2>Quer vender ou comprar com reserva?</h2>
-          <p>{config?.aviso_intermediacao || "Atuamos na intermediação de negócios rurais."}</p></div>
+        <div><span className="rotulo-sec" style={{ color: "var(--lima)" }}>Atendimento direto</span><h2>Quer vender ou comprar com discrição?</h2>
+          <p>Fale com o corretor para anunciar sua propriedade ou encontrar a fazenda certa, com sigilo do primeiro contato ao fechamento.</p></div>
         <div className="linha">
           <Link className="btn lima" to="/fazendas">Explorar fazendas</Link>
           <Link className="btn fantasma" to="/venda-sua-fazenda">Vender minha fazenda</Link>

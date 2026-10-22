@@ -8,7 +8,8 @@
     "build": "vite build && esbuild server/index.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/server.js",
     "start": "NODE_ENV=production node dist/server.js",
     "check": "tsc --noEmit",
-    "test": "NODE_ENV=test tsx server/__tests__/run-all.ts"
+    "test": "NODE_ENV=test tsx server/__tests__/run-all.ts",
+    "seed:exemplo": "tsx server/scripts/seed-exemplo.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

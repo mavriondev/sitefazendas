@@ -45,6 +45,9 @@ npm start
 ```
 Tabelas são criadas sozinhas no início. Testes: `npm test` (usam banco em memória). Checagem de tipos: `npm run check`.
 
+### Dados de exemplo (só desenvolvimento)
+`NODE_ENV=development npm run seed:exemplo` cria 6 fazendas publicadas, 3 slides, 4 parceiros (logos de exemplo) e os textos de Sobre e Contato, todos marcados com `[EXEMPLO]`. Rodar de novo recria os exemplos sem duplicar; `NODE_ENV=development npm run seed:exemplo -- --remover` apaga só eles. O script recusa qualquer `NODE_ENV` diferente de `development` e nunca altera dados reais nem textos já editados no painel.
+
 ## Antes de divulgar
 1. Preencher CRECI e WhatsApp em Painel → Configurações.
 2. Revisar a política de privacidade (`client/src/pages/Privacidade.tsx`) com advogado.

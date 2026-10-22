@@ -276,3 +276,99 @@ a.parceiro:hover { box-shadow: 0 8px 24px rgba(20,50,30,.12); transform: transla
 .zap-flutuante { position: fixed; right: 18px; bottom: 18px; z-index: 45; background: #25d366; color: #073b1a; font-weight: 700; padding: 12px 18px; border-radius: 999px; text-decoration: none; box-shadow: 0 6px 18px rgba(0,0,0,.25); }
 .zap-flutuante:hover { background: #1ebe5b; }
 @media (max-width: 600px) { .zap-flutuante { right: 12px; bottom: 12px; padding: 9px 14px; font-size: .85rem; } }
+
+/* ===== Revisão visual: espaçamentos, hierarquia, imagens e painel ===== */
+/* rodapé encosta na última seção (as páginas já terminam com respiro próprio) */
+.rodape { margin-top: 0; }
+
+/* menu no celular: continua sempre visível, mas ocupa menos altura */
+@media (max-width: 600px) {
+  .topo .container { gap: 4px 12px; padding-top: 8px; padding-bottom: 8px; }
+  .topo .marca { font-size: 1.1rem; }
+  .topo nav { gap: 2px 0; margin: 0 -8px; width: calc(100% + 16px); }
+  .topo nav a { padding: 5px 8px; font-size: .84rem; }
+}
+
+/* carrossel: controles alinhados ao conteúdo e acima da busca rápida */
+.slide .texto { padding-bottom: 150px; }
+.slider .pontos { left: max(20px, calc((100% - 1200px) / 2 + 20px)); bottom: 104px; }
+.slider .setas { right: max(20px, calc((100% - 1200px) / 2 + 20px)); bottom: 92px; }
+@media (max-width: 600px) {
+  .slide { min-height: 440px; }
+  .slide .texto { padding: 40px 0 130px; }
+  .slider .pontos { bottom: 96px; }
+  .slider .setas { bottom: 84px; }
+  .slider .setas button { width: 36px; height: 36px; }
+}
+
+/* busca rápida no celular: campos em duas colunas */
+@media (max-width: 600px) {
+  .busca-hero form { grid-template-columns: 1fr 1fr; padding: 16px; }
+  .busca-hero form > :nth-child(-n+2) { grid-column: 1 / -1; }
+  .busca-hero form .btn { grid-column: 1 / -1; }
+}
+
+/* seções que também são .container mantêm o recuo lateral */
+.container.secao { padding-left: 20px; padding-right: 20px; }
+
+/* parceiros: logos maiores e legíveis */
+.parceiros-faixa { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+.parceiro-mini { width: auto; height: 96px; padding: 12px 16px; }
+.parceiro-mini img { max-height: 72px; }
+.parceiros-grade { grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); }
+.parceiro { padding: 22px 20px 18px; }
+.parceiro .logo { height: 112px; }
+.parceiro .logo img { max-height: 112px; }
+
+/* faixa final da home: botões não esticam no celular */
+@media (max-width: 760px) { .faixa .linha .btn { flex: 0 1 auto; } }
+
+/* cartões e painéis: títulos com hierarquia clara */
+.painel h3 { font-size: 1.2rem; margin-bottom: 12px; }
+.painel > h3:first-child { margin-top: 0; }
+
+/* detalhe da fazenda: coluna lateral vira cartão de contato */
+.detalhe-grid > .lateral:not(:has(> .painel)) { background: var(--papel); border: 1px solid var(--linha); border-radius: var(--raio); box-shadow: var(--sombra); padding: 20px; }
+.detalhe-grid > .lateral h4 { font-size: .95rem; margin: 20px 0 8px; }
+.detalhe-grid > .lateral > p:first-child { margin-top: 0; }
+.detalhe-grid > .lateral form .btn { margin-top: 14px; }
+.galeria .principal { aspect-ratio: 3 / 2; }
+
+/* formulários de contato e do painel: rótulos legíveis (o estilo em caixa alta fica só nos filtros do catálogo) */
+.painel .filtros label { font-size: .9rem; text-transform: none; letter-spacing: 0; color: var(--texto); margin: 10px 0 4px; }
+.painel .filtros { align-items: start; }
+.painel .filtros + h3 { margin-top: 24px; }
+form.painel > .btn[type="submit"] { margin-top: 14px; }
+
+/* filtros do catálogo: grupo acima, subcampos menores */
+.filtros-lateral legend { font-size: .9rem; color: var(--texto); padding: 0; margin: 6px 0 2px; }
+.filtros-lateral fieldset label { font-weight: 400; font-size: .8rem; color: var(--suave); text-transform: none; letter-spacing: 0; margin: 2px 0; }
+.filtros-lateral .painel > div > label, .filtros-lateral .painel > div:not(.linha) > label { font-size: .9rem; color: var(--texto); text-transform: none; letter-spacing: 0; }
+.filtros-lateral h3 { margin-bottom: 4px; }
+@media (max-width: 900px) {
+  .filtros-lateral .painel { grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+  .filtros-lateral .painel > h3, .filtros-lateral .painel > fieldset, .filtros-lateral .painel > .linha:not(.opcao), .filtros-lateral .painel > p { grid-column: 1 / -1; }
+  .filtros-lateral .painel > fieldset .duas input { padding: 7px 10px; }
+  .filtros-lateral .painel > .opcao { order: 1; }
+  .filtros-lateral .painel > .linha:not(.opcao), .filtros-lateral .painel > p { order: 2; }
+}
+
+/* painel administrativo */
+.painel.linha > input:not([type="checkbox"]) { flex: 1 1 240px; width: auto; }
+input[type="file"] { width: auto; max-width: 100%; padding: 6px; background: transparent; border-style: dashed; }
+@media (max-width: 800px) {
+  .admin-menu { display: flex; flex-wrap: wrap; gap: 4px; }
+  .admin-menu a { padding: 6px 12px; }
+}
+@media (max-width: 760px) {
+  .tabela thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .tabela, .tabela tbody { display: block; }
+  .tabela tr { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 12px 0; border-bottom: 1px solid var(--linha); }
+  .tabela td { border: 0; padding: 0; }
+  .tabela td:first-child { flex-basis: 100%; font-weight: 700; }
+  .tabela td:nth-child(3):not(:only-child)::before { content: "Fotos: "; color: var(--suave); }
+  .tabela td:nth-child(4)::before { content: "CAR: "; color: var(--suave); }
+  .tabela td:last-child:not(:only-child) { margin-left: auto; }
+}
+.filtros-lateral .opcao { flex-wrap: nowrap; margin: 0; }
+@media (max-width: 600px) { .parceiros-faixa { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
