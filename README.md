@@ -34,8 +34,17 @@ Ficam em disco (`UPLOADS_DIR`), sem dependência de nenhum provedor: faça backu
 - Sem serviço de e-mail: quem esquece a senha pede um link ao corretor (WhatsApp); no painel, Usuários → "Link de nova senha" (uso único, 1 hora).
 - Excluir usuário (LGPD) apaga a conta e anonimiza os contatos feitos por ela; registros de apresentação são mantidos.
 
-## Mapa de região (opcional por fazenda)
-Círculo de 12 km com centro deslocado 2–5 km (direção fixa e aleatória, guardada no banco). Nunca a posição real. Usa tiles do OpenStreetMap (permitidos no CSP).
+## Apresentação pública e sigilo
+O design baseado no Agrezen usa fotografias, cartões de portfólio e ícones específicos dos atributos. A página da fazenda não exibe formulário de contato, mapa ou polígono: o contato é direto pelo WhatsApp configurado no anúncio ou pelo padrão do site. Coordenadas, CAR e geometria continuam disponíveis apenas para o trabalho interno e as regras existentes de enriquecimento.
+
+A home respeita slides, destaques, parceiros e textos configurados no painel. As fotos decorativas fornecidas com o design são ilustrativas; os cartões e galerias dos anúncios usam exclusivamente as fotos cadastradas para cada fazenda. As fontes abertas Instrument Sans e Nunito Sans são servidas localmente, com suas licenças OFL.
+
+## Vídeos do YouTube
+No painel, abra uma fazenda e a aba **Vídeos**. É possível adicionar, editar título/link/ordem, retirar da exibição pública e remover vídeos. O menor número de ordem aparece primeiro. Novos vídeos são **privados por padrão**.
+
+Só marque a autorização pública depois de revisar imagens, áudio, descrição e canal no YouTube. Vídeos podem revelar localização ou proprietário mesmo que o título seja neutro. O sistema bloqueia títulos públicos com dados privados conhecidos, mas não consegue revisar o conteúdo audiovisual automaticamente.
+
+A tabela `fazenda_videos` é criada de forma aditiva no próximo início do servidor; nenhuma fazenda ou foto é apagada. Só vídeos autorizados de fazendas publicadas aparecem na API pública. O banco guarda o ID validado, não HTML nem iframe arbitrário. Players usam `youtube-nocookie.com` e só são carregados depois do clique; miniaturas públicas são fornecidas pelo YouTube.
 
 ## Rodar
 ```

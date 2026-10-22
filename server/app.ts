@@ -39,7 +39,8 @@ export function criarApp(o: OpcoesApp): Express {
     contentSecurityPolicy: {
       useDefaults: true,
       directives: {
-        "img-src": ["'self'", "data:", "https://tile.openstreetmap.org"],
+        "img-src": ["'self'", "data:", "https://tile.openstreetmap.org", "https://i.ytimg.com"],
+        "frame-src": ["https://www.youtube-nocookie.com"],
         "style-src": ["'self'", "'unsafe-inline'"],
         "script-src": ["'self'"],
         "connect-src": ["'self'"],

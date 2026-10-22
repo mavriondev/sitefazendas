@@ -14,6 +14,7 @@ import { ESTADOS } from "../../shared/confianca";
 import { criarHub, type Hub } from "../lib/hub";
 import { gerarTexto } from "../lib/ia";
 import { apagarArquivo as apagarArquivoUpload, salvarArquivo } from "../lib/arquivos";
+import { registrarRotasVideos } from "./videos";
 
 const STATUS = ["rascunho", "revisao", "publicada", "vendida", "arquivada"];
 
@@ -27,7 +28,8 @@ async function carregar(db: Db, id: number) {
   if (!f) return null;
   const atributos = (await db.query<AtributoRow>("SELECT * FROM fazenda_atributos WHERE fazenda_id = $1 ORDER BY chave", [id])).rows;
   const fotos = (await db.query<FotoRow>("SELECT * FROM fazenda_fotos WHERE fazenda_id = $1 ORDER BY capa DESC, ordem, id", [id])).rows;
-  return { f, atributos, fotos };
+  const videos = (await db.query("SELECT * FROM fazenda_videos WHERE fazenda_id=$1 ORDER BY ordem,id", [id])).rows;
+  return { f, atributos, fotos, videos };
 }
 
 /** Aplica o corpo da requisição sobre a fazenda (allowlist). Devolve valores novos ou erro. */
@@ -83,6 +85,7 @@ const COLUNAS_EDITAVEIS = [
 ] as const;
 
 export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: OpcoesAdmin) {
+  registrarRotasVideos(app, db, exigirAdmin);
   const hub = op.hub ?? criarHub();
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024, files: 1 } });
 
@@ -136,8 +139,8 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     const c = await carregar(db, idDe(req));
     if (!c) return res.status(404).json({ message: "Fazenda não encontrada." });
     res.json({
-      fazenda: c.f, atributos: c.atributos, fotos: c.fotos,
-      problemas_publicacao: validarPublicacao(c.f, c.fotos, c.atributos),
+      fazenda: c.f, atributos: c.atributos, fotos: c.fotos, videos: c.videos,
+      problemas_publicacao: validarPublicacao(c.f, c.fotos, c.atributos, c.videos),
       atributos_catalogo: ATRIBUTOS,
       previa_publica: c.atributos.map(atributoParaPublico).filter(Boolean),
     });
@@ -151,7 +154,7 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     if (ap.erro) return res.status(400).json({ message: ap.erro });
     // Fazenda já publicada: não deixa a edição introduzir vazamento nem esvaziar campos obrigatórios.
     if (c.f.status === "publicada") {
-      const prob = validarPublicacao(ap.novo!, c.fotos, c.atributos);
+      const prob = validarPublicacao(ap.novo!, c.fotos, c.atributos, c.videos);
       if (prob.length) return res.status(409).json({ message: "A edição deixaria a fazenda publicada fora das regras.", problemas: prob });
     }
     await salvarCampos(id, ap.novo!);
@@ -176,7 +179,7 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     const c = await carregar(db, id);
     if (!c) return res.status(404).json({ message: "Fazenda não encontrada." });
     if (status === "publicada") {
-      const prob = validarPublicacao(c.f, c.fotos, c.atributos);
+      const prob = validarPublicacao(c.f, c.fotos, c.atributos, c.videos);
       if (prob.length) return res.status(409).json({ message: "Não é possível publicar ainda.", problemas: prob });
     }
     await db.query(
@@ -197,7 +200,7 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     // Se a fazenda está publicada, a mudança não pode violar as regras.
     const c = await carregar(db, id);
     if (c!.f.status === "publicada") {
-      const prob = validarPublicacao(c!.f, c!.fotos, c!.atributos);
+      const prob = validarPublicacao(c!.f, c!.fotos, c!.atributos, c!.videos);
       if (prob.length) {
         await db.query("UPDATE fazenda_atributos SET publico = FALSE WHERE fazenda_id=$1 AND chave=$2", [id, chave]);
         return res.status(409).json({ message: "Atributo salvo como privado: tornar público violaria as regras.", problemas: prob });
@@ -218,7 +221,7 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     await db.query("UPDATE fazenda_atributos SET publico=$3 WHERE fazenda_id=$1 AND chave=$2", [id, chave, publico]);
     const c = await carregar(db, id);
     if (publico && c!.f.status === "publicada") {
-      const prob = validarPublicacao(c!.f, c!.fotos, c!.atributos);
+      const prob = validarPublicacao(c!.f, c!.fotos, c!.atributos, c!.videos);
       if (prob.length) { await db.query("UPDATE fazenda_atributos SET publico=FALSE WHERE fazenda_id=$1 AND chave=$2", [id, chave]); return res.status(409).json({ message: "Violaria as regras de publicação.", problemas: prob }); }
     }
     res.json({ ok: true });
@@ -306,7 +309,7 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
       const leg = txt(req.body.legenda, 200);
       const fakeFotos = c!.fotos.map((x) => (x.id === fid ? { ...x, legenda: leg } : x));
       if (c!.f.status === "publicada") {
-        const prob = validarPublicacao(c!.f, fakeFotos, c!.atributos);
+        const prob = validarPublicacao(c!.f, fakeFotos, c!.atributos, c!.videos);
         if (prob.length) return res.status(409).json({ message: "A legenda violaria as regras.", problemas: prob });
       }
       await db.query("UPDATE fazenda_fotos SET legenda=$2 WHERE id=$1", [fid, leg]);

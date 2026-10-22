@@ -23,12 +23,14 @@ export interface AtributoRow {
   consultado_em: string; publico: boolean;
 }
 export interface FotoRow { id: number; arquivo: string; legenda: string | null; ordem: number; capa: boolean }
+export interface VideoPublico { id: number; youtube_id: string; titulo: string }
 
 export interface AtributoPublico { chave: string; rotulo: string; texto: string; confianca: "confirmado" | "indicado" }
 export interface FazendaPublica {
   slug: string; titulo: string; descricao: string; regiao: string; culturas: string[];
   area: string | null; preco: string | null; destaque: boolean;
   capa: string | null; fotos: Array<{ url: string; legenda: string | null }>;
+  videos: VideoPublico[];
   atributos: AtributoPublico[]; forma: { d: string; viewBox: string } | null; regiao_mapa: { lat: number; lon: number; raio_km: number } | null; whatsapp: string | null;
 }
 
@@ -85,6 +87,7 @@ export function projetarFazendaPublica(f: FazendaRow, atributos: AtributoRow[], 
     destaque: f.destaque,
     capa: fotosOrd[0] ? `/uploads/${fotosOrd[0].arquivo}` : null,
     fotos: fotosOrd.map((x) => ({ url: `/uploads/${x.arquivo}`, legenda: x.legenda })),
+    videos: [],
     atributos: atributos.map(atributoParaPublico).filter((x): x is AtributoPublico => x !== null),
     forma: f.mostrar_mapa && f.geojson ? formaSvgAnonima(f.geojson) : null,
     regiao_mapa: f.mostrar_regiao ? regiaoAproximada(f.latitude, f.longitude, f.regiao_ang, f.regiao_dist) : null,
@@ -93,7 +96,7 @@ export function projetarFazendaPublica(f: FazendaRow, atributos: AtributoRow[], 
 }
 
 /** Problemas que impedem publicar. Lista vazia = pode publicar. */
-export function validarPublicacao(f: FazendaRow, fotos: FotoRow[], atributos: AtributoRow[]): string[] {
+export function validarPublicacao(f: FazendaRow, fotos: FotoRow[], atributos: AtributoRow[], videos: Array<{ titulo: string; publico: boolean }> = []): string[] {
   const p: string[] = [];
   if (!f.titulo?.trim()) p.push("Falta o título.");
   if (!f.descricao_publica?.trim()) p.push("Falta a descrição pública.");
@@ -105,6 +108,7 @@ export function validarPublicacao(f: FazendaRow, fotos: FotoRow[], atributos: At
     ["título", f.titulo], ["descrição", f.descricao_publica], ["região", f.regiao_publica], ["preço", f.preco_exibicao],
     ...fotos.map((x, i) => [`legenda da foto ${i + 1}`, x.legenda] as [string, string | null]),
     ...f.culturas.map((c) => ["cultura", c] as [string, string]),
+    ...videos.filter(v => v.publico).map(v => ["título do vídeo", v.titulo] as [string, string]),
   ];
   for (const [nome, texto] of campos) for (const m of vazaDadoSensivel(texto, priv)) p.push(`O campo ${nome} ${m}.`);
   for (const a of atributos) {
@@ -205,7 +209,9 @@ export async function obterPublicaPorSlug(db: Db, slug: string, whatsappPadrao: 
   const f = r.rows[0];
   if (!f) return null;
   const { attrs, fotos } = await carregarRelacionados(db, [f.id]);
-  return projetarFazendaPublica(f, attrs.get(f.id) ?? [], fotos.get(f.id) ?? [], whatsappPadrao);
+  const publica = projetarFazendaPublica(f, attrs.get(f.id) ?? [], fotos.get(f.id) ?? [], whatsappPadrao);
+  publica.videos = (await db.query<VideoPublico>("SELECT id,youtube_id,titulo FROM fazenda_videos WHERE fazenda_id=$1 AND publico ORDER BY ordem,id", [f.id])).rows;
+  return publica;
 }
 
 /** Opções para os filtros da vitrine (só de fazendas publicadas; região e culturas já são textos públicos). */

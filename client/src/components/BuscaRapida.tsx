@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
+import { Search } from "lucide-react";
 
 export function BuscaRapida() {
   const nav = useNavigate();
@@ -14,13 +15,13 @@ export function BuscaRapida() {
     nav(`/fazendas${p.toString() ? `?${p}` : ""}`);
   };
   return (
-    <div className="container busca-hero">
-      <form onSubmit={enviar} aria-label="Buscar fazendas">
+    <div className="ga-search-band">
+      <form className="ga-wrap ga-search ga-search-live" onSubmit={enviar} aria-label="Buscar fazendas">
         <div><label htmlFor="bh-regiao">Região</label><select id="bh-regiao" value={f.regiao} onChange={(e) => setF({ ...f, regiao: e.target.value })}><option value="">Todas</option>{op.regioes.map((r) => <option key={r}>{r}</option>)}</select></div>
         <div><label htmlFor="bh-cultura">Cultura</label><select id="bh-cultura" value={f.cultura} onChange={(e) => setF({ ...f, cultura: e.target.value })}><option value="">Todas</option>{op.culturas.map((r) => <option key={r}>{r}</option>)}</select></div>
         <div><label htmlFor="bh-amin">Área mín. (ha)</label><input id="bh-amin" inputMode="decimal" value={f.area_min} onChange={(e) => setF({ ...f, area_min: e.target.value })} /></div>
         <div><label htmlFor="bh-amax">Área máx. (ha)</label><input id="bh-amax" inputMode="decimal" value={f.area_max} onChange={(e) => setF({ ...f, area_max: e.target.value })} /></div>
-        <button className="btn" type="submit">Buscar fazendas</button>
+        <button className="ga-btn ga-btn--green" type="submit"><Search aria-hidden="true"/>Buscar fazendas</button>
       </form>
     </div>
   );

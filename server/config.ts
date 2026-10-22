@@ -20,7 +20,7 @@ export interface ConfigSite {
 }
 
 export const CONFIG_PADRAO: ConfigSite = {
-  nome_site: "Fazendas",
+  nome_site: "Gramogol Fazendas",
   whatsapp_padrao: "",
   texto_creci: "",
   aviso_intermediacao:

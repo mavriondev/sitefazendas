@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api";
 import { Erro, Ok, Aviso } from "../components/Avisos";
+import { VideosAdmin } from "./VideosAdmin";
 
-type Aba = "dados" | "atributos" | "fotos" | "publicar";
+type Aba = "dados" | "atributos" | "fotos" | "videos" | "publicar";
 const ESTADO_ROTULO: Record<string, string> = { confirmado: "Confirmado", indicado: "Indicado por fonte", sem_dado: "Sem dado" };
 
 export default function FazendaEditor() {
@@ -24,12 +25,13 @@ export default function FazendaEditor() {
     <>
       <p><Link to="/admin">← Fazendas</Link></p>
       <h1>{f.titulo} <span className="etiqueta">{f.status}</span></h1>
-      <div className="abas">{(["dados", "atributos", "fotos", "publicar"] as Aba[]).map((a) => (
-        <button key={a} className={aba === a ? "ativa" : ""} onClick={() => setAba(a)}>{{ dados: "Dados", atributos: "Dados da terra", fotos: "Fotos", publicar: "Publicação" }[a]}</button>))}</div>
+      <div className="abas">{(["dados", "atributos", "fotos", "videos", "publicar"] as Aba[]).map((a) => (
+        <button key={a} className={aba === a ? "ativa" : ""} onClick={() => setAba(a)}>{{ dados: "Dados", atributos: "Dados da terra", fotos: "Fotos", videos: "Vídeos", publicar: "Publicação" }[a]}</button>))}</div>
       <Erro erro={erro} />{ok && <Ok>{ok}</Ok>}
       {aba === "dados" && <Dados key={String(f.atualizado_em)} f={f} acao={acao} id={id!} />}
       {aba === "atributos" && <Atributos d={d} acao={acao} id={id!} />}
       {aba === "fotos" && <Fotos d={d} acao={acao} id={id!} />}
+      {aba === "videos" && <VideosAdmin videos={d.videos ?? []} acao={acao} id={id!}/>}
       {aba === "publicar" && <Publicar d={d} acao={acao} id={id!} />}
     </>
   );

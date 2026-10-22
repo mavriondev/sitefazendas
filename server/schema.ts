@@ -141,6 +141,17 @@ export const MIGRACOES: string[] = [
   `ALTER TABLE fazendas ADD COLUMN IF NOT EXISTS regiao_ang REAL NOT NULL DEFAULT random()`,
   `ALTER TABLE fazendas ADD COLUMN IF NOT EXISTS regiao_dist REAL NOT NULL DEFAULT random()`,
   `CREATE INDEX IF NOT EXISTS idx_pesquisa_consultas_usuario ON pesquisa_consultas (usuario_id, criado_em DESC)`,
+  // Galeria de vídeos: adição independente, sem alterar anúncios ou fotos existentes.
+  `CREATE TABLE IF NOT EXISTS fazenda_videos (
+    id SERIAL PRIMARY KEY,
+    fazenda_id INTEGER NOT NULL REFERENCES fazendas(id) ON DELETE CASCADE,
+    youtube_id TEXT NOT NULL CHECK (youtube_id ~ '^[A-Za-z0-9_-]{11}$'),
+    titulo TEXT NOT NULL CHECK (length(titulo) BETWEEN 1 AND 120),
+    ordem INTEGER NOT NULL DEFAULT 0,
+    publico BOOLEAN NOT NULL DEFAULT FALSE,
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_fazenda_videos_ordem ON fazenda_videos (fazenda_id, ordem, id)`,
 ];
 
 export async function migrar(db: Db): Promise<void> {
