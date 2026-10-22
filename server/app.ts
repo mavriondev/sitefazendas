@@ -13,6 +13,8 @@ import { lerConfig } from "./config";
 import { obterPublicaPorSlug } from "./lib/publico";
 import type { Hub } from "./lib/hub";
 import { caminhoDoArquivo } from "./lib/arquivos";
+import rateLimit from "express-rate-limit";
+import { instalarCsrf, rotasSeguras, validarCorpo, validarParametros } from "./lib/seguranca";
 
 export interface OpcoesApp {
   db: Db;
@@ -49,23 +51,40 @@ export function criarApp(o: OpcoesApp): Express {
     },
     crossOriginResourcePolicy: { policy: "same-site" },
   }));
-  app.use(express.json({ limit: "5mb" }));
+  app.use("/api", (_req, res, next) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("X-Robots-Tag", "noindex, nofollow");
+    next();
+  });
+  if (o.limitar) app.use("/api", rateLimit({
+    windowMs: 60 * 1000, limit: 240, standardHeaders: true, legacyHeaders: false,
+    message: { message: "Muitas requisições. Aguarde um minuto." },
+  }));
   app.use(session({
     store: o.sessionStore,
     secret: o.segredo,
     name: "sf.sid",
     resave: false,
     saveUninitialized: false,
-    cookie: { httpOnly: true, sameSite: "lax", secure: o.producao, maxAge: 1000 * 60 * 60 * 24 * 14 },
+    cookie: { httpOnly: true, sameSite: "lax", secure: o.producao, maxAge: 1000 * 60 * 60 * 8 },
   }));
+  instalarCsrf(app);
   const { anexar, exigirLogin, exigirAdmin } = middlewaresDeAuth(o.db);
   app.use(anexar);
+  // Autenticar antes de ler corpos grandes ou receber uploads em memória.
+  app.use("/api/admin", exigirAdmin);
+  const jsonPublico = express.json({ limit: "16kb" });
+  const jsonAdmin = express.json({ limit: "5mb" }); // GeoJSON de fazendas.
+  app.use((req, res, next) => (req.path.startsWith("/api/admin/") ? jsonAdmin : jsonPublico)(req, res, next));
+  app.use(validarCorpo);
 
   app.get("/api/saude", (_req, res) => res.json({ ok: true }));
-  registrarRotasAuth(app, o.db, { limitar: o.limitar });
-  registrarRotasPublicas(app, o.db, { limitar: o.limitar });
-  registrarRotasAdmin(app, o.db, exigirAdmin, { uploadsDir: o.uploadsDir, hub: o.hub, fetchIA: o.fetchIA });
-  registrarRotasPesquisa(app, o.db, exigirLogin, { hub: o.hub, segredo: o.segredo });
+  const rotas = rotasSeguras(app);
+  for (const nome of ["id", "fotoId", "videoId"]) app.param(nome, (req, res, next) => validarParametros(req, res, next));
+  registrarRotasAuth(rotas, o.db, { limitar: o.limitar });
+  registrarRotasPublicas(rotas, o.db, { limitar: o.limitar });
+  registrarRotasAdmin(rotas, o.db, exigirAdmin, { uploadsDir: o.uploadsDir, hub: o.hub, fetchIA: o.fetchIA });
+  registrarRotasPesquisa(rotas, o.db, exigirLogin, { hub: o.hub, segredo: o.segredo });
 
 
   // robots.txt e sitemap.xml (só fazendas publicadas). Painel e API ficam fora dos buscadores.
@@ -139,10 +158,14 @@ export function criarApp(o: OpcoesApp): Express {
   app.use((req, res) => res.status(404).json({ message: "Não encontrado." }));
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    if (res.headersSent) return _next(err);
     if (err?.code === "LIMIT_FILE_SIZE") return res.status(413).json({ message: "Arquivo muito grande (máx. 12 MB)." });
+    if (typeof err?.code === "string" && err.code.startsWith("LIMIT_")) return res.status(400).json({ message: "Upload inválido ou com campos em excesso." });
     if (err?.type === "entity.too.large") return res.status(413).json({ message: "Requisição muito grande." });
+    if (err?.type === "entity.parse.failed" || err instanceof URIError) return res.status(400).json({ message: "Requisição inválida." });
     if (err?.status === 404) return res.status(404).json({ message: "Não encontrado." });
-    console.error("[erro]", err?.message ?? err);
+    // Não registrar mensagens SQL, dados de formulário, tokens ou senhas.
+    console.error("[erro interno]", err?.name || "Error");
     res.status(500).json({ message: "Erro interno." });
   });
   return app;

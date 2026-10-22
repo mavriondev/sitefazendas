@@ -43,7 +43,7 @@ Esta preparação **não instala nem publica o aplicativo**. Antes de trocar o v
 1. Instalar a versão aprovada do projeto em diretório próprio, com banco PostgreSQL
    e uploads persistentes próprios. Não reutilizar bancos ou credenciais de outros produtos.
 2. Configurar o processo com `NODE_ENV=production`, `PORT=5005` e
-   `SITE_URL=https://fazendasgramogol.com.br`, além das variáveis obrigatórias do
+   `BIND_HOST=127.0.0.1`, `SITE_URL=https://fazendasgramogol.com.br`, além das variáveis obrigatórias do
    README principal. A porta 5005 deve permanecer fechada ao público; permitir
    acesso ao app somente pelo Nginx. Confirmar que a porta continua livre.
 3. Validar `http://127.0.0.1:5005/api/saude`, a inicialização e a persistência
@@ -68,3 +68,23 @@ Esta preparação **não instala nem publica o aplicativo**. Antes de trocar o v
 
 Se a validação do novo vhost falhar, restaurar o backup antes de recarregar.
 Nenhum certificado foi emitido como parte da preparação inicial.
+
+## Segurança antes de liberar acesso público
+
+- Usar usuário de sistema exclusivo para o aplicativo, sem root; arquivos de
+  configuração privados e uploads fora de `dist/public`. O banco deve ter usuário
+  próprio, sem privilégios de superusuário. Não expor PostgreSQL nem a porta 5005.
+- Gerar `SESSION_SECRET` aleatório com pelo menos 32 bytes e não reutilizar
+  credenciais de outros produtos. Nunca versionar `.env`, dumps ou documentos.
+- Nginx deve ser o único proxy. Manter a sobrescrita de `X-Forwarded-For`
+  deste template: o Express confia em exatamente um proxy para limitar por IP.
+- Usar uma instância do app: os limitadores atuais são locais ao processo. Antes
+  de habilitar PM2 cluster ou múltiplas réplicas, usar armazenamento compartilhado
+  para limites. As sessões já são persistidas em PostgreSQL.
+- HTTPS válido é obrigatório para cookies Secure. Conferir renovação automática,
+  atualizações de sistema/Node suportado e backups **criptografados** do banco e
+  dos uploads, com acesso restrito e teste periódico de restauração.
+- Verificar login, logout, cadastro, troca de senha, contato e upload pelo domínio
+  final. APIs não devem passar por cache/CDN com armazenamento de respostas.
+- Não iniciar Vite/esbuild em modo servidor no ambiente público. Servir somente
+  o build pelo Express. Consultar `SECURITY.md` para limites e alertas pendentes.

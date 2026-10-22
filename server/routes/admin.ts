@@ -87,7 +87,10 @@ const COLUNAS_EDITAVEIS = [
 export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: OpcoesAdmin) {
   registrarRotasVideos(app, db, exigirAdmin);
   const hub = op.hub ?? criarHub();
-  const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024, files: 1 } });
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 12 * 1024 * 1024, files: 1, fields: 8, fieldSize: 4096, parts: 10, fieldNameSize: 100 },
+  });
 
   async function salvarImagem(buf: Buffer): Promise<string | null> {
     const limpa = sanitizarImagem(buf); // remove EXIF/GPS; rejeita o que não for JPEG/PNG

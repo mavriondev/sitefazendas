@@ -20,7 +20,7 @@ Os filtros do catálogo só enxergam dados públicos e agem sobre as mesmas faix
 |---|---|---|
 | `DATABASE_URL` | sim | PostgreSQL NOVO deste site |
 | `SESSION_SECRET` | sim (produção) | texto aleatório longo |
-| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | 1ª execução | cria o admin (senha mín. 8; troque depois) |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | 1ª execução | cria o admin (senha mín. 12 caracteres e máx. 72 bytes; troque depois) |
 | `HUB_API_URL`, `HUB_API_KEY` | para enriquecer/pesquisar | Hub (`https://api.mavrionconnect.com.br`); criar uma chave só para este site e acrescentá-la em `API_KEYS` da Hub |
 | `ANTHROPIC_API_KEY` | para texto por IA | opcional (`ANTHROPIC_MODEL` ajusta o modelo) |
 | `UPLOADS_DIR` | sim (produção) | pasta em disco PERSISTENTE das fotos |

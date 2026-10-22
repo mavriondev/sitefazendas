@@ -283,6 +283,8 @@ export async function rodar() {
     assert.equal((await anon.post("/api/auth/redefinir", { token: String(lk2.json.caminho).split("token=")[1], senha: "outra-senha-789" })).status, 400); // expirado
 
     // ---------- excluir usuário (LGPD) ----------
+    assert.equal((await bia.get("/api/auth/eu")).json.usuario, null); // redefinição encerrou a sessão antiga
+    assert.equal((await bia.post("/api/auth/entrar", { email: "bia@x.com", senha: "outra-senha-789" })).status, 200);
     await bia.post("/api/public/contato", { nome: "Bia", whatsapp: "31999991111", mensagem: "oi" });
     assert.equal((await admin.del("/api/admin/usuarios/1")).status, 400);                      // não exclui a si mesmo
     assert.equal((await bia.del(`/api/admin/usuarios/${idBia}`)).status, 403);

@@ -3,16 +3,33 @@ export class ErroApi extends Error {
 }
 
 async function chamar<T>(metodo: string, url: string, corpo?: unknown, form?: FormData): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (metodo !== "GET") {
+    const csrf = await obterCsrf();
+    headers["X-CSRF-Token"] = csrf;
+  }
+  if (!form && corpo !== undefined) headers["Content-Type"] = "application/json";
   const r = await fetch(url, {
     method: metodo,
     credentials: "same-origin",
-    headers: form || corpo === undefined ? undefined : { "Content-Type": "application/json" },
+    headers,
     body: form ?? (corpo === undefined ? undefined : JSON.stringify(corpo)),
   });
   let j: any = null;
   try { j = await r.json(); } catch { /* sem corpo */ }
   if (!r.ok) throw new ErroApi(r.status, j?.message ?? "Erro inesperado. Tente novamente.", j?.problemas);
   return j as T;
+}
+
+// Não persistir o token: login e troca de senha renovam a sessão.
+let csrfEmAndamento: Promise<string> | null = null;
+function obterCsrf(): Promise<string> {
+  if (!csrfEmAndamento) csrfEmAndamento = (async () => {
+    const r = await fetch("/api/auth/csrf", { credentials: "same-origin", cache: "no-store" });
+    if (!r.ok) throw new ErroApi(r.status, "Não foi possível preparar o envio. Tente novamente.");
+    return (await r.json()).token as string;
+  })().finally(() => { csrfEmAndamento = null; });
+  return csrfEmAndamento;
 }
 
 export const api = {

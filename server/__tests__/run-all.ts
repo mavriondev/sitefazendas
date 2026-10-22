@@ -1,5 +1,5 @@
 export {};
-const arquivos = ["unitarios", "api", "videos"];
+const arquivos = ["unitarios", "api", "videos", "seguranca"];
 let falhas = 0;
 for (const a of arquivos) {
   try {

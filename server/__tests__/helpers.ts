@@ -33,11 +33,11 @@ export function criarHubFalso(): HubFalso {
   return h;
 }
 
-export async function subirApp(opts: { hub?: Hub; fetchIA?: typeof fetch } = {}) {
+export async function subirApp(opts: { hub?: Hub; fetchIA?: typeof fetch; limitar?: boolean } = {}) {
   const db = await criarDbTeste();
   await garantirAdmin(db, "admin@teste.com", "senha-forte-1");
   const uploadsDir = fs.mkdtempSync(path.join(os.tmpdir(), "sf-up-"));
-  const app = criarApp({ db, uploadsDir, segredo: "segredo-de-teste", producao: false, limitar: false, hub: opts.hub, fetchIA: opts.fetchIA });
+  const app = criarApp({ db, uploadsDir, segredo: "segredo-de-teste", producao: false, limitar: opts.limitar ?? false, hub: opts.hub, fetchIA: opts.fetchIA });
   const server = await new Promise<import("node:http").Server>((ok) => { const s = app.listen(0, "127.0.0.1", () => ok(s)); });
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 
@@ -46,6 +46,10 @@ export async function subirApp(opts: { hub?: Hub; fetchIA?: typeof fetch } = {})
     let cookie = "";
     const chamar = async (metodo: string, rota: string, corpo?: unknown, extra?: { form?: FormData }) => {
       const headers: Record<string, string> = {};
+      if (metodo !== "GET") {
+        const csrf = await chamar("GET", "/api/auth/csrf");
+        headers["x-csrf-token"] = csrf.json.token;
+      }
       if (cookie) headers.cookie = cookie;
       let body: any;
       if (extra?.form) body = extra.form;
