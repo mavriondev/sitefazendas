@@ -110,7 +110,8 @@ export function criarApp(o: OpcoesApp): Express {
           throw erro;
         }
         res.setHeader("Content-Type", metadata.contentType || (nome.endsWith(".png") ? "image/png" : "image/jpeg"));
-        res.setHeader("Cache-Control", "private, no-store");
+        // Foto publicada pode ser guardada em cache; rascunho (só admin vê) nunca.
+        res.setHeader("Cache-Control", publico.rows[0]?.publico ? "public, max-age=86400" : "private, no-store");
         res.setHeader("X-Content-Type-Options", "nosniff");
         res.setHeader("Content-Length", conteudo.byteLength);
         res.end(conteudo);

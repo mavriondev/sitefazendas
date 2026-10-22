@@ -1,8 +1,10 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { ObjectNotFoundError, ObjectStorageService, objectStorageClient } from "./objectStorage";
-
-const storage = new ObjectStorageService();
+// O armazenamento de objetos (App Storage do Replit) é OPCIONAL: só é carregado quando PRIVATE_OBJECT_DIR está definido.
+// Sem ele, as fotos ficam em disco local (UPLOADS_DIR), o que funciona em qualquer servidor com disco persistente.
+type ModuloObjetos = typeof import("./objectStorage");
+let modulo: Promise<ModuloObjetos> | null = null;
+const objetos = () => (modulo ??= import("./objectStorage"));
 
 export function armazenamentoPersistenteAtivo(): boolean {
   return process.env.NODE_ENV !== "test" && Boolean(process.env.PRIVATE_OBJECT_DIR);
@@ -10,8 +12,7 @@ export function armazenamentoPersistenteAtivo(): boolean {
 
 export function arquivoInexistente(erro: unknown): boolean {
   const e = erro as { code?: number | string; status?: number; name?: string; message?: string };
-  return erro instanceof ObjectNotFoundError
-    || e?.name === "ObjectNotFoundError"
+  return e?.name === "ObjectNotFoundError"
     || Number(e?.code) === 404
     || Number(e?.status) === 404
     || /^No such object:/i.test(e?.message ?? "");
@@ -30,9 +31,10 @@ function prefixoUploads(): string {
   return prefixo;
 }
 
-function arquivoNoBucket(nome: string) {
+async function arquivoNoBucket(nome: string) {
   if (!nomeValido(nome)) throw new Error("Nome de arquivo inválido.");
-  const destino = `${storage.getPrivateObjectDir()}/${prefixoUploads()}/${nome}`.replace(/^\/+/, "");
+  const { ObjectStorageService, objectStorageClient } = await objetos();
+  const destino = `${new ObjectStorageService().getPrivateObjectDir()}/${prefixoUploads()}/${nome}`.replace(/^\/+/, "");
   const [bucket, ...partes] = destino.split("/");
   if (!bucket || partes.length === 0) throw new Error("PRIVATE_OBJECT_DIR inválido.");
   return objectStorageClient.bucket(bucket).file(partes.join("/"));
@@ -46,7 +48,7 @@ export async function salvarArquivo(
 ): Promise<void> {
   if (!nomeValido(nome)) throw new Error("Nome de arquivo inválido.");
   if (armazenamentoPersistenteAtivo()) {
-    await arquivoNoBucket(nome).save(conteudo, {
+    await (await arquivoNoBucket(nome)).save(conteudo, {
       resumable: false,
       metadata: {
         contentType,
@@ -63,7 +65,7 @@ export async function apagarArquivo(uploadsDir: string, nome: string | null): Pr
   if (!nome || !nomeValido(nome)) return;
   if (armazenamentoPersistenteAtivo()) {
     try {
-      await arquivoNoBucket(nome).delete({ ignoreNotFound: true });
+      await (await arquivoNoBucket(nome)).delete({ ignoreNotFound: true });
     } catch (erro) {
       console.error("[storage] Não foi possível remover imagem:", erro);
     }
@@ -75,7 +77,8 @@ export async function apagarArquivo(uploadsDir: string, nome: string | null): Pr
 export async function buscarArquivo(nome: string) {
   if (!nomeValido(nome)) return null;
   try {
-    return await storage.getObjectEntityFile(`/objects/${prefixoUploads()}/${nome}`);
+    const { ObjectStorageService } = await objetos();
+    return await new ObjectStorageService().getObjectEntityFile(`/objects/${prefixoUploads()}/${nome}`);
   } catch (erro) {
     if (arquivoInexistente(erro)) return null;
     throw erro;
