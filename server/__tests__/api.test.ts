@@ -249,6 +249,12 @@ export async function rodar() {
     const cts = (await admin.get("/api/admin/contatos")).json.contatos;
     assert.ok(cts.every((c: any) => c.nome !== "Bia" && c.mensagem !== "oi"));                  // contatos anonimizados
 
+    // foto publicada: aberta a todos e com cache
+    const fotoPub = (await admin.get(`/api/admin/fazendas/${id}`)).json.fotos[0].arquivo;
+    const rf = await fetch(`${t.base}/uploads/${fotoPub}`);
+    assert.equal(rf.status, 200);
+    assert.ok(String(rf.headers.get("cache-control")).includes("max-age"));
+
     // ---------- mapa de região, robots, sitemap ----------
     await admin.put(`/api/admin/fazendas/${id}`, { latitude: -16.89, longitude: -43.01, mostrar_regiao: true });
     const dr = (await anon.get(`/api/public/fazendas/${d.slug}`)).json;
@@ -277,6 +283,11 @@ export async function rodar() {
     assert.equal((await anon.get(`/api/public/fazendas/${d.slug}`)).status, 404);
     assert.equal((await anon.get("/api/public/home")).json.slides[0].link, null);       // slide não aponta para fazenda fora do ar
     assert.equal((await anon.get("/sitemap.xml")).texto.includes(d.slug), false);          // arquivada sai do sitemap
+    // foto de fazenda não publicada: só o admin abre
+    const fotoArq = (await admin.get(`/api/admin/fazendas/${id}`)).json.fotos[0].arquivo;
+    assert.equal((await anon.get(`/uploads/${fotoArq}`)).status, 404);
+    assert.equal((await admin.get(`/uploads/${fotoArq}`)).status, 200);
+    assert.equal((await anon.get("/uploads/..%2f..%2fetc%2fpasswd")).status, 404);
     assert.equal((await admin.del(`/api/admin/fazendas/${id}`)).status, 200);
     assert.equal((await admin.get(`/api/admin/fazendas/${id}`)).status, 404);
   } finally {

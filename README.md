@@ -18,13 +18,12 @@ Banco, chaves e domínio **próprios** — este projeto não compartilha banco c
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | 1ª execução | cria o admin (senha mín. 8; troque depois) |
 | `HUB_API_URL`, `HUB_API_KEY` | para enriquecer/pesquisar | Hub (`https://api.mavrionconnect.com.br`); criar uma chave só para este site e acrescentá-la em `API_KEYS` da Hub |
 | `ANTHROPIC_API_KEY` | para texto por IA | opcional (`ANTHROPIC_MODEL` ajusta o modelo) |
-| `UPLOADS_DIR` | sim (produção, salvo App Storage) | pasta em disco PERSISTENTE das fotos |
-| `PRIVATE_OBJECT_DIR` | opcional | só no Replit: usa o App Storage em vez de disco (exige `@google-cloud/storage`, já nas dependências); UPLOADS_DIR vira o prefixo dos objetos |
+| `UPLOADS_DIR` | sim (produção) | pasta em disco PERSISTENTE das fotos |
 | `SITE_URL` | recomendado | endereço público (links de compartilhamento) |
 | `PORT` | não | padrão 5000 |
 
 ## Fotos
-Padrão: disco local (`UPLOADS_DIR`), funciona em qualquer servidor — faça backup da pasta. No Replit pode-se usar o App Storage (`PRIVATE_OBJECT_DIR`). Em ambos, fotos de fazendas não publicadas só o administrador acessa (no modo App Storage; no disco, os nomes são aleatórios e não listáveis).
+Ficam em disco (`UPLOADS_DIR`), sem dependência de nenhum provedor: faça backup dessa pasta. Fotos de fazendas não publicadas só o administrador abre; as publicadas têm cache de 1 dia. O GPS é removido no envio.
 
 ## Contas e senhas
 - Sem serviço de e-mail: quem esquece a senha pede um link ao corretor (WhatsApp); no painel, Usuários → "Link de nova senha" (uso único, 1 hora).

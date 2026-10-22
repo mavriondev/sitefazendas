@@ -90,7 +90,7 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     const limpa = sanitizarImagem(buf); // remove EXIF/GPS; rejeita o que não for JPEG/PNG
     if (!limpa) return null;
     const nome = `${crypto.randomBytes(16).toString("hex")}.${limpa.tipo === "jpeg" ? "jpg" : "png"}`;
-    await salvarArquivo(op.uploadsDir, nome, limpa.dados, limpa.tipo === "jpeg" ? "image/jpeg" : "image/png");
+    await salvarArquivo(op.uploadsDir, nome, limpa.dados);
     return nome;
   }
   const apagarArquivo = (nome: string | null) => { void apagarArquivoUpload(op.uploadsDir, nome); };

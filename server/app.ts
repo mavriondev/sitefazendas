@@ -12,7 +12,7 @@ import { registrarRotasPesquisa } from "./routes/pesquisa";
 import { lerConfig } from "./config";
 import { obterPublicaPorSlug } from "./lib/publico";
 import type { Hub } from "./lib/hub";
-import { arquivoInexistente, armazenamentoPersistenteAtivo, buscarArquivo } from "./lib/arquivos";
+import { caminhoDoArquivo } from "./lib/arquivos";
 
 export interface OpcoesApp {
   db: Db;
@@ -83,45 +83,26 @@ export function criarApp(o: OpcoesApp): Express {
   });
   app.use(["/admin", "/redefinir-senha"], (_req, res, next) => { res.setHeader("X-Robots-Tag", "noindex, nofollow"); next(); });
 
-  if (armazenamentoPersistenteAtivo()) {
-    app.get("/uploads/:arquivo", async (req, res, next) => {
-      try {
-        const nome = String(req.params.arquivo);
-        if (!/^[a-f0-9]{32}\.(jpg|png)$/.test(nome)) return res.status(404).end();
-        const publico = await o.db.query<{ publico: boolean }>(
-          `SELECT
-             EXISTS (SELECT 1 FROM fazenda_fotos p JOIN fazendas f ON f.id=p.fazenda_id
-                     WHERE p.arquivo=$1 AND f.status='publicada')
-             OR EXISTS (SELECT 1 FROM slides s WHERE s.arquivo=$1 AND s.ativo) AS publico`,
-          [nome],
-        );
-        if (!publico.rows[0]?.publico && (req as any).usuario?.papel !== "admin") {
-          return res.status(404).end();
-        }
-        const arquivo = await buscarArquivo(nome);
-        if (!arquivo) return res.status(404).end();
-        let metadata;
-        let conteudo: Buffer;
-        try {
-          [metadata] = await arquivo.getMetadata();
-          [conteudo] = await arquivo.download();
-        } catch (erro) {
-          if (arquivoInexistente(erro)) return res.status(404).end();
-          throw erro;
-        }
-        res.setHeader("Content-Type", metadata.contentType || (nome.endsWith(".png") ? "image/png" : "image/jpeg"));
-        // Foto publicada pode ser guardada em cache; rascunho (só admin vê) nunca.
-        res.setHeader("Cache-Control", publico.rows[0]?.publico ? "public, max-age=86400" : "private, no-store");
-        res.setHeader("X-Content-Type-Options", "nosniff");
-        res.setHeader("Content-Length", conteudo.byteLength);
-        res.end(conteudo);
-      } catch (erro) {
-        next(erro);
-      }
-    });
-  } else {
-    app.use("/uploads", express.static(o.uploadsDir, { index: false, dotfiles: "deny", maxAge: "7d", fallthrough: false }));
-  }
+  // Fotos: publicadas ficam em cache; de fazendas não publicadas só o administrador abre (404 para os demais).
+  app.get("/uploads/:arquivo", async (req, res, next) => {
+    try {
+      const nome = String(req.params.arquivo);
+      const caminho = caminhoDoArquivo(o.uploadsDir, nome);
+      if (!caminho) return res.status(404).end();
+      const r = await o.db.query<{ publico: boolean }>(
+        `SELECT
+           EXISTS (SELECT 1 FROM fazenda_fotos p JOIN fazendas f ON f.id=p.fazenda_id WHERE p.arquivo=$1 AND f.status='publicada')
+           OR EXISTS (SELECT 1 FROM slides s WHERE s.arquivo=$1 AND s.ativo) AS publico`,
+        [nome],
+      );
+      const publico = !!r.rows[0]?.publico;
+      if (!publico && (req as any).usuario?.papel !== "admin") return res.status(404).end();
+      res.setHeader("Cache-Control", publico ? "public, max-age=86400" : "private, no-store");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.type(nome.endsWith(".png") ? "image/png" : "image/jpeg");
+      res.sendFile(caminho, { dotfiles: "deny" }, (err) => { if (err) { if (!res.headersSent) res.status(404).end(); } });
+    } catch (e) { next(e); }
+  });
 
   // Front-end compilado + metadados de compartilhamento (WhatsApp/Facebook leem o HTML, não rodam JS).
   if (o.clientDir && fs.existsSync(path.join(o.clientDir, "index.html"))) {

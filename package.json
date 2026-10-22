@@ -1,5 +1,5 @@
 {
-  "name": "@workspace/sitefazendas",
+  "name": "sitefazendas",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -16,7 +16,6 @@
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
     "express-session": "^1.18.1",
-    "@google-cloud/storage": "^7.16.0",
     "helmet": "^8.0.0",
     "leaflet": "^1.9.4",
     "multer": "^2.0.2",
