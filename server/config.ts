@@ -7,6 +7,12 @@ export interface ConfigSite {
   aviso_intermediacao: string;
   hero_titulo: string;
   hero_subtitulo: string;
+  sobre_titulo: string;
+  sobre_texto: string;
+  contato_email: string;
+  contato_endereco: string;
+  contato_horario: string;
+  instagram_url: string;
   /** Interruptor do módulo B (pesquisa de terras). Desligado por padrão. */
   modulo_pesquisa_ativo: boolean;
   /** Limite de consultas por usuário por hora no módulo B. */
@@ -21,6 +27,13 @@ export const CONFIG_PADRAO: ConfigSite = {
     "As informações são indicativas, obtidas de fontes públicas e do vendedor, e não substituem a verificação documental. O acesso ao imóvel e aos dados completos é feito exclusivamente por intermediação.",
   hero_titulo: "Fazendas selecionadas",
   hero_subtitulo: "Terras com dados verificados e atendimento direto.",
+  sobre_titulo: "Sobre nós",
+  sobre_texto:
+    "Somos uma equipe especializada na intermediação de fazendas e propriedades rurais.\n\nApresentamos cada propriedade com dados claros e a indicação de onde cada informação vem: o que foi confirmado com o vendedor, em documento ou em visita, e o que vem de bases públicas e modelos.\n\nPor proteção dos proprietários, a localização exata, o código do CAR e os limites das propriedades só são informados em atendimento direto.",
+  contato_email: "",
+  contato_endereco: "",
+  contato_horario: "",
+  instagram_url: "",
   modulo_pesquisa_ativo: false,
   pesquisa_limite_hora: 30,
 };
@@ -40,7 +53,8 @@ export async function gravarConfig(db: Db, parcial: Record<string, unknown>): Pr
     if (!(CHAVES as string[]).includes(k)) return `configuração desconhecida: ${k}`;
     const tipoEsperado = typeof CONFIG_PADRAO[k as keyof ConfigSite];
     if (typeof v !== tipoEsperado) return `${k} deve ser ${tipoEsperado}`;
-    if (typeof v === "string" && v.length > 2000) return `${k} muito longo`;
+    if (typeof v === "string" && v.length > 8000) return `${k} muito longo`;
+    if (k === "instagram_url" && v && !/^https:\/\//i.test(v as string)) return "instagram_url deve começar com https://";
     if (k === "pesquisa_limite_hora" && (!Number.isInteger(v) || (v as number) < 1 || (v as number) > 1000)) return "pesquisa_limite_hora deve ser inteiro de 1 a 1000";
   }
   for (const [k, v] of Object.entries(parcial)) {

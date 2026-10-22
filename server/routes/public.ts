@@ -23,7 +23,14 @@ export function registrarRotasPublicas(app: Express, db: Db, opts: { limitar: bo
       nome_site: c.nome_site, whatsapp_padrao: c.whatsapp_padrao, texto_creci: c.texto_creci,
       aviso_intermediacao: c.aviso_intermediacao, hero_titulo: c.hero_titulo, hero_subtitulo: c.hero_subtitulo,
       modulo_pesquisa_ativo: c.modulo_pesquisa_ativo,
+      sobre_titulo: c.sobre_titulo, sobre_texto: c.sobre_texto, contato_email: c.contato_email,
+      contato_endereco: c.contato_endereco, contato_horario: c.contato_horario, instagram_url: c.instagram_url,
     });
+  });
+
+  app.get("/api/public/parceiros", async (_req, res) => {
+    const r = await db.query("SELECT id, nome, arquivo, url FROM parceiros WHERE ativo ORDER BY ordem, id");
+    res.json({ parceiros: r.rows.map((x: any) => ({ id: x.id, nome: x.nome, logo: x.arquivo ? `/uploads/${x.arquivo}` : null, url: x.url })) });
   });
 
   app.get("/api/public/home", async (_req, res) => {
@@ -52,6 +59,7 @@ export function registrarRotasPublicas(app: Express, db: Db, opts: { limitar: bo
       area_min: num(q.area_min), area_max: num(q.area_max),
       altitude_min: num(q.altitude_min), altitude_max: num(q.altitude_max),
       argila_min: num(q.argila_min), argila_max: num(q.argila_max),
+      relevo: txt(q.relevo, 20), com_agua: q.com_agua === "1", com_energia: q.com_energia === "1", ordem: txt(q.ordem, 20),
       limite: num(q.limite), deslocamento: num(q.deslocamento),
     };
     const c = await lerConfig(db);
@@ -80,9 +88,21 @@ export function registrarRotasPublicas(app: Express, db: Db, opts: { limitar: bo
       if (!f.rows[0]) return res.status(404).json({ message: "Fazenda não encontrada." });
       fazendaId = f.rows[0].id;
     }
+    // Origem: vitrine (de uma fazenda), contato (página Contato) ou anuncio (quer vender). O anúncio guarda os dados da fazenda na mensagem.
+    const origem = fazendaId ? "vitrine" : b.tipo === "anuncio" ? "anuncio" : "contato";
+    let mensagem = txt(b.mensagem, 1000) ?? "";
+    if (origem === "anuncio") {
+      const extra = [
+        txt(b.regiao_fazenda, 120) && `Região/município: ${txt(b.regiao_fazenda, 120)}`,
+        txt(b.area_fazenda, 40) && `Área aproximada: ${txt(b.area_fazenda, 40)}`,
+        txt(b.car_fazenda, 60) && `CAR: ${txt(b.car_fazenda, 60)}`,
+        txt(b.culturas_fazenda, 120) && `Culturas: ${txt(b.culturas_fazenda, 120)}`,
+      ].filter(Boolean).join("\n");
+      mensagem = [extra, mensagem].filter(Boolean).join("\n");
+    }
     await db.query(
-      `INSERT INTO contatos (fazenda_id, usuario_id, nome, whatsapp, email, mensagem, origem) VALUES ($1,$2,$3,$4,$5,$6,'vitrine')`,
-      [fazendaId, (req as any).usuario?.id ?? null, nome, tel, email, txt(b.mensagem, 1000) ?? null],
+      `INSERT INTO contatos (fazenda_id, usuario_id, nome, whatsapp, email, mensagem, origem) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [fazendaId, (req as any).usuario?.id ?? null, nome, tel, email, mensagem || null, origem],
     );
     res.status(201).json({ ok: true });
   });

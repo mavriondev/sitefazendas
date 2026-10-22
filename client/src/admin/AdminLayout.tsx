@@ -11,6 +11,7 @@ export default function AdminLayout() {
         <NavLink to="/admin" end>Fazendas</NavLink>
         <NavLink to="/admin/contatos">Contatos</NavLink>
         <NavLink to="/admin/slides">Slides da home</NavLink>
+        <NavLink to="/admin/parceiros">Parceiros</NavLink>
         <NavLink to="/admin/usuarios">Usuários</NavLink>
         <NavLink to="/admin/config">Configurações</NavLink>
       </nav>

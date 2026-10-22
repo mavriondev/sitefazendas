@@ -16,6 +16,8 @@ export default function Home() {
   const { config } = useSite();
   const [dados, setDados] = useState<{ slides: SlideItem[]; destaques: FazendaPublica[] } | null>(null);
   const [erro, setErro] = useState(false);
+  const [parceiros, setParceiros] = useState<Array<{ id: number; nome: string; logo: string | null }>>([]);
+  useEffect(() => { void api.get("/api/public/parceiros").then((r) => setParceiros(r.parceiros)).catch(() => {}); }, []);
   useEffect(() => {
     let ativo = true;
     void api.get("/api/public/home").then((resposta) => { if (ativo) setDados(resposta); }).catch(() => { if (ativo) setErro(true); });
@@ -53,13 +55,19 @@ export default function Home() {
           <div className="passos">{PASSOS.map(([n, t, d]) => <div className="passo" key={n}><div className="n">{n}</div><h3>{t}</h3><p>{d}</p></div>)}</div>
         </section>
       </div>
+      {parceiros.length > 0 && (
+        <section className="container secao">
+          <div className="cab"><div><span className="rotulo-sec">Rede</span><h2>Parceiros</h2></div><span className="espaco" /><Link className="link-seta" to="/parceiros">Ver todos</Link></div>
+          <div className="parceiros-faixa">{parceiros.slice(0, 8).map((p) => <div key={p.id} className="parceiro-mini" title={p.nome}>{p.logo ? <img src={p.logo} alt={p.nome} loading="lazy" /> : <span>{p.nome}</span>}</div>)}</div>
+        </section>
+      )}
       <section className="faixa"><div className="container">
         <div><span className="rotulo-sec" style={{ color: "var(--lima)" }}>Atendimento direto</span><h2>Quer vender ou comprar com reserva?</h2>
           <p>{config?.aviso_intermediacao || "Atuamos na intermediação de negócios rurais."}</p></div>
         <div className="linha">
           <Link className="btn lima" to="/fazendas">Explorar fazendas</Link>
+          <Link className="btn fantasma" to="/venda-sua-fazenda">Vender minha fazenda</Link>
           {config?.modulo_pesquisa_ativo && <Link className="btn fantasma" to="/pesquisa">Pesquisar terras</Link>}
-          {!config?.modulo_pesquisa_ativo && <Link className="btn fantasma" to="/cadastro">Criar cadastro</Link>}
         </div>
       </div></section>
     </>

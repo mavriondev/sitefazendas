@@ -3,6 +3,11 @@
 Vitrine pública de fazendas + painel do corretor + (opcional) pesquisa de terras sobre a Hub API do Mavrion Connect.
 Banco, chaves e domínio **próprios** — este projeto não compartilha banco com o Mavrion Connect.
 
+## Páginas
+Início, Fazendas (catálogo com filtros avançados: região, cultura, área, altitude, argila, relevo, água, energia, ordenação e paginação), Sobre, Parceiros (logos), Venda sua fazenda (com ou sem CAR), Contato, Pesquisa de terras (se ligada), Entrar/Cadastrar, Minha conta e Política de privacidade. O menu fica sempre visível no topo.
+Painel: fazendas, contatos (origem: fazenda, pesquisa, contato, quer vender), slides, parceiros, usuários e configurações (inclui os textos de Sobre e Contato).
+Os filtros do catálogo só enxergam dados públicos e agem sobre as mesmas faixas mostradas nos anúncios (não revelam o valor exato).
+
 ## Regras de dados (não quebrar)
 - Dado automático nunca vira "confirmado"; só o corretor confirma (vendedor, documento ou visita).
 - "Não detectado" não prova ausência; falha de fonte = "sem dado".

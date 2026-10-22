@@ -76,8 +76,11 @@ export function criarApp(o: OpcoesApp): Express {
     try {
       const base = baseDe(req);
       const r = await o.db.query<{ slug: string; atualizado_em: string }>("SELECT slug, atualizado_em FROM fazendas WHERE status='publicada' ORDER BY id");
-      const urls = [`<url><loc>${esc(base)}/</loc></url>`, `<url><loc>${esc(base)}/fazendas</loc></url>`,
-        ...r.rows.map((x) => `<url><loc>${esc(`${base}/fazenda/${x.slug}`)}</loc><lastmod>${new Date(x.atualizado_em).toISOString().slice(0, 10)}</lastmod></url>`)];
+      const fixas = ["/", "/fazendas", "/sobre", "/parceiros", "/venda-sua-fazenda", "/contato"];
+      const urls = [
+        ...fixas.map((c) => `<url><loc>${esc(base + c)}</loc></url>`),
+        ...r.rows.map((x) => `<url><loc>${esc(`${base}/fazenda/${x.slug}`)}</loc><lastmod>${new Date(x.atualizado_em).toISOString().slice(0, 10)}</lastmod></url>`),
+      ];
       res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>\n`);
     } catch (e) { next(e); }
   });
@@ -92,7 +95,8 @@ export function criarApp(o: OpcoesApp): Express {
       const r = await o.db.query<{ publico: boolean }>(
         `SELECT
            EXISTS (SELECT 1 FROM fazenda_fotos p JOIN fazendas f ON f.id=p.fazenda_id WHERE p.arquivo=$1 AND f.status='publicada')
-           OR EXISTS (SELECT 1 FROM slides s WHERE s.arquivo=$1 AND s.ativo) AS publico`,
+           OR EXISTS (SELECT 1 FROM slides s WHERE s.arquivo=$1 AND s.ativo)
+           OR EXISTS (SELECT 1 FROM parceiros pr WHERE pr.arquivo=$1 AND pr.ativo) AS publico`,
         [nome],
       );
       const publico = !!r.rows[0]?.publico;

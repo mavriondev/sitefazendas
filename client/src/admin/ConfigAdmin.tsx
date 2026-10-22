@@ -40,6 +40,16 @@ export default function ConfigAdmin() {
         <label htmlFor="av">Aviso de intermediação (rodapé)</label><textarea id="av" rows={3} value={c.aviso_intermediacao} onChange={set("aviso_intermediacao")} />
         <button className="btn" onClick={() => salvar({ nome_site: c.nome_site, whatsapp_padrao: c.whatsapp_padrao, hero_titulo: c.hero_titulo, hero_subtitulo: c.hero_subtitulo, texto_creci: c.texto_creci, aviso_intermediacao: c.aviso_intermediacao })}>Salvar</button>
       </div>
+      <div className="painel">
+        <h3>Páginas Sobre e Contato</h3>
+        <label htmlFor="st">Título da página Sobre</label><input id="st" value={c.sobre_titulo} onChange={set("sobre_titulo")} />
+        <label htmlFor="sx">Texto do Sobre (deixe uma linha em branco entre parágrafos)</label><textarea id="sx" rows={10} value={c.sobre_texto} onChange={set("sobre_texto")} />
+        <label htmlFor="ce">E-mail de contato</label><input id="ce" type="email" value={c.contato_email} onChange={set("contato_email")} />
+        <label htmlFor="cd">Endereço</label><input id="cd" value={c.contato_endereco} onChange={set("contato_endereco")} />
+        <label htmlFor="ch">Horário de atendimento</label><input id="ch" value={c.contato_horario} onChange={set("contato_horario")} />
+        <label htmlFor="ig">Instagram (endereço completo, https://...)</label><input id="ig" value={c.instagram_url} onChange={set("instagram_url")} />
+        <button className="btn" onClick={() => salvar({ sobre_titulo: c.sobre_titulo, sobre_texto: c.sobre_texto, contato_email: c.contato_email, contato_endereco: c.contato_endereco, contato_horario: c.contato_horario, instagram_url: c.instagram_url })}>Salvar</button>
+      </div>
     </>
   );
 }

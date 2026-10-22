@@ -123,11 +123,23 @@ export function validarPublicacao(f: FazendaRow, fotos: FotoRow[], atributos: At
 export interface FiltrosPublicos {
   regiao?: string; cultura?: string; area_min?: number; area_max?: number;
   altitude_min?: number; altitude_max?: number; argila_min?: number; argila_max?: number;
+  relevo?: string; com_agua?: boolean; com_energia?: boolean; ordem?: string;
   limite?: number; deslocamento?: number;
 }
 
-const SUB_NUM = (chave: string, op: string, p: string) =>
-  `EXISTS (SELECT 1 FROM fazenda_atributos a WHERE a.fazenda_id = f.id AND a.chave = '${chave}' AND a.estado <> 'sem_dado' AND a.achado = 'detectado' AND (a.valor_json #>> '{}')::numeric ${op} ${p})`;
+export const RELEVOS: Record<string, [number, number]> = {
+  plano: [0, 3], "suave ondulado": [3, 8], ondulado: [8, 20], "forte ondulado": [20, 45], montanhoso: [45, 1e6],
+};
+
+// Os filtros só enxergam atributos PÚBLICOS e agem sobre a mesma faixa que a vitrine mostra: filtrar não pode
+// revelar o valor exato nem dados privados (ex.: afunilar "altitude ≥ 812" para descobrir o número).
+const ATTR = (chave: string, cond: string) =>
+  `EXISTS (SELECT 1 FROM fazenda_atributos a WHERE a.fazenda_id = f.id AND a.chave = '${chave}' AND a.publico AND a.estado <> 'sem_dado' AND a.achado = 'detectado' AND ${cond})`;
+const VAL = "(a.valor_json #>> '{}')::numeric";
+const baixo = (v: number, p: number) => Math.floor(v / p) * p;
+const alto = (v: number, p: number) => Math.ceil(v / p) * p;
+const AREA_LOW = "(CASE WHEN f.area_ha < 100 THEN 0 WHEN f.area_ha < 500 THEN 100 WHEN f.area_ha < 1000 THEN 500 WHEN f.area_ha < 2500 THEN 1000 WHEN f.area_ha < 5000 THEN 2500 WHEN f.area_ha < 10000 THEN 5000 ELSE 10000 END)";
+const AREA_HIGH = "(CASE WHEN f.area_ha < 100 THEN 100 WHEN f.area_ha < 500 THEN 500 WHEN f.area_ha < 1000 THEN 1000 WHEN f.area_ha < 2500 THEN 2500 WHEN f.area_ha < 5000 THEN 5000 WHEN f.area_ha < 10000 THEN 10000 ELSE 1e12 END)";
 
 export function montarFiltros(filtros: FiltrosPublicos): { where: string; params: unknown[] } {
   const w: string[] = ["f.status = 'publicada'"];
@@ -135,12 +147,23 @@ export function montarFiltros(filtros: FiltrosPublicos): { where: string; params
   const add = (cond: (n: string) => string, v: unknown) => { p.push(v); w.push(cond(`$${p.length}`)); };
   if (filtros.regiao) add((n) => `f.regiao_publica ILIKE '%' || ${n} || '%'`, filtros.regiao.slice(0, 100));
   if (filtros.cultura) add((n) => `EXISTS (SELECT 1 FROM unnest(f.culturas) c WHERE c ILIKE ${n})`, filtros.cultura.slice(0, 60));
-  if (filtros.area_min != null) add((n) => `f.area_ha >= ${n}`, filtros.area_min);
-  if (filtros.area_max != null) add((n) => `f.area_ha <= ${n}`, filtros.area_max);
-  if (filtros.altitude_min != null) add((n) => SUB_NUM("altitude_media", ">=", n), filtros.altitude_min);
-  if (filtros.altitude_max != null) add((n) => SUB_NUM("altitude_media", "<=", n), filtros.altitude_max);
-  if (filtros.argila_min != null) add((n) => SUB_NUM("argila_media", ">=", n), filtros.argila_min);
-  if (filtros.argila_max != null) add((n) => SUB_NUM("argila_media", "<=", n), filtros.argila_max);
+  // Área: exata onde a vitrine mostra o número exato; por faixa onde mostra faixa.
+  if (filtros.area_min != null) add((n) => `((f.area_exibicao = 'exata' AND f.area_ha >= ${n}) OR (f.area_exibicao = 'faixa' AND ${AREA_HIGH} > ${n}))`, filtros.area_min);
+  if (filtros.area_max != null) add((n) => `((f.area_exibicao = 'exata' AND f.area_ha <= ${n}) OR (f.area_exibicao = 'faixa' AND ${AREA_LOW} < ${n}))`, filtros.area_max);
+  const faixaAttr = (chave: string, passo: number, min?: number, max?: number) => {
+    const bucket = `floor(${VAL} / ${passo}) * ${passo}`;
+    if (min != null) add((n) => ATTR(chave, `${bucket} >= ${n}`), baixo(min, passo));
+    if (max != null) add((n) => ATTR(chave, `${bucket} + ${passo} <= ${n}`), alto(max, passo));
+  };
+  faixaAttr("altitude_media", 100, filtros.altitude_min, filtros.altitude_max);
+  faixaAttr("argila_media", 5, filtros.argila_min, filtros.argila_max);
+  if (filtros.relevo && RELEVOS[filtros.relevo]) {
+    const [lo, hi] = RELEVOS[filtros.relevo];
+    p.push(lo, hi);
+    w.push(ATTR("declividade_media", `${VAL} >= $${p.length - 1} AND ${VAL} < $${p.length}`));
+  }
+  if (filtros.com_agua) w.push(ATTR("agua", "TRUE"));
+  if (filtros.com_energia) w.push(ATTR("energia", "TRUE"));
   return { where: w.join(" AND "), params: p };
 }
 
@@ -154,13 +177,20 @@ async function carregarRelacionados(db: Db, ids: number[]) {
   return { attrs, fotos };
 }
 
+function ordenacao(ordem?: string): string {
+  if (ordem === "maior_area") return "f.area_ha DESC NULLS LAST, f.id DESC";
+  if (ordem === "menor_area") return "f.area_ha ASC NULLS LAST, f.id DESC";
+  if (ordem === "recentes") return "f.publicado_em DESC NULLS LAST, f.id DESC";
+  return "f.destaque DESC, f.destaque_ordem, f.publicado_em DESC NULLS LAST, f.id DESC";
+}
+
 export async function listarPublicas(db: Db, filtros: FiltrosPublicos, whatsappPadrao: string) {
   const { where, params } = montarFiltros(filtros);
   const limite = Math.min(Math.max(filtros.limite ?? 24, 1), 60);
   const desloc = Math.max(filtros.deslocamento ?? 0, 0);
   const total = await db.query<{ n: string }>(`SELECT COUNT(*) AS n FROM fazendas f WHERE ${where}`, params);
   const r = await db.query<FazendaRow>(
-    `SELECT f.* FROM fazendas f WHERE ${where} ORDER BY f.destaque DESC, f.destaque_ordem, f.publicado_em DESC NULLS LAST, f.id DESC LIMIT ${limite} OFFSET ${desloc}`,
+    `SELECT f.* FROM fazendas f WHERE ${where} ORDER BY ${ordenacao(filtros.ordem)} LIMIT ${limite} OFFSET ${desloc}`,
     params,
   );
   const { attrs, fotos } = await carregarRelacionados(db, r.rows.map((x) => x.id));

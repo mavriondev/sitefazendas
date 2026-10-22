@@ -122,6 +122,17 @@ export const MIGRACOES: string[] = [
     resultados INTEGER,
     criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
+  `CREATE TABLE IF NOT EXISTS parceiros (
+    id SERIAL PRIMARY KEY,
+    nome TEXT NOT NULL,
+    arquivo TEXT,
+    url TEXT,
+    ordem INTEGER NOT NULL DEFAULT 0,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE
+  )`,
+  // Origens de contato: vitrine (de uma fazenda), pesquisa (módulo B), contato (página Contato), anuncio (quer vender a fazenda).
+  `ALTER TABLE contatos DROP CONSTRAINT IF EXISTS contatos_origem_check`,
+  `ALTER TABLE contatos ADD CONSTRAINT contatos_origem_check CHECK (origem IN ('vitrine','pesquisa','contato','anuncio'))`,
   // Redefinição de senha sem e-mail: o admin gera um link de uso único (guardamos só o hash do token).
   `ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS reset_hash TEXT`,
   `ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS reset_expira TIMESTAMPTZ`,

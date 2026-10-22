@@ -24,15 +24,15 @@ export default function ContatosAdmin() {
       <h1>Contatos</h1>
       <Erro erro={erro} />
       <table className="tabela">
-        <thead><tr><th>Quando</th><th>Quem</th><th>Interesse</th><th>Mensagem</th><th></th></tr></thead>
+        <thead><tr><th>Quando</th><th>Quem</th><th>Origem / interesse</th><th>Mensagem</th><th></th></tr></thead>
         <tbody>{l.map((c) => {
           const wa = linkWhatsapp(c.whatsapp, `Olá ${c.nome}, aqui é sobre seu interesse${c.fazenda_titulo ? ` na fazenda ${c.fazenda_titulo}` : ""}.`);
           return (
             <tr key={c.id}>
               <td>{new Date(c.criado_em).toLocaleString("pt-BR")}</td>
               <td>{c.nome}<br />{wa ? <a href={wa} target="_blank" rel="noopener noreferrer">{c.whatsapp}</a> : c.whatsapp}{c.email && <><br />{c.email}</>}</td>
-              <td>{c.fazenda_titulo ?? (c.pesquisa_cod_imovel ? `Pesquisa (${c.pesquisa_uf}) CAR ${c.pesquisa_cod_imovel}` : "—")}</td>
-              <td>{c.mensagem}</td>
+              <td><span className="etiqueta">{({ vitrine: "Fazenda", pesquisa: "Pesquisa", contato: "Contato", anuncio: "Quer vender" } as Record<string, string>)[c.origem] ?? c.origem}</span><br />{c.fazenda_titulo ?? (c.pesquisa_cod_imovel ? `(${c.pesquisa_uf}) CAR ${c.pesquisa_cod_imovel}` : "")}</td>
+              <td style={{ whiteSpace: "pre-line" }}>{c.mensagem}</td>
               <td><button className="btn sec" onClick={() => status(c.id, c.status === "novo" ? "atendido" : "novo")}>{c.status === "novo" ? "Marcar atendido" : "Reabrir"}</button></td>
             </tr>);
         })}{l.length === 0 && <tr><td colSpan={5} className="suave">Nenhum contato ainda.</td></tr>}</tbody>

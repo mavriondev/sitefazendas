@@ -219,6 +219,48 @@ export async function rodar() {
     assert.equal((await ana.get("/api/auth/eu")).json.usuario, null);
     assert.equal((await admin.put("/api/admin/usuarios/1", { bloqueado: true })).status, 400); // admin não se bloqueia
 
+    // ---------- filtros: só atributos públicos, na mesma faixa que a vitrine mostra ----------
+    const filtrar = async (q: string) => (await anon.get(`/api/public/fazendas?${q}`)).json.total as number;
+    assert.equal(await filtrar("altitude_min=700&altitude_max=900"), 1);
+    assert.equal(await filtrar("altitude_min=851"), 1);          // 851 vira 800: não revela que o valor real é 850
+    assert.equal(await filtrar("altitude_min=900"), 0);
+    assert.equal(await filtrar("altitude_max=850"), 1);          // 850 sobe para 900: não revela o valor real
+    assert.equal(await filtrar("altitude_max=799"), 0);
+    assert.equal(await filtrar("altitude_max=900"), 1);
+    assert.equal(await filtrar("com_energia=1"), 1);
+    assert.equal(await filtrar("com_agua=1"), 0);
+    assert.equal(await filtrar("relevo=plano"), 0);
+    assert.equal(await filtrar("ordem=maior_area"), 1);
+    await admin.put(`/api/admin/fazendas/${id}/atributos/altitude_media/publico`, { publico: false });
+    assert.equal(await filtrar("altitude_min=700&altitude_max=900"), 0);  // atributo privado não é filtrável
+    await admin.put(`/api/admin/fazendas/${id}/atributos/altitude_media/publico`, { publico: true });
+    assert.equal(await filtrar("altitude_min=700&altitude_max=900"), 1);
+
+    // ---------- parceiros, contato e venda ----------
+    assert.equal((await anon.post("/api/admin/parceiros", { nome: "X" })).status, 401);
+    assert.equal((await admin.post("/api/admin/parceiros", { nome: "" })).status, 400);
+    assert.equal((await admin.post("/api/admin/parceiros", { nome: "Marca", url: "javascript:alert(1)" })).status, 400);
+    const pid = (await admin.post("/api/admin/parceiros", { nome: "Marca Parceira", url: "https://exemplo.com", ordem: 1 })).json.id;
+    assert.equal((await admin.upload(`/api/admin/parceiros/${pid}/logo`, jpegComExif())).status, 200);
+    const pubParc = (await anon.get("/api/public/parceiros")).json.parceiros;
+    assert.equal(pubParc.length, 1);
+    assert.ok(pubParc[0].logo.startsWith("/uploads/"));
+    assert.equal((await fetch(`${t.base}${pubParc[0].logo}`)).status, 200);   // logo de parceiro ativo é público
+    await admin.put(`/api/admin/parceiros/${pid}`, { nome: "Marca Parceira", ativo: false });
+    assert.equal((await anon.get("/api/public/parceiros")).json.parceiros.length, 0);
+    assert.equal((await anon.get(pubParc[0].logo)).status, 404);              // inativo some, inclusive o arquivo
+    assert.equal((await admin.del(`/api/admin/parceiros/${pid}`)).status, 200);
+    assert.ok((await anon.get("/api/public/config")).json.sobre_texto.length > 20);
+    assert.equal((await admin.put("/api/admin/config", { instagram_url: "http://x" })).status, 400);
+    assert.equal((await admin.put("/api/admin/config", { sobre_titulo: "Quem somos", contato_email: "a@b.com" })).status, 200);
+    assert.equal((await anon.post("/api/public/contato", { tipo: "anuncio", nome: "Vendedor", whatsapp: "62999990000", regiao_fazenda: "Rio Verde", area_fazenda: "1200 ha", car_fazenda: "GO-1", mensagem: "Quero vender" })).status, 201);
+    assert.equal((await anon.post("/api/public/contato", { nome: "Curioso", whatsapp: "62999990001", mensagem: "Dúvida" })).status, 201);
+    const cs = (await admin.get("/api/admin/contatos")).json.contatos;
+    const anun = cs.find((c: any) => c.origem === "anuncio");
+    assert.ok(anun && anun.mensagem.includes("Rio Verde") && anun.mensagem.includes("CAR: GO-1"));
+    assert.ok(cs.some((c: any) => c.origem === "contato"));
+    assert.ok((await anon.get("/sitemap.xml")).texto.includes("/sobre"));
+
     // ---------- senha: trocar, redefinir por link do admin ----------
     const bia = cliente();
     await bia.post("/api/auth/registrar", { nome: "Bia", email: "bia@x.com", senha: "senha-boa-123", whatsapp: "31999991111", aceite: true });

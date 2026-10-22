@@ -375,6 +375,45 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     res.json({ ok: true });
   });
 
+
+  // ---------- parceiros (marcas na página Parceiros) ----------
+  const parceiroValido = (b: any): { erro?: string; v?: any } => {
+    const nome = txt(b.nome, 100);
+    if (!nome) return { erro: "Informe o nome do parceiro." };
+    const url = txt(b.url, 300);
+    if (url && !/^https?:\/\//i.test(url)) return { erro: "O site do parceiro deve começar com http:// ou https://." };
+    return { v: { nome, url, ordem: Number.isInteger(b.ordem) ? b.ordem : 0, ativo: b.ativo !== false } };
+  };
+  app.get("/api/admin/parceiros", exigirAdmin, async (_req, res) => res.json({ parceiros: (await db.query("SELECT * FROM parceiros ORDER BY ordem, id")).rows }));
+  app.post("/api/admin/parceiros", exigirAdmin, async (req, res) => {
+    const { erro, v } = parceiroValido(req.body ?? {});
+    if (erro) return res.status(400).json({ message: erro });
+    const r = await db.query<{ id: number }>("INSERT INTO parceiros (nome, url, ordem, ativo) VALUES ($1,$2,$3,$4) RETURNING id", [v.nome, v.url, v.ordem, v.ativo]);
+    res.status(201).json({ id: r.rows[0].id });
+  });
+  app.put("/api/admin/parceiros/:id", exigirAdmin, async (req, res) => {
+    const { erro, v } = parceiroValido(req.body ?? {});
+    if (erro) return res.status(400).json({ message: erro });
+    await db.query("UPDATE parceiros SET nome=$2, url=$3, ordem=$4, ativo=$5 WHERE id=$1", [idDe(req), v.nome, v.url, v.ordem, v.ativo]);
+    res.json({ ok: true });
+  });
+  app.post("/api/admin/parceiros/:id/logo", exigirAdmin, upload.single("arquivo"), async (req, res) => {
+    const id = idDe(req);
+    const s = await db.query<{ arquivo: string | null }>("SELECT arquivo FROM parceiros WHERE id=$1", [id]);
+    if (!s.rows[0]) return res.status(404).json({ message: "Parceiro não encontrado." });
+    if (!req.file) return res.status(400).json({ message: "Envie um arquivo JPEG ou PNG." });
+    const nome = await salvarImagem(req.file.buffer);
+    if (!nome) return res.status(415).json({ message: "Formato não aceito. Use JPEG ou PNG." });
+    await db.query("UPDATE parceiros SET arquivo=$2 WHERE id=$1", [id, nome]);
+    apagarArquivo(s.rows[0].arquivo);
+    res.json({ ok: true, arquivo: nome });
+  });
+  app.delete("/api/admin/parceiros/:id", exigirAdmin, async (req, res) => {
+    const s = await db.query<{ arquivo: string | null }>("DELETE FROM parceiros WHERE id=$1 RETURNING arquivo", [idDe(req)]);
+    apagarArquivo(s.rows[0]?.arquivo ?? null);
+    res.json({ ok: true });
+  });
+
   // ---------- configurações ----------
   app.get("/api/admin/config", exigirAdmin, async (_req, res) => res.json(await lerConfig(db)));
   app.put("/api/admin/config", exigirAdmin, async (req, res) => {
