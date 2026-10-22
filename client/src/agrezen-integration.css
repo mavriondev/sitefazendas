@@ -239,3 +239,47 @@
   .site-public .ga-logo { width: 100px; }
   .site-public .ga-head-cta svg { display: none; }
 }
+
+/* Selects nativos: seta e texto com espaços próprios em todos os navegadores.
+   Não aplicar a listboxes (multiple/size), que não são comboboxes. */
+.site-public select:not([multiple]):not([size]),
+.site-public select[size="1"]:not([multiple]) {
+  appearance: none;
+  -webkit-appearance: none;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 48px;
+  padding: 10px 44px 10px 14px;
+  border: 1px solid #daddd2;
+  border-radius: 10px;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23496d23' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 18px 18px;
+  color: #263321;
+  font-size: 15px;
+  line-height: normal;
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.site-public select:not(:disabled):hover { border-color: #91a77b; }
+.site-public select:focus-visible { border-color: #496d23; outline: 2px solid #496d23; outline-offset: 2px; }
+.site-public select:disabled { cursor: not-allowed; opacity: .6; }
+.site-public select option { color: #263321; background: #fff; }
+@media(max-width:760px) {
+  .site-public select:not([multiple]):not([size]),
+  .site-public select[size="1"]:not([multiple]) { font-size: 16px; }
+}
+@media(max-width:480px) {
+  /* Nomes de regiões e culturas precisam de mais espaço que os campos numéricos. */
+  .site-public .filtros-lateral .painel > div:has(> select) { grid-column: 1/-1; }
+}
+@media(forced-colors:active) {
+  .site-public select:not([multiple]):not([size]),
+  .site-public select[size="1"]:not([multiple]) { appearance: auto; -webkit-appearance: auto; background-image: none; padding-right: 12px; }
+}

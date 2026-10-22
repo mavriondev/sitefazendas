@@ -70,9 +70,9 @@ export default function Fazendas() {
           <form className="painel" onSubmit={aplicar} aria-label="Filtros">
             <h3>Filtros</h3>
             <div><label htmlFor="regiao">Região</label>
-              <select id="regiao" value={form.regiao} onChange={(e) => setForm({ ...form, regiao: e.target.value })}><option value="">Todas</option>{opcoes.regioes.map((r) => <option key={r}>{r}</option>)}</select></div>
+              <select id="regiao" title={form.regiao || "Todas as regiões"} value={form.regiao} onChange={(e) => setForm({ ...form, regiao: e.target.value })}><option value="">Todas</option>{opcoes.regioes.map((r) => <option key={r}>{r}</option>)}</select></div>
             <div><label htmlFor="cultura">Cultura</label>
-              <select id="cultura" value={form.cultura} onChange={(e) => setForm({ ...form, cultura: e.target.value })}><option value="">Todas</option>{opcoes.culturas.map((r) => <option key={r}>{r}</option>)}</select></div>
+              <select id="cultura" title={form.cultura || "Todas as culturas"} value={form.cultura} onChange={(e) => setForm({ ...form, cultura: e.target.value })}><option value="">Todas</option>{opcoes.culturas.map((r) => <option key={r}>{r}</option>)}</select></div>
             <fieldset><legend>Área (ha)</legend><div className="duas">{campo("area_min", "Mínima")}{campo("area_max", "Máxima")}</div></fieldset>
             <fieldset><legend>Altitude (m)</legend><div className="duas">{campo("altitude_min", "Mínima")}{campo("altitude_max", "Máxima")}</div></fieldset>
             <fieldset><legend>Argila no solo (%)</legend><div className="duas">{campo("argila_min", "Mínima")}{campo("argila_max", "Máxima")}</div></fieldset>
