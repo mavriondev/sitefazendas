@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, type FazendaPublica } from "../api";
 import { CartaoFazenda } from "../components/CartaoFazenda";
+import { Secoes, useConteudo } from "../components/Conteudo";
+import { TopoConteudo } from "./Institucional";
 
 const POR_PAGINA = 12;
 const CAMPOS = ["regiao", "cultura", "area_min", "area_max", "altitude_min", "altitude_max", "argila_min", "argila_max", "ordem"] as const;
@@ -12,6 +14,7 @@ const ROTULOS: Record<string, string> = {
 };
 
 export default function Fazendas() {
+  const {texto:t}=useConteudo("catalogo");
   const [params, setParams] = useSearchParams();
   const numeroPagina = Number(params.get("pagina"));
   const pagina = Number.isFinite(numeroPagina) ? Math.max(1, Math.floor(numeroPagina)) : 1;
@@ -63,37 +66,37 @@ export default function Fazendas() {
   const paginas = dados ? Math.max(1, Math.ceil(dados.total / POR_PAGINA)) : 1;
 
   return (
-    <>
-      <section className="topo-pagina"><div className="container"><span className="rotulo-sec">Catálogo</span><h1>Fazendas à venda</h1><p>Filtre por região, cultura, tamanho, altitude, argila e infraestrutura.</p></div></section>
-      <div className="container pagina catalogo">
+    <Secoes pagina="catalogo" blocos={{
+      topo:<TopoConteudo pagina="catalogo"/>,
+      catalogo:<div className="container pagina catalogo" data-cms-secao="catalogo">
         <aside className="filtros-lateral">
           <form className="painel" onSubmit={aplicar} aria-label="Filtros">
-            <h3>Filtros</h3>
-            <div><label htmlFor="regiao">Região</label>
-              <select id="regiao" title={form.regiao || "Todas as regiões"} value={form.regiao} onChange={(e) => setForm({ ...form, regiao: e.target.value })}><option value="">Todas</option>{opcoes.regioes.map((r) => <option key={r}>{r}</option>)}</select></div>
-            <div><label htmlFor="cultura">Cultura</label>
-              <select id="cultura" title={form.cultura || "Todas as culturas"} value={form.cultura} onChange={(e) => setForm({ ...form, cultura: e.target.value })}><option value="">Todas</option>{opcoes.culturas.map((r) => <option key={r}>{r}</option>)}</select></div>
-            <fieldset><legend>Área (ha)</legend><div className="duas">{campo("area_min", "Mínima")}{campo("area_max", "Máxima")}</div></fieldset>
-            <fieldset><legend>Altitude (m)</legend><div className="duas">{campo("altitude_min", "Mínima")}{campo("altitude_max", "Máxima")}</div></fieldset>
-            <fieldset><legend>Argila no solo (%)</legend><div className="duas">{campo("argila_min", "Mínima")}{campo("argila_max", "Máxima")}</div></fieldset>
-            <fieldset><legend>Infraestrutura</legend><div className="duas">
-              <label className="linha opcao"><input type="checkbox" checked={!!flags.com_agua} onChange={(e) => setFlags({ ...flags, com_agua: e.target.checked })} />Com água</label>
-              <label className="linha opcao"><input type="checkbox" checked={!!flags.com_energia} onChange={(e) => setFlags({ ...flags, com_energia: e.target.checked })} />Com energia elétrica</label>
+            <h3>{t("catalogo.filtros")}</h3>
+            <div><label htmlFor="regiao">{t("catalogo.regiao")}</label>
+              <select id="regiao" title={form.regiao || t("catalogo.todas")} value={form.regiao} onChange={(e) => setForm({ ...form, regiao: e.target.value })}><option value="">{t("catalogo.todas")}</option>{opcoes.regioes.map((r) => <option key={r}>{r}</option>)}</select></div>
+            <div><label htmlFor="cultura">{t("catalogo.cultura")}</label>
+              <select id="cultura" title={form.cultura || t("catalogo.todas")} value={form.cultura} onChange={(e) => setForm({ ...form, cultura: e.target.value })}><option value="">{t("catalogo.todas")}</option>{opcoes.culturas.map((r) => <option key={r}>{r}</option>)}</select></div>
+            <fieldset><legend>{t("catalogo.grupo_area")}</legend><div className="duas">{campo("area_min", t("catalogo.minima"))}{campo("area_max", t("catalogo.maxima"))}</div></fieldset>
+            <fieldset><legend>{t("catalogo.grupo_altitude")}</legend><div className="duas">{campo("altitude_min", t("catalogo.minima"))}{campo("altitude_max", t("catalogo.maxima"))}</div></fieldset>
+            <fieldset><legend>{t("catalogo.grupo_argila")}</legend><div className="duas">{campo("argila_min", t("catalogo.minima"))}{campo("argila_max", t("catalogo.maxima"))}</div></fieldset>
+            <fieldset><legend>{t("catalogo.infraestrutura")}</legend><div className="duas">
+              <label className="linha opcao"><input type="checkbox" checked={!!flags.com_agua} onChange={(e) => setFlags({ ...flags, com_agua: e.target.checked })} />{t("catalogo.com_agua")}</label>
+              <label className="linha opcao"><input type="checkbox" checked={!!flags.com_energia} onChange={(e) => setFlags({ ...flags, com_energia: e.target.checked })} />{t("catalogo.com_energia")}</label>
             </div></fieldset>
-            <div className="filtro-ordem"><label htmlFor="ordem">Ordenar por</label>
+            <div className="filtro-ordem"><label htmlFor="ordem">{t("catalogo.ordem")}</label>
               <select id="ordem" value={form.ordem} onChange={(e) => setForm({ ...form, ordem: e.target.value })}>
-                <option value="">Destaques primeiro</option><option value="recentes">Mais recentes</option><option value="maior_area">Maior área</option><option value="menor_area">Menor área</option>
+                <option value="">{t("catalogo.destaques")}</option><option value="recentes">{t("catalogo.recentes")}</option><option value="maior_area">{t("catalogo.maior")}</option><option value="menor_area">{t("catalogo.menor")}</option>
               </select></div>
-            <div className="linha"><button className="btn" type="submit">Filtrar</button><button className="btn sec" type="button" onClick={limpar}>Limpar</button></div>
-            <p className="suave pequeno">Altitude e argila são filtradas pelas faixas mostradas nos anúncios. Só entram os dados que o corretor liberou para o público.</p>
+            <div className="linha"><button className="btn" type="submit">{t("catalogo.aplicar")}</button><button className="btn sec" type="button" onClick={limpar}>{t("catalogo.limpar")}</button></div>
+            <p className="suave pequeno">{t("catalogo.orientacao")}</p>
           </form>
         </aside>
         <section aria-live="polite">
-          {ativos.length > 0 && <div className="chips">{ativos.map((k) => <button key={k} className="chip" onClick={() => remover(k)}>{ROTULOS[k]}{params.get(k) !== "1" ? `: ${params.get(k)}` : ""} ×</button>)}</div>}
+          {ativos.length > 0 && <div className="chips">{ativos.map((k) => <button key={k} className="chip" onClick={() => remover(k)}>{t(`catalogo.${k}`) || ROTULOS[k]}{params.get(k) !== "1" ? `: ${params.get(k)}` : ""} ×</button>)}</div>}
           {erro && <div className="msg erro" role="alert">Não foi possível carregar as fazendas agora. Tente novamente.</div>}
           {!dados && !erro && <p className="suave" role="status">Carregando…</p>}
           {dados && <p className="suave">{dados.total} {dados.total === 1 ? "fazenda encontrada" : "fazendas encontradas"}</p>}
-          {dados && dados.total === 0 && <div className="vazio"><h3>Nenhuma fazenda com esses filtros</h3><p>Tente ampliar os critérios ou limpar os filtros.</p><button className="btn" onClick={limpar}>Limpar filtros</button></div>}
+          {dados && dados.total === 0 && <div className="vazio"><h3>{t("catalogo.vazio_titulo")}</h3><p>{t("catalogo.vazio_texto")}</p><button className="btn" onClick={limpar}>{t("catalogo.limpar")}</button></div>}
           <div className="grade">{dados?.fazendas.map((f) => <CartaoFazenda key={f.slug} f={f} />)}</div>
           {dados && paginas > 1 && (
             <nav className="paginacao" aria-label="Páginas">
@@ -103,7 +106,7 @@ export default function Fazendas() {
             </nav>
           )}
         </section>
-      </div>
-    </>
+      </div>,
+    }}/>
   );
 }

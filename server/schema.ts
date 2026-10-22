@@ -152,6 +152,11 @@ export const MIGRACOES: string[] = [
     criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
   `CREATE INDEX IF NOT EXISTS idx_fazenda_videos_ordem ON fazenda_videos (fazenda_id, ordem, id)`,
+  `CREATE TABLE IF NOT EXISTS site_midias (
+    arquivo TEXT PRIMARY KEY CHECK (arquivo ~ '^[a-f0-9]{32}\\.(jpg|png)$'),
+    publicado BOOLEAN NOT NULL DEFAULT FALSE,
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`,
 ];
 
 export async function migrar(db: Db): Promise<void> {

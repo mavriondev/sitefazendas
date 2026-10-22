@@ -10,6 +10,7 @@ export default function AdminLayout() {
       <nav className="admin-menu" aria-label="Painel">
         <NavLink to="/admin" end>Fazendas</NavLink>
         <NavLink to="/admin/contatos">Contatos</NavLink>
+        <NavLink to="/admin/conteudo">Conteúdo do site</NavLink>
         <NavLink to="/admin/slides">Slides da home</NavLink>
         <NavLink to="/admin/parceiros">Parceiros</NavLink>
         <NavLink to="/admin/usuarios">Usuários</NavLink>

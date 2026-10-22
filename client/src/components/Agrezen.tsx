@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Leaf, MapPin, Wheat } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useConteudo, fundoConteudo } from "./Conteudo";
 
 export const IMAGENS = "/images/gramogol/";
 export function Eyebrow({children}: {children: ReactNode}) {
@@ -13,12 +14,14 @@ export function Botanical() {
   </svg></div>;
 }
 export function Seals() {
+  const {texto:t}=useConteudo("home");
   return <div className="ga-hero-seals">{[
-    {Icon:Wheat,text:<>Terra produtiva<br/>e bem cuidada</>},
-    {Icon:Leaf,text:<>Negociação<br/>com discrição</>},
-    {Icon:MapPin,text:<>Atendimento<br/>próximo e direto</>}
+    {Icon:Wheat,text:t("hero.selo1")},
+    {Icon:Leaf,text:t("hero.selo2")},
+    {Icon:MapPin,text:t("hero.selo3")}
   ].map(({Icon,text},i)=><div className="ga-seal" key={i}><span className="ga-seal-icon"><Icon aria-hidden="true"/></span><span>{text}</span></div>)}</div>;
 }
 export function Banner({titulo}: {titulo: string}) {
-  return <section className="ga-page-banner"><div className="ga-wrap"><h1 className="ga-title">{titulo}</h1><p className="ga-breadcrumb"><Link to="/">Início</Link>　›　<Link to="/fazendas">Fazendas</Link>　›　{titulo}</p></div></section>;
+  const {texto:t}=useConteudo("fazenda");
+  return <section className="ga-page-banner cms-fundo" style={fundoConteudo(t("topo.imagem"))}><div className="ga-wrap"><h1 className="ga-title">{titulo}</h1><p className="ga-breadcrumb"><Link to="/">{t("topo.inicio")}</Link>　›　<Link to="/fazendas">{t("topo.catalogo")}</Link>　›　{titulo}</p></div></section>;
 }

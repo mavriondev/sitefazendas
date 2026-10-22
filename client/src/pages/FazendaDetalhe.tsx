@@ -9,10 +9,12 @@ import { Caracteristicas } from "../components/Caracteristicas";
 import { GaleriaFotos } from "../components/GaleriaFotos";
 import { GaleriaVideos } from "../components/GaleriaVideos";
 import { CartaoFazenda } from "../components/CartaoFazenda";
+import { Secoes, useConteudo, LinkConteudo } from "../components/Conteudo";
 
 export default function FazendaDetalhe() {
   const {slug}=useParams();
   const {config}=useSite();
+  const {texto:t}=useConteudo("fazenda");
   const [f,setF]=useState<FazendaPublica|null>(null);
   const [erro,setErro]=useState<unknown>(null);
   const [outras,setOutras]=useState<FazendaPublica[]>([]);
@@ -38,23 +40,23 @@ export default function FazendaDetalhe() {
   const similares=selecionadas.filter(p=>score(p)>0).slice(0,3);
   const recomendadas=similares.length?similares:selecionadas.slice(0,3);
   const agua=f.atributos.find(a=>a.chave==="agua");
-  return <>
-    <Banner titulo={f.titulo}/>
-    <section className="ga-detail"><div className="ga-wrap">
-      <div className="ga-detail-heading"><div><Eyebrow>{f.destaque?"Seleção do corretor":"Propriedade rural"}</Eyebrow><h2 className="ga-title">{f.titulo}</h2><p>{[f.regiao,f.area].filter(Boolean).join(" · ")}</p></div><div className="ga-detail-actions"><button className="ga-icon-button" onClick={()=>void compartilhar()}><Share2/>Compartilhar</button><Link className="ga-icon-button" to="/fazendas"><ArrowLeft/>Todas as fazendas</Link></div></div>
+  return <Secoes pagina="fazenda" blocos={{
+    topo:<Banner titulo={f.titulo}/>,
+    imovel:<section className="ga-detail" data-cms-secao="imovel"><div className="ga-wrap">
+      <div className="ga-detail-heading"><div><Eyebrow>{t(f.destaque?"imovel.destaque":"imovel.rotulo")}</Eyebrow><h2 className="ga-title">{f.titulo}</h2><p>{[f.regiao,f.area].filter(Boolean).join(" · ")}</p></div><div className="ga-detail-actions"><button className="ga-icon-button" onClick={()=>void compartilhar()}><Share2/>{t("imovel.compartilhar")}</button><Link className="ga-icon-button" to="/fazendas"><ArrowLeft/>{t("imovel.voltar")}</Link></div></div>
       <GaleriaFotos key={f.slug} fotos={f.fotos} titulo={f.titulo}/>
       <div className="ga-property-facts">
-        {[{Icon:Ruler,label:"Área",value:f.area || "Consultar"},{Icon:MapPin,label:"Região",value:f.regiao},{Icon:Sprout,label:"Vocação",value:f.culturas.join(" · ") || "Uso rural"},{Icon:Droplets,label:"Água",value:agua?.texto || "Consultar o corretor"}].map(({Icon,label,value})=><div className="ga-fact" key={label}><span className="ga-fact-icon"><Icon/></span><div><span className="ga-fact-label">{label}</span><strong>{value}</strong></div></div>)}
+        {[{Icon:Ruler,label:t("imovel.area"),value:f.area || "Consultar"},{Icon:MapPin,label:t("imovel.regiao"),value:f.regiao},{Icon:Sprout,label:t("imovel.vocacao"),value:f.culturas.join(" · ") || "Uso rural"},{Icon:Droplets,label:t("imovel.agua"),value:agua?.texto || "Consultar o corretor"}].map(({Icon,label,value},n)=><div className="ga-fact" key={n}><span className="ga-fact-icon"><Icon/></span><div><span className="ga-fact-label">{label}</span><strong>{value}</strong></div></div>)}
       </div>
-      <div className="ga-detail-grid"><div className="ga-detail-main"><h3>Sobre a propriedade</h3>{f.descricao.split(/\n+/).filter(Boolean).map((p,i)=><p key={i}>{p}</p>)}
+      <div className="ga-detail-grid"><div className="ga-detail-main"><h3>{t("imovel.sobre")}</h3>{f.descricao.split(/\n+/).filter(Boolean).map((p,i)=><p key={i}>{p}</p>)}
         <Caracteristicas atributos={f.atributos}/><GaleriaVideos key={f.slug} videos={f.videos || []}/>
-      </div><aside className="ga-sidebar"><span className="ga-price-label">Valor anunciado</span><strong className="ga-price">{f.preco || "Sob consulta"}</strong>
-        {wa?<a className="ga-btn ga-btn--green" href={wa} target="_blank" rel="noopener noreferrer"><MessageCircle/>Falar com o corretor <ArrowUpRight/></a>:<><p className="ga-disclaimer">WhatsApp ainda não configurado para este anúncio.</p><Link className="ga-btn" to="/contato">Canais de atendimento <ArrowUpRight/></Link></>}
-        <div className="ga-sidebar-rule"/><h4>Compartilhar propriedade</h4><div className="ga-share-row"><button className="ga-icon-button" onClick={()=>void copiar()}><Copy/>Copiar link</button><a className="ga-icon-button" href={`https://wa.me/?text=${encodeURIComponent(mensagem)}`} target="_blank" rel="noopener noreferrer"><Share2/>WhatsApp</a></div>
+      </div><aside className="ga-sidebar"><span className="ga-price-label">{t("imovel.valor")}</span><strong className="ga-price">{f.preco || t("imovel.consulta")}</strong>
+        {wa?<a className="ga-btn ga-btn--green" href={wa} target="_blank" rel="noopener noreferrer"><MessageCircle/>{t("imovel.botao")} <ArrowUpRight/></a>:<><p className="ga-disclaimer">WhatsApp ainda não configurado para este anúncio.</p><Link className="ga-btn" to="/contato">{t("imovel.sem_whatsapp")} <ArrowUpRight/></Link></>}
+        <div className="ga-sidebar-rule"/><h4>{t("imovel.compartilhar_titulo")}</h4><div className="ga-share-row"><button className="ga-icon-button" onClick={()=>void copiar()}><Copy/>{t("imovel.copiar")}</button><a className="ga-icon-button" href={`https://wa.me/?text=${encodeURIComponent(mensagem)}`} target="_blank" rel="noopener noreferrer"><Share2/>WhatsApp</a></div>
         {aviso&&<p role="status" className="ga-disclaimer">{aviso}</p>}
         <div className="ga-broker-note">{config?.aviso_intermediacao || "Atendimento direto com o corretor. Localização detalhada, documentação e visitas são tratados em conversa privada."}{config?.texto_creci&&<p>{config.texto_creci}</p>}</div>
       </aside></div>
-    </div></section>
-    {recomendadas.length>0&&<section className="ga-similar"><div className="ga-wrap"><div className="ga-section-head"><div><Eyebrow>Mais propriedades</Eyebrow><h2 className="ga-section-title">{similares.length?"Fazendas semelhantes":"Outras fazendas disponíveis"}</h2></div><Link className="ga-link-arrow" to="/fazendas">Ver catálogo <ArrowRight/></Link></div><div className="ga-cards">{recomendadas.map(p=><CartaoFazenda f={p} key={p.slug}/>)}</div></div></section>}
-  </>;
+    </div></section>,
+    similares:recomendadas.length>0&&<section className="ga-similar" data-cms-secao="similares"><div className="ga-wrap"><div className="ga-section-head"><div><Eyebrow>{t("similares.rotulo")}</Eyebrow><h2 className="ga-section-title">{t(similares.length?"similares.titulo":"similares.titulo_alternativo")}</h2></div><LinkConteudo className="ga-link-arrow" href={t("similares.link")}>{t("similares.botao")} <ArrowRight/></LinkConteudo></div><div className="ga-cards">{recomendadas.map(p=><CartaoFazenda f={p} key={p.slug}/>)}</div></div></section>,
+  }}/>;
 }

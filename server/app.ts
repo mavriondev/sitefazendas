@@ -15,6 +15,7 @@ import type { Hub } from "./lib/hub";
 import { caminhoDoArquivo } from "./lib/arquivos";
 import rateLimit from "express-rate-limit";
 import { instalarCsrf, rotasSeguras, validarCorpo, validarParametros } from "./lib/seguranca";
+import { registrarRotasConteudo } from "./routes/conteudo";
 
 export interface OpcoesApp {
   db: Db;
@@ -83,6 +84,7 @@ export function criarApp(o: OpcoesApp): Express {
   for (const nome of ["id", "fotoId", "videoId"]) app.param(nome, (req, res, next) => validarParametros(req, res, next));
   registrarRotasAuth(rotas, o.db, { limitar: o.limitar });
   registrarRotasPublicas(rotas, o.db, { limitar: o.limitar });
+  registrarRotasConteudo(rotas, o.db, o.uploadsDir);
   registrarRotasAdmin(rotas, o.db, exigirAdmin, { uploadsDir: o.uploadsDir, hub: o.hub, fetchIA: o.fetchIA });
   registrarRotasPesquisa(rotas, o.db, exigirLogin, { hub: o.hub, segredo: o.segredo });
 
@@ -116,7 +118,8 @@ export function criarApp(o: OpcoesApp): Express {
         `SELECT
            EXISTS (SELECT 1 FROM fazenda_fotos p JOIN fazendas f ON f.id=p.fazenda_id WHERE p.arquivo=$1 AND f.status='publicada')
            OR EXISTS (SELECT 1 FROM slides s WHERE s.arquivo=$1 AND s.ativo)
-           OR EXISTS (SELECT 1 FROM parceiros pr WHERE pr.arquivo=$1 AND pr.ativo) AS publico`,
+           OR EXISTS (SELECT 1 FROM parceiros pr WHERE pr.arquivo=$1 AND pr.ativo)
+           OR EXISTS (SELECT 1 FROM site_midias m WHERE m.arquivo=$1 AND m.publicado) AS publico`,
         [nome],
       );
       const publico = !!r.rows[0]?.publico;
