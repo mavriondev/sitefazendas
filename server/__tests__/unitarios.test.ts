@@ -161,6 +161,11 @@ export async function rodar() {
   assert.ok(dist >= 1.5 && dist <= 5.5, `deslocamento fora do esperado: ${dist}`);
   assert.ok(dist < RAIO_REGIAO_KM);
   assert.deepEqual(regiaoAproximada(-16.8923, -43.0121, 0.3, 0.5), reg);              // estável: não dá para tirar a média
+  for (const ang of [0, 0.25, 0.5, 0.75]) {
+    const deslocada = regiaoAproximada(-16.89, -43.01, ang, 0)!;
+    assert.notEqual(deslocada.lat, -16.89);
+    assert.notEqual(deslocada.lon, -43.01);
+  }
   assert.equal(regiaoAproximada(null, null, 0.3, 0.5), null);
   assert.equal(JSON.stringify(projetarFazendaPublica({ ...fz, mostrar_regiao: false }, [], [])).includes("regiao_mapa\":{"), false);
   assert.ok(projetarFazendaPublica({ ...fz, mostrar_regiao: true }, [], []).regiao_mapa);

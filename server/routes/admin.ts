@@ -1,8 +1,6 @@
 import type { Express, Request } from "express";
 import multer from "multer";
 import crypto from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
 import type { Db } from "../db";
 import { lerConfig, gravarConfig } from "../config";
 import { limparTelefone } from "../auth";
@@ -15,6 +13,7 @@ import { ATRIBUTOS, chaveValida } from "../../shared/atributos";
 import { ESTADOS } from "../../shared/confianca";
 import { criarHub, type Hub } from "../lib/hub";
 import { gerarTexto } from "../lib/ia";
+import { apagarArquivo as apagarArquivoUpload, salvarArquivo } from "../lib/arquivos";
 
 const STATUS = ["rascunho", "revisao", "publicada", "vendida", "arquivada"];
 
@@ -85,17 +84,16 @@ const COLUNAS_EDITAVEIS = [
 
 export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: OpcoesAdmin) {
   const hub = op.hub ?? criarHub();
-  fs.mkdirSync(op.uploadsDir, { recursive: true });
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024, files: 1 } });
 
   async function salvarImagem(buf: Buffer): Promise<string | null> {
     const limpa = sanitizarImagem(buf); // remove EXIF/GPS; rejeita o que não for JPEG/PNG
     if (!limpa) return null;
     const nome = `${crypto.randomBytes(16).toString("hex")}.${limpa.tipo === "jpeg" ? "jpg" : "png"}`;
-    await fs.promises.writeFile(path.join(op.uploadsDir, nome), limpa.dados);
+    await salvarArquivo(op.uploadsDir, nome, limpa.dados, limpa.tipo === "jpeg" ? "image/jpeg" : "image/png");
     return nome;
   }
-  const apagarArquivo = (nome: string | null) => { if (nome && /^[a-f0-9]{32}\.(jpg|png)$/.test(nome)) fs.promises.unlink(path.join(op.uploadsDir, nome)).catch(() => {}); };
+  const apagarArquivo = (nome: string | null) => { void apagarArquivoUpload(op.uploadsDir, nome); };
 
   // ---------- fazendas ----------
   app.get("/api/admin/fazendas", exigirAdmin, async (_req, res) => {

@@ -12,7 +12,8 @@ export function CartaoFazenda({ f }: { f: FazendaPublica }) {
         <h3>{f.titulo}</h3>
         <div className="meta">{[f.regiao, f.area].filter(Boolean).join(" · ")}</div>
         <div style={{ marginTop: 8 }}>{f.culturas.slice(0, 4).map((c) => <span className="etiqueta" key={c}>{c}</span>)}</div>
-        {f.preco && <strong>{f.preco}</strong>}
+        {f.preco && <strong className="preco">{f.preco}</strong>}
+        <span className="ver">Ver detalhes</span>
       </div>
     </Link>
   );

@@ -14,6 +14,7 @@ export default function Fazendas() {
 
   useEffect(() => { void api.get("/api/public/filtros").then(setOpcoes).catch(() => {}); }, []);
   useEffect(() => {
+    setForm(Object.fromEntries(CAMPOS.map((c) => [c, params.get(c) ?? ""])));
     setErro(false);
     void api.get(`/api/public/fazendas?${params.toString()}`).then(setDados).catch(() => setErro(true));
   }, [params]);
@@ -28,8 +29,9 @@ export default function Fazendas() {
     <div><label htmlFor={nome}>{rotulo}</label><input id={nome} inputMode="decimal" placeholder={ph} value={form[nome]} onChange={(e) => setForm({ ...form, [nome]: e.target.value })} /></div>
   );
   return (
-    <div className="container pagina">
-      <h1>Fazendas</h1>
+    <>
+    <div className="pagina-topo"><div className="container"><h1>Fazendas</h1><p>Propriedades rurais disponíveis, com informações públicas e atendimento direto.</p></div></div>
+    <div className="container pagina" style={{ paddingTop: 0 }}>
       <form className="painel filtros" onSubmit={aplicar}>
         <div><label htmlFor="regiao">Região</label>
           <select id="regiao" value={form.regiao} onChange={(e) => setForm({ ...form, regiao: e.target.value })}><option value="">Todas</option>{opcoes.regioes.map((r) => <option key={r}>{r}</option>)}</select></div>
@@ -42,8 +44,10 @@ export default function Fazendas() {
           <button className="btn sec" type="button" onClick={() => { setForm(Object.fromEntries(CAMPOS.map((c) => [c, ""]))); setParams(new URLSearchParams()); }}>Limpar</button></div>
       </form>
       {erro && <div className="msg erro">Não foi possível carregar as fazendas agora.</div>}
-      {dados && <p className="suave">{dados.total} {dados.total === 1 ? "fazenda encontrada" : "fazendas encontradas"}</p>}
+      {dados && <p className="suave" style={{ margin: "24px 0 16px" }}>{dados.total} {dados.total === 1 ? "fazenda encontrada" : "fazendas encontradas"}</p>}
+      {dados && dados.fazendas.length === 0 && !erro && <div className="vazio"><div className="selo-vazio" aria-hidden="true" /><h3>Nenhuma fazenda encontrada</h3><p>Não há propriedades publicadas para estes filtros no momento. Ajuste a busca ou volte em breve.</p></div>}
       <div className="grade">{dados?.fazendas.map((f) => <CartaoFazenda key={f.slug} f={f} />)}</div>
     </div>
+    </>
   );
 }

@@ -11,6 +11,9 @@ async function main() {
   const producao = process.env.NODE_ENV === "production";
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("Defina DATABASE_URL (PostgreSQL deste site — um banco NOVO, separado do Mavrion Connect).");
+  if (producao && !process.env.PRIVATE_OBJECT_DIR) {
+    throw new Error("Configure o App Storage deste site antes de iniciar em produção; uploads em disco local não persistem entre publicações.");
+  }
   let segredo = process.env.SESSION_SECRET || "";
   if (!segredo) {
     if (producao) throw new Error("Defina SESSION_SECRET (texto aleatório longo).");
@@ -26,7 +29,7 @@ async function main() {
   const PgStore = connectPgSimple(session);
   const app = criarApp({
     db,
-    uploadsDir: path.resolve(process.env.UPLOADS_DIR || "uploads"),
+    uploadsDir: process.env.UPLOADS_DIR || "sitefazendas/uploads",
     segredo,
     producao,
     limitar: true,
