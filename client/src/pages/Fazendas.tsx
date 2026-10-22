@@ -4,11 +4,11 @@ import { api, type FazendaPublica } from "../api";
 import { CartaoFazenda } from "../components/CartaoFazenda";
 
 const POR_PAGINA = 12;
-const CAMPOS = ["regiao", "cultura", "area_min", "area_max", "altitude_min", "altitude_max", "argila_min", "argila_max", "relevo", "ordem"] as const;
+const CAMPOS = ["regiao", "cultura", "area_min", "area_max", "altitude_min", "altitude_max", "argila_min", "argila_max", "ordem"] as const;
 const FLAGS = ["com_agua", "com_energia"] as const;
 const ROTULOS: Record<string, string> = {
   regiao: "Região", cultura: "Cultura", area_min: "Área mín.", area_max: "Área máx.", altitude_min: "Altitude mín.", altitude_max: "Altitude máx.",
-  argila_min: "Argila mín.", argila_max: "Argila máx.", relevo: "Relevo", com_agua: "Com água", com_energia: "Com energia",
+  argila_min: "Argila mín.", argila_max: "Argila máx.", com_agua: "Com água", com_energia: "Com energia",
 };
 
 export default function Fazendas() {
@@ -23,6 +23,13 @@ export default function Fazendas() {
 
   useEffect(() => { document.title = "Fazendas à venda"; void api.get("/api/public/filtros").then(setOpcoes).catch(() => {}); }, []);
   useEffect(() => {
+    // Links antigos não devem aplicar um filtro que já não existe na interface.
+    if (params.has("relevo")) {
+      const atuais = new URLSearchParams(params);
+      atuais.delete("relevo");
+      setParams(atuais, { replace: true });
+      return;
+    }
     let ativo = true;
     setForm(Object.fromEntries(CAMPOS.map((c) => [c, params.get(c) ?? ""])));
     setFlags(Object.fromEntries(FLAGS.map((c) => [c, params.get(c) === "1"])));
@@ -34,7 +41,7 @@ export default function Fazendas() {
       .then((resposta) => { if (ativo) setDados(resposta); })
       .catch(() => { if (ativo) setErro(true); });
     return () => { ativo = false; };
-  }, [params, pagina]);
+  }, [params, pagina, setParams]);
 
   const aplicar = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -57,7 +64,7 @@ export default function Fazendas() {
 
   return (
     <>
-      <section className="topo-pagina"><div className="container"><span className="rotulo-sec">Catálogo</span><h1>Fazendas à venda</h1><p>Filtre por região, cultura, tamanho, altitude, argila, relevo e infraestrutura.</p></div></section>
+      <section className="topo-pagina"><div className="container"><span className="rotulo-sec">Catálogo</span><h1>Fazendas à venda</h1><p>Filtre por região, cultura, tamanho, altitude, argila e infraestrutura.</p></div></section>
       <div className="container pagina catalogo">
         <aside className="filtros-lateral">
           <form className="painel" onSubmit={aplicar} aria-label="Filtros">
@@ -69,13 +76,11 @@ export default function Fazendas() {
             <fieldset><legend>Área (ha)</legend><div className="duas">{campo("area_min", "Mínima")}{campo("area_max", "Máxima")}</div></fieldset>
             <fieldset><legend>Altitude (m)</legend><div className="duas">{campo("altitude_min", "Mínima")}{campo("altitude_max", "Máxima")}</div></fieldset>
             <fieldset><legend>Argila no solo (%)</legend><div className="duas">{campo("argila_min", "Mínima")}{campo("argila_max", "Máxima")}</div></fieldset>
-            <div><label htmlFor="relevo">Relevo</label>
-              <select id="relevo" value={form.relevo} onChange={(e) => setForm({ ...form, relevo: e.target.value })}>
-                <option value="">Qualquer</option><option value="plano">Plano</option><option value="suave ondulado">Suave ondulado</option><option value="ondulado">Ondulado</option><option value="forte ondulado">Forte ondulado</option><option value="montanhoso">Montanhoso</option>
-              </select></div>
-            <label className="linha opcao"><input type="checkbox" checked={!!flags.com_agua} onChange={(e) => setFlags({ ...flags, com_agua: e.target.checked })} />Com água</label>
-            <label className="linha opcao"><input type="checkbox" checked={!!flags.com_energia} onChange={(e) => setFlags({ ...flags, com_energia: e.target.checked })} />Com energia elétrica</label>
-            <div><label htmlFor="ordem">Ordenar por</label>
+            <fieldset><legend>Infraestrutura</legend><div className="duas">
+              <label className="linha opcao"><input type="checkbox" checked={!!flags.com_agua} onChange={(e) => setFlags({ ...flags, com_agua: e.target.checked })} />Com água</label>
+              <label className="linha opcao"><input type="checkbox" checked={!!flags.com_energia} onChange={(e) => setFlags({ ...flags, com_energia: e.target.checked })} />Com energia elétrica</label>
+            </div></fieldset>
+            <div className="filtro-ordem"><label htmlFor="ordem">Ordenar por</label>
               <select id="ordem" value={form.ordem} onChange={(e) => setForm({ ...form, ordem: e.target.value })}>
                 <option value="">Destaques primeiro</option><option value="recentes">Mais recentes</option><option value="maior_area">Maior área</option><option value="menor_area">Menor área</option>
               </select></div>

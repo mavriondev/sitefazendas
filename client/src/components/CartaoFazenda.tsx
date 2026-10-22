@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowUpRight, MapPin, Ruler, Wheat, Image } from "lucide-react";
+import { ArrowUpRight, Banknote, MapPin, Ruler, Image } from "lucide-react";
 import type { FazendaPublica } from "../api";
 
 export function CartaoFazenda({f}: {f: FazendaPublica}) {
@@ -9,7 +9,7 @@ export function CartaoFazenda({f}: {f: FazendaPublica}) {
     </div>
     <div className="ga-farm-body"><span className="ga-region"><MapPin aria-hidden="true"/>{f.regiao}</span><h3 className="ga-card-title">{f.titulo}</h3>
       <p>{f.culturas.length ? f.culturas.join(" · ") : "Propriedade rural"}</p>
-      <div className="ga-farm-specs">{f.area && <span><Ruler aria-hidden="true"/>{f.area}</span>}<span><Wheat aria-hidden="true"/>{f.preco || "Sob consulta"}</span><span className="ga-card-arrow" aria-label="Ver detalhes"><ArrowUpRight/></span></div>
+      <div className="ga-farm-specs"><span><Ruler aria-hidden="true"/>{f.area || "Área sob consulta"}</span><span><Banknote aria-hidden="true"/>{f.preco || "Sob consulta"}</span><span className="ga-card-arrow" aria-label="Ver detalhes"><ArrowUpRight/></span></div>
     </div>
   </Link>;
 }
