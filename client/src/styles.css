@@ -372,3 +372,20 @@ input[type="file"] { width: auto; max-width: 100%; padding: 6px; background: tra
 }
 .filtros-lateral .opcao { flex-wrap: nowrap; margin: 0; }
 @media (max-width: 600px) { .parceiros-faixa { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- painel: ações em andamento, confirmação e listas ---------- */
+.ocupado { opacity: .6; pointer-events: none; transition: opacity .15s; }
+.dica-campo { margin: 4px 0 0; }
+dialog.confirmar { border: 0; border-radius: var(--raio); padding: 22px; max-width: min(440px, calc(100vw - 32px)); box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+dialog.confirmar::backdrop { background: rgba(15, 30, 20, .55); }
+dialog.confirmar h2 { font-size: 1.15rem; margin: 0 0 8px; }
+dialog.confirmar p { margin: 0 0 16px; }
+dialog.confirmar .linha { justify-content: flex-end; }
+.barra-lista { display: grid; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); gap: 12px; align-items: end; margin-bottom: 12px; }
+.barra-lista label { margin-top: 0; }
+@media (max-width: 760px) { .barra-lista { grid-template-columns: 1fr; } }
+.resumo-lista { margin: 0 0 8px; }
+.acoes-linha { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+button.link-acao { background: none; border: 0; padding: 0; font: inherit; color: var(--verde); text-decoration: underline; cursor: pointer; }
+button.link-acao.perigo { color: var(--erro); }
+.salvar-barra { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
