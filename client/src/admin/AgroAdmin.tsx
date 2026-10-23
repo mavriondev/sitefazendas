@@ -6,7 +6,7 @@ import { dataBr, useCarga } from "../lib/agro";
 import "../components/Mercado.css";
 
 const OPCOES: Array<[keyof ConfigAgro, string]> = [
-  ["noticias_ativas", "Seção de notícias"], ["cotacoes_ativas", "Seção de cotações"],
+  ["noticias_ativas", "Seção de notícias"], ["cotacoes_ativas", "Seção do dólar PTAX"],
   ["mapa_ativo", "Fonte: Ministério da Agricultura (MAPA)"], ["canal_rural_ativo", "Fonte: Canal Rural"],
 ];
 
@@ -66,7 +66,7 @@ export default function AgroAdmin() {
     catch (e) { setErr(e); } finally { setBusy(""); }
   };
   return <div>
-    <h1>Notícias e cotações</h1>
+    <h1>Notícias e dólar</h1>
     {msg && <Ok>{msg}</Ok>}{err != null && <Erro erro={err} />}{erro != null && <Erro erro={erro} />}
     <h2>Fontes e seções</h2>
     <div className="mk-ad-linha">

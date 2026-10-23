@@ -54,9 +54,3 @@ export interface AgroPublico {
 export interface AgroAdmin extends AgroPublico {
   noticias: NoticiaAgro[];
 }
-export const WIDGETS_AGRO = [
-  { id: "127", nome: "Soja", mercado: "Mercado físico · preços por praça" },
-  { id: "130", nome: "Milho", mercado: "Mercado físico · preços por praça" },
-  { id: "28", nome: "Café", mercado: "Arábica tipo 6 · bebida dura · bica corrida" },
-  { id: "120", nome: "Boi gordo", mercado: "Média de São Paulo · a prazo" },
-] as const;

@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import type { Db } from "../db";
-import { CONFIG_AGRO_PADRAO, WIDGETS_AGRO, type ConfigAgro } from "../../shared/agro";
+import { CONFIG_AGRO_PADRAO, type ConfigAgro } from "../../shared/agro";
 import { atualizarAgro, configAgro, dolarAgro, estadoVazio, fontesAtivas, gravarValorAgro, lerValorAgro, noticiaPublica } from "../lib/agro";
 import type { BuscarAgro } from "../lib/agro-fontes";
 
@@ -55,17 +55,5 @@ export function registrarRotasAgro(app: Express, db: Db, opts: { automatico: boo
     const r = await db.query("UPDATE site_noticias SET chamada=$2,resumo=$3,ativo=$4,ordem=$5 WHERE id=$1 RETURNING *", [req.params.id, b.chamada.trim(), b.resumo.trim(), b.ativo, b.ordem]);
     if (!r.rows.length) return res.status(404).json({ message: "Notícia não encontrada." });
     res.json({ noticia: noticiaPublica(r.rows[0]) });
-  });
-  app.get("/mercado-widget/:widget", async (req, res) => {
-    const widget = WIDGETS_AGRO.find(w => w.id === req.params.widget);
-    if (!widget || !(await configAgro(db)).cotacoes_ativas) return res.status(404).type("text").send("Cotação indisponível.");
-    res.setHeader("Cache-Control", "no-store");
-    res.setHeader("X-Robots-Tag", "noindex, nofollow");
-    // Documento independente e sandboxed; nunca executa scripts do provedor
-    // no documento principal. Nenhum domínio de publicidade é autorizado.
-    res.setHeader("Content-Security-Policy", "default-src 'none'; script-src https://www.noticiasagricolas.com.br/widgets/cotacoes; style-src 'unsafe-inline'; img-src https://www.noticiasagricolas.com.br https://cdn.noticiasagricolas.com.br data:; connect-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'; sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox");
-    const url = "https://www.noticiasagricolas.com.br/widgets/cotacoes?id=" + widget.id +
-      "&fonte=Arial&tamanho=10pt&largura=auto&cortexto=27452c&corcabecalho=edf2e8&corlinha=f8faf5&imagem=false&output=js";
-    res.type("html").send(`<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${widget.nome} — Notícias Agrícolas</title><style>body{margin:0;padding:8px;font:14px Arial;color:#27452c}table{max-width:100%!important;width:100%!important}a{color:#27452c}img{max-width:100%}</style><body><script src="${url.replace(/&/g, "&amp;")}"></script><noscript>Ative o JavaScript para carregar as cotações do provedor.</noscript></body></html>`);
   });
 }

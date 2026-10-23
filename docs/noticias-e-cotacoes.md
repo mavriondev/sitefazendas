@@ -1,11 +1,10 @@
 # Notícias e cotações na Gramogol
 
-> **Publicação bloqueada:** o teste cruzado em navegador confirmou notícias,
-> painel e dólar, mas o endpoint oficial dos widgets de commodities devolveu
-> desafio HTTP 403 do provedor e os quadros ficaram vazios. O gerador do próprio
-> portal funciona, o que não garante incorporação em outro domínio.
-> Não publicar este PR antes de escolher uma fonte permitida e comprovar as
-> quatro tabelas no site. Não contornar o desafio nem desligar o isolamento.
+> **Escopo aprovado:** notícias, dólar PTAX e logo menor.
+> Soja, milho, café e boi gordo ficam para uma entrega futura, por decisão do
+> usuário após o bloqueio do provedor. Widgets, suas rotas, scripts e controles
+> foram retirados; a página não exibe quadros vazios nem solicita autorização
+> para uma integração indisponível.
 
 ## Fontes e direitos
 - **Ministério da Agricultura:** consulta a listagem pública e importa texto
@@ -30,24 +29,18 @@ e https://www.canalrural.com.br/feed/.
   Exibe a data do dado e a variação entre as duas últimas observações.
   Não é preço intradiário. Falhas conservam o último valor com aviso; ausência
   de dado não vira zero. Também sinaliza dado com mais de sete dias.
-- **Soja, milho, café e boi gordo:** widgets oficiais disponibilizados em
-  https://www.noticiasagricolas.com.br/widgets. São mercados físicos brasileiros:
-  soja e milho por praça; café arábica tipo 6; boi, média SP a prazo.
-  O próprio provedor apresenta unidades, praças e fechamento.
-- Não copia séries do CEPEA, cuja licença padrão restringe uso comercial.
-  Não substitui esses preços por futuros internacionais.
-- O visitante precisa clicar em **Carregar cotações** antes da conexão externa.
-  O quadro é isolado, sem acesso ao documento principal nem à sessão.
-  CSP própria permite somente o script oficial de cotações e suas imagens;
-  publicidade, pixels, conexões adicionais e subframes não são autorizados.
-  **Desativar** remove o quadro. O link alternativo da fonte fica disponível.
+- O Banco Central é consultado pelo servidor; o navegador recebe o dado pelo
+  próprio site, sem script, iframe ou chamada ao provedor externo.
+- Commodities não fazem parte desta entrega. Uma futura implementação depende
+  de fonte estável com permissão de uso comercial. Não copiar séries do CEPEA
+  com licença não comercial nem substituir preços físicos por futuros internacionais.
 
 ## Funcionamento e painel
 - Atualização automática, acionada pelas consultas públicas, com intervalo
   de 30 minutos. Requisições simultâneas compartilham a atualização.
   Falhas também respeitam esse intervalo; não há uma consulta por visitante
   a cada erro. O navegador consulta o cache do site a cada 15 segundos.
-- **Painel → Notícias e cotações:** fontes, exibição das seções, atualização
+- **Painel → Notícias e dólar:** fontes, exibição das seções, atualização
   manual, edição da chamada/resumo/ordem e ocultação das notícias.
 - **Conteúdo do site:** títulos e textos da home, página de notícias,
   ocultação e posição das seções. Novas seções entram sem apagar a ordem

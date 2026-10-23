@@ -15,7 +15,7 @@ export default function AdminLayout() {
         <Link to="/admin" className={emFazendas ? "active" : undefined} aria-current={emFazendas ? "page" : undefined}><Tractor aria-hidden="true" /><span>Fazendas</span></Link>
         <NavLink to="/admin/contatos"><MessageSquare aria-hidden="true" /><span>Contatos</span></NavLink>
         <NavLink to="/admin/conteudo"><Globe aria-hidden="true" /><span>Conteúdo do site</span></NavLink>
-        <NavLink to="/admin/agro"><Newspaper aria-hidden="true" /><span>Notícias e cotações</span></NavLink>
+        <NavLink to="/admin/agro"><Newspaper aria-hidden="true" /><span>Notícias e dólar</span></NavLink>
         <NavLink to="/admin/seo"><Search aria-hidden="true" /><span>SEO e buscadores</span></NavLink>
         <NavLink to="/admin/slides"><Images aria-hidden="true" /><span>Slides da home</span></NavLink>
         <NavLink to="/admin/parceiros"><Handshake aria-hidden="true" /><span>Parceiros</span></NavLink>

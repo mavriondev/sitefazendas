@@ -47,6 +47,9 @@ export async function rodar() {
   try {
     const anon = t.cliente();
     assert.equal((await anon.get("/api/admin/agro")).status, 401);
+    for (const id of ["127", "130", "28", "120"]) {
+      assert.equal((await anon.get(`/mercado-widget/${id}`)).status, 404);
+    }
     assert.equal((await anon.post("/api/admin/agro/atualizar")).status, 401);
     assert.equal((await anon.put("/api/admin/noticias/1", {})).status, 401);
     assert.equal((await t.admin.put("/api/admin/agro", { noticias_ativas: "true" })).status, 400);
