@@ -49,7 +49,7 @@ function Linha({ p, acao, confirmar }: { p: any; acao: any; confirmar: ReturnTyp
       <label className="linha" style={{ fontWeight: 400 }}><input type="checkbox" style={{ width: "auto" }} checked={v.ativo} onChange={(e) => setV({ ...v, ativo: e.target.checked })} />Visível no site</label>
       <div className="salvar-barra">
         <button className="btn" disabled={!sujo} onClick={() => acao(() => api.put(`/api/admin/parceiros/${p.id}`, { ...v, ordem: Number(v.ordem) || 0 }))}>Salvar parceiro</button>
-        <button className="btn sec" onClick={async () => { if (await confirmar({ titulo: `Remover ${p.nome}?`, texto: "O parceiro e o logo deixam de aparecer no site.", confirmar: "Remover parceiro", perigo: true })) void acao(() => api.del(`/api/admin/parceiros/${p.id}`), "Parceiro removido."); }}>Remover</button>
+        <button className="btn sec perigo" onClick={async () => { if (await confirmar({ titulo: `Remover ${p.nome}?`, texto: "O parceiro e o logo deixam de aparecer no site.", confirmar: "Remover parceiro", perigo: true })) void acao(() => api.del(`/api/admin/parceiros/${p.id}`), "Parceiro removido."); }}>Remover</button>
         <span className="suave pequeno" role="status">{sujo ? "Há alterações não salvas." : ""}</span>
       </div>
     </div>

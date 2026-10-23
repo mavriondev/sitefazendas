@@ -67,7 +67,7 @@ export default function ContatosAdmin() {
       <AvisoLimite total={totais.contatos} mostrados={l.length} />
       <p className="suave pequeno resumo-lista" role="status">{visiveis.length} contato(s) na lista</p>
       <div className="tabela-rolagem" role="region" aria-label="Lista de contatos" tabIndex={0}>
-        <table className="tabela tabela-responsiva">
+        <table className="tabela tabela-responsiva tabela-contatos">
           <thead><tr><th>Quando</th><th>Quem</th><th>Origem / interesse</th><th>Mensagem</th><th>Ações</th></tr></thead>
           <tbody>{visiveis.map((c) => {
             const wa = linkWhatsapp(c.whatsapp, `Olá ${c.nome}, aqui é sobre seu interesse${c.fazenda_titulo ? ` na fazenda ${c.fazenda_titulo}` : ""}.`);

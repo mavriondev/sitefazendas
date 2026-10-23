@@ -29,7 +29,7 @@ export default function UsuariosAdmin() {
       <Erro erro={erro} />{ok && <Ok>{ok}</Ok>}
       <AvisoLimite total={total} mostrados={l.length} />
       <div className="tabela-rolagem" role="region" aria-label="Lista de usuários" tabIndex={0}>
-      <table className="tabela tabela-responsiva">
+      <table className="tabela tabela-responsiva tabela-usuarios">
         <thead><tr><th>Nome</th><th>Contato</th><th>Papel</th><th>Nível</th><th>Bloqueado</th><th>Ações</th></tr></thead>
         <tbody>{l.map((u) => (
           <tr key={u.id}>
@@ -37,8 +37,10 @@ export default function UsuariosAdmin() {
             <td data-rotulo="Nível"><select aria-label={`Nível de acesso de ${u.nome}`} value={u.nivel_acesso} onChange={(e) => mudar(u.id, { nivel_acesso: e.target.value })}><option value="aberto">Aberto</option><option value="desbloqueado">Desbloqueado</option><option value="completo">Completo</option></select></td>
             <td data-rotulo="Bloqueado"><input aria-label={`Bloquear ${u.nome}`} type="checkbox" style={{ width: "auto" }} checked={u.bloqueado} onChange={(e) => mudar(u.id, { bloqueado: e.target.checked })} /></td>
             <td data-rotulo="Ações">
-              <button className="btn sec" onClick={() => gerarLink(u)}>Link de nova senha</button>{" "}
-              <button className="btn sec" onClick={() => excluir(u)}>Excluir</button>
+              <div className="acoes-linha">
+              <button className="btn sec" onClick={() => gerarLink(u)}>Link de nova senha</button>
+              <button className="btn sec perigo" onClick={() => excluir(u)}>Excluir</button>
+              </div>
             </td>
           </tr>))}</tbody>
       </table></div>

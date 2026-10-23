@@ -78,7 +78,7 @@ export default function FazendasAdmin() {
                 <td data-rotulo="CAR">{f.car_codigo ? "sim" : "—"}</td>
                 <td data-rotulo="Ações"><div className="acoes-linha">
                   <Link className="btn sec mini" to={`/admin/fazendas/${f.id}`}>Editar</Link>
-                  {f.status !== "publicada" && <button type="button" className="btn sec mini" onClick={() => void excluir(f)}>Excluir</button>}
+                  {f.status !== "publicada" && <button type="button" className="btn sec mini perigo" onClick={() => void excluir(f)}>Excluir</button>}
                 </div></td>
               </tr>
             ))}
