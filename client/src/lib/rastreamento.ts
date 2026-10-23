@@ -6,12 +6,17 @@ type Janela = Window & { dataLayer?: unknown[]; gtag?: Comando; fbq?: Pixel; _fb
 
 /** Remove somente cookies dos rastreadores conhecidos, não sessão nem preferências. */
 export function apagarCookiesRastreio(analytics: boolean, marketing: boolean) {
-  const nomes = document.cookie.split(";").map(c => c.trim().split("=")[0]).filter(n =>
+  let cookies: string;
+  try { cookies = document.cookie; }
+  catch { return; } // Navegadores podem negar cookies em iframes ou por política de privacidade.
+  const nomes = cookies.split(";").map(c => c.trim().split("=")[0]).filter(n =>
     analytics && /^_ga(?:_|$)|^_gid$|^_gat(?:_|$)/.test(n) || marketing && /^_fb[pc]$/.test(n));
   const partes = location.hostname.split(".");
   const dominios = ["", ...partes.map((_, i) => partes.slice(i).join(".")).flatMap(d => [d, "." + d])];
-  for (const n of nomes) for (const dominio of dominios)
-    document.cookie = `${n}=; Max-Age=0; path=/; SameSite=Lax${dominio ? "; domain=" + dominio : ""}`;
+  for (const n of nomes) for (const dominio of dominios) {
+    try { document.cookie = `${n}=; Max-Age=0; path=/; SameSite=Lax${dominio ? "; domain=" + dominio : ""}`; }
+    catch { /* A recusa continua válida mesmo quando o navegador impede a limpeza. */ }
+  }
 }
 
 export function criarRastreadores(w: Janela = window) {
