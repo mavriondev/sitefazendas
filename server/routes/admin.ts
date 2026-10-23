@@ -12,12 +12,15 @@ import { gravarManual, gravarAutomatico, validarEntradaManual } from "../lib/atr
 import { ATRIBUTOS, chaveValida } from "../../shared/atributos";
 import { ESTADOS } from "../../shared/confianca";
 import { criarHub, type Hub } from "../lib/hub";
+import { atualizarDadosOficiais } from "../lib/dados-oficiais";
+import type { FontesMalha } from "../lib/ibge-malha";
 import { gerarTexto } from "../lib/ia";
 import { apagarArquivo as apagarArquivoUpload, salvarArquivo } from "../lib/arquivos";
+import { registrarRotasVideos } from "./videos";
 
 const STATUS = ["rascunho", "revisao", "publicada", "vendida", "arquivada"];
 
-export interface OpcoesAdmin { uploadsDir: string; hub?: Hub; fetchIA?: typeof fetch }
+export interface OpcoesAdmin { uploadsDir: string; hub?: Hub; fetchIA?: typeof fetch; fontesMalha?: FontesMalha }
 
 const txt = (v: unknown, max: number): string | null => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 const idDe = (req: Request, nome = "id"): number => Number(req.params[nome]);
@@ -27,7 +30,8 @@ async function carregar(db: Db, id: number) {
   if (!f) return null;
   const atributos = (await db.query<AtributoRow>("SELECT * FROM fazenda_atributos WHERE fazenda_id = $1 ORDER BY chave", [id])).rows;
   const fotos = (await db.query<FotoRow>("SELECT * FROM fazenda_fotos WHERE fazenda_id = $1 ORDER BY capa DESC, ordem, id", [id])).rows;
-  return { f, atributos, fotos };
+  const videos = (await db.query("SELECT * FROM fazenda_videos WHERE fazenda_id=$1 ORDER BY ordem,id", [id])).rows;
+  return { f, atributos, fotos, videos };
 }
 
 /** Aplica o corpo da requisição sobre a fazenda (allowlist). Devolve valores novos ou erro. */
@@ -83,8 +87,12 @@ const COLUNAS_EDITAVEIS = [
 ] as const;
 
 export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: OpcoesAdmin) {
+  registrarRotasVideos(app, db, exigirAdmin);
   const hub = op.hub ?? criarHub();
-  const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024, files: 1 } });
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 12 * 1024 * 1024, files: 1, fields: 8, fieldSize: 4096, parts: 10, fieldNameSize: 100 },
+  });
 
   async function salvarImagem(buf: Buffer): Promise<string | null> {
     const limpa = sanitizarImagem(buf); // remove EXIF/GPS; rejeita o que não for JPEG/PNG
@@ -136,8 +144,8 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     const c = await carregar(db, idDe(req));
     if (!c) return res.status(404).json({ message: "Fazenda não encontrada." });
     res.json({
-      fazenda: c.f, atributos: c.atributos, fotos: c.fotos,
-      problemas_publicacao: validarPublicacao(c.f, c.fotos, c.atributos),
+      fazenda: c.f, atributos: c.atributos, fotos: c.fotos, videos: c.videos,
+      problemas_publicacao: validarPublicacao(c.f, c.fotos, c.atributos, c.videos),
       atributos_catalogo: ATRIBUTOS,
       previa_publica: c.atributos.map(atributoParaPublico).filter(Boolean),
     });
@@ -151,7 +159,7 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     if (ap.erro) return res.status(400).json({ message: ap.erro });
     // Fazenda já publicada: não deixa a edição introduzir vazamento nem esvaziar campos obrigatórios.
     if (c.f.status === "publicada") {
-      const prob = validarPublicacao(ap.novo!, c.fotos, c.atributos);
+      const prob = validarPublicacao(ap.novo!, c.fotos, c.atributos, c.videos);
       if (prob.length) return res.status(409).json({ message: "A edição deixaria a fazenda publicada fora das regras.", problemas: prob });
     }
     await salvarCampos(id, ap.novo!);
@@ -176,7 +184,7 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     const c = await carregar(db, id);
     if (!c) return res.status(404).json({ message: "Fazenda não encontrada." });
     if (status === "publicada") {
-      const prob = validarPublicacao(c.f, c.fotos, c.atributos);
+      const prob = validarPublicacao(c.f, c.fotos, c.atributos, c.videos);
       if (prob.length) return res.status(409).json({ message: "Não é possível publicar ainda.", problemas: prob });
     }
     await db.query(
@@ -197,7 +205,7 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     // Se a fazenda está publicada, a mudança não pode violar as regras.
     const c = await carregar(db, id);
     if (c!.f.status === "publicada") {
-      const prob = validarPublicacao(c!.f, c!.fotos, c!.atributos);
+      const prob = validarPublicacao(c!.f, c!.fotos, c!.atributos, c!.videos);
       if (prob.length) {
         await db.query("UPDATE fazenda_atributos SET publico = FALSE WHERE fazenda_id=$1 AND chave=$2", [id, chave]);
         return res.status(409).json({ message: "Atributo salvo como privado: tornar público violaria as regras.", problemas: prob });
@@ -218,7 +226,7 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     await db.query("UPDATE fazenda_atributos SET publico=$3 WHERE fazenda_id=$1 AND chave=$2", [id, chave, publico]);
     const c = await carregar(db, id);
     if (publico && c!.f.status === "publicada") {
-      const prob = validarPublicacao(c!.f, c!.fotos, c!.atributos);
+      const prob = validarPublicacao(c!.f, c!.fotos, c!.atributos, c!.videos);
       if (prob.length) { await db.query("UPDATE fazenda_atributos SET publico=FALSE WHERE fazenda_id=$1 AND chave=$2", [id, chave]); return res.status(409).json({ message: "Violaria as regras de publicação.", problemas: prob }); }
     }
     res.json({ ok: true });
@@ -259,6 +267,10 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     const cen = geo ? centroAproximado(geo) : null;
     if (cen && c.f.latitude == null) { params.push(cen.lat, cen.lon); sets.push(`latitude = $${params.length - 1}`, `longitude = $${params.length}`); }
     if (sets.length) await db.query(`UPDATE fazendas SET ${sets.join(", ")}, atualizado_em = now() WHERE id = $1`, params);
+    // Sobreposições (Hub) e rodovia/ferrovia (IBGE) precisam do polígono: o da fazenda, ou o que acabou de vir da Hub.
+    const poligono = c.f.geojson || geo;
+    if (poligono) Object.assign(resultado, await atualizarDadosOficiais(db, hub, id, poligono, { fontesMalha: op.fontesMalha }));
+    else resultado.aviso_poligono = "sem polígono: sobreposições e logística não foram consultadas";
     res.json({ ok: true, resultado, preenchido: sets.length > 0 });
   });
 
@@ -306,7 +318,7 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
       const leg = txt(req.body.legenda, 200);
       const fakeFotos = c!.fotos.map((x) => (x.id === fid ? { ...x, legenda: leg } : x));
       if (c!.f.status === "publicada") {
-        const prob = validarPublicacao(c!.f, fakeFotos, c!.atributos);
+        const prob = validarPublicacao(c!.f, fakeFotos, c!.atributos, c!.videos);
         if (prob.length) return res.status(409).json({ message: "A legenda violaria as regras.", problemas: prob });
       }
       await db.query("UPDATE fazenda_fotos SET legenda=$2 WHERE id=$1", [fid, leg]);
@@ -424,8 +436,9 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
 
   // ---------- usuários ----------
   app.get("/api/admin/usuarios", exigirAdmin, async (_req, res) => {
+    const total = Number((await db.query("SELECT COUNT(*) AS n FROM usuarios")).rows[0]?.n ?? 0);
     const r = await db.query("SELECT id, email, nome, whatsapp, papel, nivel_acesso, bloqueado, criado_em, ultimo_login_em FROM usuarios ORDER BY criado_em DESC LIMIT 500");
-    res.json({ usuarios: r.rows });
+    res.json({ usuarios: r.rows, total, limite: 500 });
   });
   app.put("/api/admin/usuarios/:id", exigirAdmin, async (req, res) => {
     const id = idDe(req);
@@ -468,12 +481,13 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
 
   // ---------- contatos e registro de apresentação ----------
   app.get("/api/admin/contatos", exigirAdmin, async (_req, res) => {
+    const total = Number((await db.query("SELECT COUNT(*) AS n FROM contatos")).rows[0]?.n ?? 0);
     const r = await db.query(
       `SELECT c.*, f.titulo AS fazenda_titulo, pt.cod_imovel AS pesquisa_cod_imovel, pt.uf AS pesquisa_uf
          FROM contatos c LEFT JOIN fazendas f ON f.id = c.fazenda_id LEFT JOIN pesquisa_tokens pt ON pt.token = c.pesquisa_token
         ORDER BY c.criado_em DESC LIMIT 500`,
     );
-    res.json({ contatos: r.rows });
+    res.json({ contatos: r.rows, total, limite: 500 });
   });
   app.put("/api/admin/contatos/:id", exigirAdmin, async (req, res) => {
     if (!["novo", "atendido"].includes(req.body?.status)) return res.status(400).json({ message: "Status inválido." });
@@ -481,8 +495,9 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     res.json({ ok: true });
   });
   app.get("/api/admin/apresentacoes", exigirAdmin, async (_req, res) => {
+    const total = Number((await db.query("SELECT COUNT(*) AS n FROM apresentacoes")).rows[0]?.n ?? 0);
     const r = await db.query(`SELECT a.*, f.titulo AS fazenda_titulo FROM apresentacoes a LEFT JOIN fazendas f ON f.id = a.fazenda_id ORDER BY a.apresentado_em DESC LIMIT 500`);
-    res.json({ apresentacoes: r.rows });
+    res.json({ apresentacoes: r.rows, total, limite: 500 });
   });
   app.post("/api/admin/apresentacoes", exigirAdmin, async (req, res) => {
     const b = req.body ?? {};

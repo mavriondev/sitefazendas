@@ -1,3 +1,4 @@
+import { retornoSeguro } from "../../../shared/navegacao";
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, linkWhatsapp } from "../api";
@@ -13,7 +14,7 @@ export function Entrar() {
   const [env, setEnv] = useState(false);
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault(); setErro(null); setEnv(true);
-    try { await api.post("/api/auth/entrar", v); await recarregar(); const d = p.get("de"); nav(d && d.startsWith("/") && !d.startsWith("//") ? d : "/"); }
+    try { await api.post("/api/auth/entrar", v); await recarregar(); nav(retornoSeguro(p.get("de"))); }
     catch (x) { setErro(x); } finally { setEnv(false); }
   };
   return (
@@ -47,12 +48,12 @@ export function Cadastro() {
       <h1>Criar conta</h1>
       <form className="painel" onSubmit={enviar}>
         <Erro erro={erro} />
-        <label htmlFor="n">Nome</label><input id="n" required autoComplete="name" value={v.nome} onChange={(e) => setV({ ...v, nome: e.target.value })} />
-        <label htmlFor="e">E-mail</label><input id="e" type="email" required autoComplete="email" value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} />
-        <label htmlFor="w">WhatsApp (com DDD)</label><input id="w" required inputMode="tel" autoComplete="tel" value={v.whatsapp} onChange={(e) => setV({ ...v, whatsapp: e.target.value })} />
-        <label htmlFor="s">Senha</label><input id="s" type="password" required autoComplete="new-password" value={v.senha} onChange={(e) => setV({ ...v, senha: e.target.value })} />
+        <label htmlFor="n">Nome</label><input id="n" required minLength={2} maxLength={120} autoComplete="name" value={v.nome} onChange={(e) => setV({ ...v, nome: e.target.value })} />
+        <label htmlFor="e">E-mail</label><input id="e" type="email" required maxLength={200} autoComplete="email" value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} />
+        <label htmlFor="w">WhatsApp (com DDD)</label><input id="w" required maxLength={32} inputMode="tel" autoComplete="tel" value={v.whatsapp} onChange={(e) => setV({ ...v, whatsapp: e.target.value })} />
+        <label htmlFor="s">Senha (mínimo 12 caracteres)</label><input id="s" type="password" required minLength={12} maxLength={72} autoComplete="new-password" value={v.senha} onChange={(e) => setV({ ...v, senha: e.target.value })} />
         <label className="linha" style={{ fontWeight: 400 }}>
-          <input type="checkbox" style={{ width: "auto" }} checked={v.aceite} onChange={(e) => setV({ ...v, aceite: e.target.checked })} />
+          <input type="checkbox" required style={{ width: "auto" }} checked={v.aceite} onChange={(e) => setV({ ...v, aceite: e.target.checked })} />
           <span>Li e aceito a <Link to="/privacidade">política de privacidade</Link>.</span>
         </label>
         <button className="btn" disabled={env} type="submit">Criar conta</button>
@@ -88,7 +89,7 @@ export function RedefinirSenha() {
       <h1>Nova senha</h1>
       <form className="painel" onSubmit={enviar}>
         <Erro erro={erro} />
-        <label htmlFor="ns">Nova senha</label><input id="ns" type="password" required autoComplete="new-password" value={senha} onChange={(e) => setSenha(e.target.value)} />
+        <label htmlFor="ns">Nova senha (mínimo 12 caracteres)</label><input id="ns" type="password" required minLength={12} maxLength={72} autoComplete="new-password" value={senha} onChange={(e) => setSenha(e.target.value)} />
         <button className="btn" type="submit" disabled={!token}>Salvar</button>
       </form>
     </div>
@@ -114,7 +115,7 @@ export function MinhaConta() {
         <h3>Trocar senha</h3>
         <Erro erro={erro} />{ok && <Ok>Senha alterada.</Ok>}
         <label htmlFor="sa">Senha atual</label><input id="sa" type="password" required autoComplete="current-password" value={v.senha_atual} onChange={(e) => setV({ ...v, senha_atual: e.target.value })} />
-        <label htmlFor="sn">Nova senha</label><input id="sn" type="password" required autoComplete="new-password" value={v.senha_nova} onChange={(e) => setV({ ...v, senha_nova: e.target.value })} />
+        <label htmlFor="sn">Nova senha (mínimo 12 caracteres)</label><input id="sn" type="password" required minLength={12} maxLength={72} autoComplete="new-password" value={v.senha_nova} onChange={(e) => setV({ ...v, senha_nova: e.target.value })} />
         <button className="btn" type="submit">Trocar</button>
       </form>
       <p className="suave pequeno">Para excluir sua conta e seus dados, fale com o corretor.</p>

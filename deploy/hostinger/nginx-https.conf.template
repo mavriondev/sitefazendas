@@ -1,0 +1,60 @@
+# Ativar SOMENTE após instalar o aplicativo e emitir o certificado.
+# Porta 5005 livre na inspeção inicial; confirmar antes da instalação.
+# Este arquivo é incluído no contexto http. Não registrar query strings de
+# links de redefinição, Referer, cookies ou conteúdo dos formulários.
+log_format gramogol_privado '$remote_addr [$time_local] "$request_method $uri $server_protocol" $status $body_bytes_sent';
+server {
+    listen 80;
+    server_name fazendasgramogol.com.br www.fazendasgramogol.com.br;
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/fazendasgramogol-acme;
+        default_type text/plain;
+        try_files $uri =404;
+    }
+    location / {
+        return 301 https://fazendasgramogol.com.br$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    server_name www.fazendasgramogol.com.br;
+    ssl_certificate /etc/letsencrypt/live/fazendasgramogol.com.br/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/fazendasgramogol.com.br/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    return 301 https://fazendasgramogol.com.br$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name fazendasgramogol.com.br;
+    ssl_certificate /etc/letsencrypt/live/fazendasgramogol.com.br/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/fazendasgramogol.com.br/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    access_log /var/log/nginx/fazendasgramogol.access.log gramogol_privado;
+    error_log /var/log/nginx/fazendasgramogol.error.log;
+    # O app limita cada arquivo a 12 MB; o proxy permite o envelope multipart.
+    client_max_body_size 15m;
+    server_tokens off;
+    client_body_timeout 20s;
+    client_header_timeout 15s;
+    send_timeout 30s;
+
+    # Não servir arquivos ocultos, mesmo se forem copiados por engano.
+    location ~ /\.(?!well-known/) {
+        return 404;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:5005;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        # Um único proxy confiável: descartar X-Forwarded-For enviado pelo cliente.
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection "";
+        proxy_read_timeout 120s;
+    }
+}

@@ -20,11 +20,14 @@ async function main() {
     segredo = crypto.randomBytes(32).toString("hex");
     console.warn("[aviso] SESSION_SECRET ausente: usando segredo temporário (as sessões caem a cada reinício).");
   }
+  if (producao && Buffer.byteLength(segredo, "utf8") < 32) {
+    throw new Error("SESSION_SECRET deve ter pelo menos 32 bytes em produção.");
+  }
   const db = criarDbPg(url);
   await migrar(db);
   const adm = await garantirAdmin(db, process.env.ADMIN_EMAIL, process.env.ADMIN_PASSWORD);
   if (adm === "criado") console.log("[admin] Administrador criado a partir de ADMIN_EMAIL/ADMIN_PASSWORD. Troque a senha depois.");
-  if (adm === "ignorado") console.warn("[admin] Nenhum admin existe. Defina ADMIN_EMAIL e ADMIN_PASSWORD (mín. 8 caracteres) e reinicie.");
+  if (adm === "ignorado") console.warn("[admin] Nenhum admin existe. Defina ADMIN_EMAIL e ADMIN_PASSWORD (mín. 12 caracteres) e reinicie.");
 
   const PgStore = connectPgSimple(session);
   const app = criarApp({
@@ -38,7 +41,10 @@ async function main() {
     siteUrl: process.env.SITE_URL,
   });
   const porta = Number(process.env.PORT) || 5000;
-  app.listen(porta, "0.0.0.0", () => console.log(`[site] no ar na porta ${porta}`));
+  // Na VPS, BIND_HOST=127.0.0.1 impede acesso direto que contorne o Nginx.
+  const servidor = app.listen(porta, process.env.BIND_HOST || "0.0.0.0", () => console.log(`[site] no ar na porta ${porta}`));
+  servidor.requestTimeout = 30_000;
+  servidor.headersTimeout = 15_000;
 }
 
 main().catch((e) => { console.error("[falha ao iniciar]", e.message); process.exit(1); });

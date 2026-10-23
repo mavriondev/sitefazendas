@@ -115,7 +115,7 @@ export async function rodar() {
       }
     }
     const d = detalhe.json;
-    assert.equal(d.area, "1.454,4 ha".replace(",4", ",4")); // formatação pt-BR da área exata
+    assert.equal(d.area, null); // cadastro interno não autoriza publicação da área
     assert.deepEqual(d.atributos.map((a: any) => a.chave).sort(), ["altitude_media", "argila_media", "energia"]);
     assert.equal(d.atributos.find((a: any) => a.chave === "altitude_media").texto, "800 a 900 m");
     assert.equal(d.atributos.find((a: any) => a.chave === "altitude_media").confianca, "confirmado");
@@ -130,6 +130,7 @@ export async function rodar() {
     assert.equal((await anon.get(`/api/public/fazendas/${(await admin.get(`/api/admin/fazendas/${outra}`)).json.fazenda.slug}`)).status, 404);
 
     // ---------- filtros ----------
+    await admin.put(`/api/admin/fazendas/${id}/atributos/area_total_ha`, {achado:"detectado",valor:1454.4,publico:true});
     const q = async (qs: string) => (await anon.get(`/api/public/fazendas?${qs}`)).json.total;
     assert.equal(await q("altitude_min=800&altitude_max=900"), 1);
     assert.equal(await q("altitude_min=900"), 0);
@@ -140,7 +141,8 @@ export async function rodar() {
     assert.equal(await q("cultura=SOJA"), 1);
     assert.equal(await q("cultura=café"), 0);
     assert.equal(await q("area_min=1000&area_max=2000"), 1);
-    assert.equal(await q("area_min=2000"), 0);
+    assert.equal(await q("area_min=2000"), 1); // mesmo bucket, não permite descobrir a área exata
+    assert.equal(await q("area_min=2500"), 0);
     assert.equal(await q("altitude_min=abc"), 1);                                    // lixo é ignorado, não quebra
 
     // ---------- mapa (forma anonimizada) opcional ----------
@@ -155,6 +157,12 @@ export async function rodar() {
     assert.equal((await anon.post("/api/public/contato", { nome: "Robô", whatsapp: "11988887777", website: "http://spam" })).json.ok, true);   // isca: finge sucesso
     const contatos = (await admin.get("/api/admin/contatos")).json.contatos;
     assert.equal(contatos.length, 1); assert.equal(contatos[0].origem, "vitrine");
+    // As listas avisam quando há mais registros do que o limite mostrado (total e limite acompanham a lista).
+    const listaContatos = (await admin.get("/api/admin/contatos")).json;
+    assert.equal(listaContatos.total, 1); assert.equal(listaContatos.limite, 500);
+    assert.equal(typeof (await admin.get("/api/admin/apresentacoes")).json.total, "number");
+    assert.ok((await admin.get("/api/admin/usuarios")).json.total >= 1);
+    assert.equal((await anon.get("/api/admin/contatos")).status, 401);
     await admin.put(`/api/admin/fazendas/${id}`, { destaque: true });
     assert.equal((await anon.get("/api/public/home")).json.destaques.length, 1);
     assert.equal((await admin.post("/api/admin/slides", { titulo: "x", link_tipo: "url", url: "javascript:alert(1)" })).status, 400);
@@ -283,6 +291,8 @@ export async function rodar() {
     assert.equal((await anon.post("/api/auth/redefinir", { token: String(lk2.json.caminho).split("token=")[1], senha: "outra-senha-789" })).status, 400); // expirado
 
     // ---------- excluir usuário (LGPD) ----------
+    assert.equal((await bia.get("/api/auth/eu")).json.usuario, null); // redefinição encerrou a sessão antiga
+    assert.equal((await bia.post("/api/auth/entrar", { email: "bia@x.com", senha: "outra-senha-789" })).status, 200);
     await bia.post("/api/public/contato", { nome: "Bia", whatsapp: "31999991111", mensagem: "oi" });
     assert.equal((await admin.del("/api/admin/usuarios/1")).status, 400);                      // não exclui a si mesmo
     assert.equal((await bia.del(`/api/admin/usuarios/${idBia}`)).status, 403);

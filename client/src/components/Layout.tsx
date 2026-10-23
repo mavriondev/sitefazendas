@@ -1,77 +1,57 @@
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import { ArrowUpRight, Clock, Mail, MapPin, MessageCircle } from "lucide-react";
 import { useSite } from "../contexto";
 import { linkWhatsapp } from "../api";
+import { useConteudo, LinkConteudo, Secoes, fundoConteudo } from "./Conteudo";
+import { AccountDropdown } from "./AccountDropdown";
+import { SeoPagina } from "./SeoPagina";
+import "../agrezen.css";
+import "../agrezen-integration.css";
+import "../conteudo-publico.css";
 
 export function Layout() {
-  const { config, usuario, sair } = useSite();
-  const { pathname } = useLocation();
-  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
-  const nome = config?.nome_site ?? "Fazendas";
-  const zap = linkWhatsapp(config?.whatsapp_padrao, "Olá! Vim pelo site e gostaria de conversar sobre fazendas.");
-  return (
-    <>
-      <header className="topo">
-        <div className="container">
-          <Link to="/" className="marca"><i aria-hidden="true" />{nome}</Link>
-          {/* Menu sempre visível: nenhum clique para abrir. No celular, os links quebram em linhas. */}
-          <nav aria-label="Principal">
-            <NavLink to="/" end>Início</NavLink>
-            <NavLink to="/fazendas">Fazendas</NavLink>
-            <NavLink to="/sobre">Sobre</NavLink>
-            <NavLink to="/parceiros">Parceiros</NavLink>
-            <NavLink to="/venda-sua-fazenda">Venda sua fazenda</NavLink>
-            <NavLink to="/contato">Contato</NavLink>
-            {config?.modulo_pesquisa_ativo && <NavLink to="/pesquisa">Pesquisa de terras</NavLink>}
-            {usuario?.papel === "admin" && <NavLink to="/admin">Painel</NavLink>}
-            {usuario ? (
-              <>
-                <NavLink to="/conta">{usuario.nome.split(" ")[0]}</NavLink>
-                <a href="#sair" onClick={(e) => { e.preventDefault(); void sair(); }}>Sair</a>
-              </>
-            ) : (
-              <>
-                <NavLink to="/entrar">Entrar</NavLink>
-                <NavLink to="/cadastro" className="cta">Cadastrar</NavLink>
-              </>
-            )}
-          </nav>
-        </div>
-      </header>
-      <main><Outlet /></main>
-      {zap && <a className="zap-flutuante" href={zap} target="_blank" rel="noopener noreferrer" aria-label="Falar no WhatsApp">WhatsApp</a>}
-      <footer className="rodape">
-        <div className="container">
-          <div className="rodape-grade">
-            <div>
-              <p className="nome">{nome}</p>
-              {config?.aviso_intermediacao && <p style={{ margin: "0 0 8px" }}>{config.aviso_intermediacao}</p>}
-              {config?.texto_creci && <p style={{ margin: 0 }}>{config.texto_creci}</p>}
-            </div>
-            <div>
-              <h4>Navegar</h4>
-              <Link to="/">Início</Link>
-              <Link to="/fazendas">Fazendas</Link>
-              <Link to="/sobre">Sobre</Link>
-              <Link to="/parceiros">Parceiros</Link>
-              <Link to="/venda-sua-fazenda">Venda sua fazenda</Link>
-              {config?.modulo_pesquisa_ativo && <Link to="/pesquisa">Pesquisa de terras</Link>}
-            </div>
-            <div>
-              <h4>Contato</h4>
-              <Link to="/contato">Fale conosco</Link>
-              {config?.contato_email && <a href={`mailto:${config.contato_email}`}>{config.contato_email}</a>}
-              {config?.instagram_url && <a href={config.instagram_url} target="_blank" rel="noopener noreferrer">Instagram</a>}
-              <h4 style={{ marginTop: 18 }}>Conta e legal</h4>
-              {!usuario && <Link to="/entrar">Entrar</Link>}
-              {!usuario && <Link to="/cadastro">Cadastrar</Link>}
-              {usuario && <Link to="/conta">Minha conta</Link>}
-              <Link to="/privacidade">Política de privacidade</Link>
-            </div>
-          </div>
-          <div className="fim">© {new Date().getFullYear()} {nome}</div>
-        </div>
-      </footer>
-    </>
-  );
+  const {config, usuario} = useSite();
+  const {pathname} = useLocation();
+  const {texto:t,ordem,visivel}=useConteudo("global");
+  const homeConteudo=useConteudo("home");
+  const fazendaConteudo=useConteudo("fazenda");
+  useEffect(()=>{window.scrollTo(0,0);},[pathname]);
+  const nome = config?.nome_site || "Gramogol Fazendas";
+  const zap = linkWhatsapp(config?.whatsapp_padrao,t("marca.mensagem_whatsapp"));
+  const home = pathname === "/" && homeConteudo.ordem[0] === "hero";
+  const detail = pathname.startsWith("/fazenda/") && fazendaConteudo.ordem[0] === "topo";
+  const menu=ordem.filter(id=>id.startsWith("menu_"));
+  return <div className={`gramogol-agrezen site-public ${home?"is-home":""} ${detail?"is-detail":""}`}>
+    <SeoPagina/>
+    <a className="pular-conteudo" href="#conteudo">Pular para o conteúdo</a>
+    <header className="ga-head"><div className="ga-wrap ga-head-inner">
+      <div>{visivel("marca")&&<Link to="/" aria-label={`${nome} — Início`}>{t("marca.logo")?<img className="ga-logo" src={t("marca.logo")} alt={nome}/>:nome}</Link>}</div>
+      <nav className="ga-nav" aria-label="Principal">
+        {menu.map(id=>t(`${id}.link`).startsWith("/")?<NavLink key={id} to={t(`${id}.link`)} end={t(`${id}.link`)==="/"}>{t(`${id}.texto`)}</NavLink>:<LinkConteudo key={id} href={t(`${id}.link`)}>{t(`${id}.texto`)}</LinkConteudo>)}
+        {config?.modulo_pesquisa_ativo && <NavLink to="/pesquisa">Pesquisa de terras</NavLink>}
+        {usuario?.papel === "admin" && <NavLink to="/admin">Painel</NavLink>}
+      </nav>
+      <div className="ga-head-actions">
+        {visivel("marca")&&<LinkConteudo className="ga-btn ga-head-cta" href={t("marca.destino")}>{t("marca.botao")} <ArrowUpRight aria-hidden="true"/></LinkConteudo>}
+        <AccountDropdown />
+      </div>
+    </div></header>
+    <main id="conteudo"><Outlet/></main>
+    {zap && <a className="ga-floating-whatsapp" href={zap} target="_blank" rel="noopener noreferrer" aria-label={t("marca.whatsapp") || "Falar no WhatsApp"}><MessageCircle aria-hidden="true"/></a>}
+    <footer className="ga-footer cms-fundo" style={fundoConteudo(t("marca.fundo_rodape"))} id="contato-rodape"><div className="ga-wrap">
+      <div className="ga-footer-grid">
+        <Secoes pagina="global" blocos={{
+        rodape_marca:<div><Link to="/">{t("marca.logo_rodape")?<img className="ga-footer-logo" src={t("marca.logo_rodape")} alt={nome}/>:nome}</Link><p>{config?.aviso_intermediacao || "Intermediação rural com atendimento pessoal e respeito à confidencialidade de cada negociação."}</p>{config?.texto_creci && <p>{config.texto_creci}</p>}</div>,
+        rodape_links:<div><h3>{t("rodape_links.titulo")}</h3><div className="ga-footer-links">{menu.map(id=><LinkConteudo key={id} href={t(`${id}.link`)}>{t(`${id}.texto`)}</LinkConteudo>)}<Link to="/fazendas">{t("rodape_links.catalogo")}</Link>{config?.modulo_pesquisa_ativo && <Link to="/pesquisa">Pesquisa de terras</Link>}<Link to="/privacidade">{t("rodape_links.privacidade")}</Link></div></div>,
+        rodape_contatos:<div><h3>{t("rodape_contatos.titulo")}</h3>{zap && <a className="ga-footer-contact" href={zap} target="_blank" rel="noopener noreferrer"><MessageCircle/>{t("marca.whatsapp")}</a>}
+          {config?.contato_email && <a className="ga-footer-contact" href={`mailto:${config.contato_email}`}><Mail/>{config.contato_email}</a>}
+          {config?.contato_endereco && <div className="ga-footer-contact"><MapPin/>{config.contato_endereco}</div>}
+          {config?.contato_horario && <div className="ga-footer-contact"><Clock/>{config.contato_horario}</div>}
+          <div className="ga-footer-links"><Link to="/contato">Contato</Link>{config?.instagram_url && <a href={config.instagram_url} target="_blank" rel="noopener noreferrer">Instagram</a>}<Link to={usuario?"/conta":"/entrar"}>{usuario?"Minha conta":"Entrar"}</Link></div>
+        </div>,
+        }}/>
+      </div>{visivel("rodape_creditos")&&<div className="ga-footer-bottom">© {new Date().getFullYear()} {nome} · {t("rodape_creditos.texto")}</div>}
+    </div></footer>
+  </div>;
 }

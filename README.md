@@ -1,5 +1,11 @@
 # Site de fazendas
 
+**Edição pelo painel:** consulte [Como editar o site](CONTEUDO-DO-SITE.md) para
+gerenciar textos, imagens, menus e a ordem/visibilidade das seções.
+
+**SEO:** consulte [SEO pelo painel](SEO-DO-SITE.md) para gerenciar metadados,
+indexação, compartilhamento, verificações e sitemap.
+
 Vitrine pública de fazendas + painel do corretor + (opcional) pesquisa de terras sobre a Hub API do Mavrion Connect.
 Banco, chaves e domínio **próprios** — este projeto não compartilha banco com o Mavrion Connect.
 
@@ -20,8 +26,8 @@ Os filtros do catálogo só enxergam dados públicos e agem sobre as mesmas faix
 |---|---|---|
 | `DATABASE_URL` | sim | PostgreSQL NOVO deste site |
 | `SESSION_SECRET` | sim (produção) | texto aleatório longo |
-| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | 1ª execução | cria o admin (senha mín. 8; troque depois) |
-| `HUB_API_URL`, `HUB_API_KEY` | para enriquecer/pesquisar | Hub (`https://api.mavrionconnect.com.br`); criar uma chave só para este site e acrescentá-la em `API_KEYS` da Hub |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | 1ª execução | cria o admin (senha mín. 12 caracteres e máx. 72 bytes; troque depois) |
+| `HUB_API_URL`, `HUB_API_KEY` | para enriquecer/pesquisar | Hub: usar somente a chave já existente. Não alterar Hub ou Connect, nem suas configurações/chaves/serviços, sem autorização prévia |
 | `ANTHROPIC_API_KEY` | para texto por IA | opcional (`ANTHROPIC_MODEL` ajusta o modelo) |
 | `UPLOADS_DIR` | sim (produção) | pasta em disco PERSISTENTE das fotos |
 | `SITE_URL` | recomendado | endereço público (links de compartilhamento) |
@@ -34,8 +40,17 @@ Ficam em disco (`UPLOADS_DIR`), sem dependência de nenhum provedor: faça backu
 - Sem serviço de e-mail: quem esquece a senha pede um link ao corretor (WhatsApp); no painel, Usuários → "Link de nova senha" (uso único, 1 hora).
 - Excluir usuário (LGPD) apaga a conta e anonimiza os contatos feitos por ela; registros de apresentação são mantidos.
 
-## Mapa de região (opcional por fazenda)
-Círculo de 12 km com centro deslocado 2–5 km (direção fixa e aleatória, guardada no banco). Nunca a posição real. Usa tiles do OpenStreetMap (permitidos no CSP).
+## Apresentação pública e sigilo
+O design baseado no Agrezen usa fotografias, cartões de portfólio e ícones específicos dos atributos. A página da fazenda não exibe formulário de contato, mapa ou polígono: o contato é direto pelo WhatsApp configurado no anúncio ou pelo padrão do site. Coordenadas, CAR e geometria continuam disponíveis apenas para o trabalho interno e as regras existentes de enriquecimento.
+
+A home respeita slides, destaques, parceiros e textos configurados no painel. As fotos decorativas fornecidas com o design são ilustrativas; os cartões e galerias dos anúncios usam exclusivamente as fotos cadastradas para cada fazenda. As fontes abertas Instrument Sans e Nunito Sans são servidas localmente, com suas licenças OFL.
+
+## Vídeos do YouTube
+No painel, abra uma fazenda e a aba **Vídeos**. É possível adicionar, editar título/link/ordem, retirar da exibição pública e remover vídeos. O menor número de ordem aparece primeiro. Novos vídeos são **privados por padrão**.
+
+Só marque a autorização pública depois de revisar imagens, áudio, descrição e canal no YouTube. Vídeos podem revelar localização ou proprietário mesmo que o título seja neutro. O sistema bloqueia títulos públicos com dados privados conhecidos, mas não consegue revisar o conteúdo audiovisual automaticamente.
+
+A tabela `fazenda_videos` é criada de forma aditiva no próximo início do servidor; nenhuma fazenda ou foto é apagada. Só vídeos autorizados de fazendas publicadas aparecem na API pública. O banco guarda o ID validado, não HTML nem iframe arbitrário. Players usam `youtube-nocookie.com` e só são carregados depois do clique; miniaturas públicas são fornecidas pelo YouTube.
 
 ## Rodar
 ```
@@ -44,6 +59,9 @@ npm run build
 npm start
 ```
 Tabelas são criadas sozinhas no início. Testes: `npm test` (usam banco em memória). Checagem de tipos: `npm run check`.
+
+### Dados de exemplo (só desenvolvimento)
+`NODE_ENV=development npm run seed:exemplo` cria 6 fazendas publicadas, 3 slides, 4 parceiros (logos de exemplo) e os textos de Sobre e Contato, todos marcados com `[EXEMPLO]`. Rodar de novo recria os exemplos sem duplicar; `NODE_ENV=development npm run seed:exemplo -- --remover` apaga só eles. O script recusa qualquer `NODE_ENV` diferente de `development` e nunca altera dados reais nem textos já editados no painel.
 
 ## Antes de divulgar
 1. Preencher CRECI e WhatsApp em Painel → Configurações.

@@ -3,16 +3,33 @@ export class ErroApi extends Error {
 }
 
 async function chamar<T>(metodo: string, url: string, corpo?: unknown, form?: FormData): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (metodo !== "GET") {
+    const csrf = await obterCsrf();
+    headers["X-CSRF-Token"] = csrf;
+  }
+  if (!form && corpo !== undefined) headers["Content-Type"] = "application/json";
   const r = await fetch(url, {
     method: metodo,
     credentials: "same-origin",
-    headers: form || corpo === undefined ? undefined : { "Content-Type": "application/json" },
+    headers,
     body: form ?? (corpo === undefined ? undefined : JSON.stringify(corpo)),
   });
   let j: any = null;
   try { j = await r.json(); } catch { /* sem corpo */ }
   if (!r.ok) throw new ErroApi(r.status, j?.message ?? "Erro inesperado. Tente novamente.", j?.problemas);
   return j as T;
+}
+
+// Não persistir o token: login e troca de senha renovam a sessão.
+let csrfEmAndamento: Promise<string> | null = null;
+function obterCsrf(): Promise<string> {
+  if (!csrfEmAndamento) csrfEmAndamento = (async () => {
+    const r = await fetch("/api/auth/csrf", { credentials: "same-origin", cache: "no-store" });
+    if (!r.ok) throw new ErroApi(r.status, "Não foi possível preparar o envio. Tente novamente.");
+    return (await r.json()).token as string;
+  })().finally(() => { csrfEmAndamento = null; });
+  return csrfEmAndamento;
 }
 
 export const api = {
@@ -34,11 +51,12 @@ export interface ConfigPublica {
   hero_titulo: string; hero_subtitulo: string; modulo_pesquisa_ativo: boolean;
   sobre_titulo: string; sobre_texto: string; contato_email: string; contato_endereco: string; contato_horario: string; instagram_url: string;
 }
-export interface AtributoPublico { chave: string; rotulo: string; texto: string; confianca: "confirmado" | "indicado" }
+export interface AtributoPublico { chave: string; rotulo: string; texto: string; confianca: "confirmado" | "indicado"; origem: "oficial" | "corretor"; fonte?: string; atualizado_em?: string }
 export interface FazendaPublica {
   slug: string; titulo: string; descricao: string; regiao: string; culturas: string[]; area: string | null; preco: string | null;
   destaque: boolean; capa: string | null; fotos: Array<{ url: string; legenda: string | null }>;
   atributos: AtributoPublico[]; forma: { d: string; viewBox: string } | null;
+  videos: Array<{ id: number; youtube_id: string; titulo: string }>;
   regiao_mapa: { lat: number; lon: number; raio_km: number } | null; whatsapp: string | null;
 }
 

@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import rateLimit from "express-rate-limit";
 import type { Db } from "../db";
+import { estadoBrasileiro, REGIOES_BRASIL, faixaValida } from "../../shared/filtros-publicos";
 import { lerConfig } from "../config";
 import { listarPublicas, obterPublicaPorSlug, opcoesFiltros, type FiltrosPublicos } from "../lib/publico";
 import { limparTelefone, validarEmail } from "../auth";
@@ -54,7 +55,14 @@ export function registrarRotasPublicas(app: Express, db: Db, opts: { limitar: bo
 
   app.get("/api/public/fazendas", async (req, res) => {
     const q = req.query;
+    for (const [campo,tipo] of [["area_faixa","area"],["altitude_faixa","altitude"],["argila_faixa","argila"]] as const) {
+      if (q[campo] !== undefined && (typeof q[campo] !== "string" || !faixaValida(q[campo] as string,tipo))) return res.status(400).json({message:"Faixa de busca inválida."});
+    }
+    if (q.uf !== undefined && (typeof q.uf!=="string" || !estadoBrasileiro(q.uf))) return res.status(400).json({message:"Estado inválido."});
+    if (q.regiao_brasil !== undefined && !REGIOES_BRASIL.some(r=>r.id===q.regiao_brasil)) return res.status(400).json({message:"Região do Brasil inválida."});
     const filtros: FiltrosPublicos = {
+      uf: txt(q.uf,2), regiao_brasil: txt(q.regiao_brasil,20),
+      area_faixa:txt(q.area_faixa,30),altitude_faixa:txt(q.altitude_faixa,30),argila_faixa:txt(q.argila_faixa,30),
       regiao: txt(q.regiao), cultura: txt(q.cultura, 60),
       area_min: num(q.area_min), area_max: num(q.area_max),
       altitude_min: num(q.altitude_min), altitude_max: num(q.altitude_max),
@@ -75,6 +83,17 @@ export function registrarRotasPublicas(app: Express, db: Db, opts: { limitar: bo
 
   app.post("/api/public/contato", limiteContato, async (req, res) => {
     const b = req.body ?? {};
+    const limites: Record<string, number> = {
+      nome: 120, whatsapp: 32, email: 200, mensagem: 1000, tipo: 16, website: 200,
+      fazenda_slug: 200, regiao_fazenda: 120, area_fazenda: 40, car_fazenda: 60, culturas_fazenda: 120,
+    };
+    for (const [campo, valor] of Object.entries(b)) {
+      if (!(campo in limites) || typeof valor !== "string" || valor.length > limites[campo] ||
+          /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(valor)) {
+        return res.status(400).json({ message: "Há campos inválidos ou acima do tamanho permitido." });
+      }
+    }
+    if (b.tipo !== undefined && !["contato", "anuncio"].includes(b.tipo)) return res.status(400).json({ message: "Tipo de contato inválido." });
     if (typeof b.website === "string" && b.website.length > 0) return res.json({ ok: true }); // isca anti-robô
     const nome = txt(b.nome, 120);
     const tel = limparTelefone(b.whatsapp);

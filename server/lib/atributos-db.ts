@@ -1,5 +1,6 @@
 import type { Db } from "../db";
 import { defAtributo } from "../../shared/atributos";
+import { estadoBrasileiro } from "../../shared/filtros-publicos";
 import { estadoAutomatico, validarConfirmacao, type Achado } from "../../shared/confianca";
 
 export interface EntradaManual {
@@ -17,6 +18,10 @@ export function validarEntradaManual(chave: string, e: EntradaManual): string | 
     if (erro) return erro;
   }
   if (e.achado === "detectado") {
+    if (chave === "estado_publico" && !estadoBrasileiro(e.valor)) return "Selecione um estado brasileiro válido.";
+    if (chave === "area_total_ha" && (typeof e.valor !== "number" || e.valor <= 0 || e.valor >= 1e7)) return "Área total pública inválida.";
+    if (chave === "altitude_media" && (typeof e.valor !== "number" || e.valor < 0 || e.valor >= 10000)) return "Altitude fora do intervalo.";
+    if (chave === "argila_media" && (typeof e.valor !== "number" || e.valor < 0 || e.valor > 100)) return "Argila deve ficar entre 0 e 100%.";
     if (def.tipo === "numero") {
       if (typeof e.valor !== "number" || !Number.isFinite(e.valor)) return `${def.rotulo}: informe um número.`;
       if (e.valor < -1000 || e.valor > 1e7) return `${def.rotulo}: valor fora do intervalo.`;
@@ -32,11 +37,11 @@ export async function gravarManual(db: Db, fazendaId: number, chave: string, e: 
   const confirmado = !!e.confirmado_por;
   const valor = e.achado === "detectado" ? e.valor : null;
   await db.query(
-    `INSERT INTO fazenda_atributos (fazenda_id, chave, estado, achado, valor_json, fonte, observacao, confirmado_por, consultado_em, publico)
-     VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,$8, now(), $9)
+    `INSERT INTO fazenda_atributos (fazenda_id, chave, estado, achado, valor_json, fonte, observacao, confirmado_por, consultado_em, publico, origem)
+     VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,$8, now(), $9, 'corretor')
      ON CONFLICT (fazenda_id, chave) DO UPDATE SET
        estado = EXCLUDED.estado, achado = EXCLUDED.achado, valor_json = EXCLUDED.valor_json, fonte = EXCLUDED.fonte,
-       observacao = EXCLUDED.observacao, confirmado_por = EXCLUDED.confirmado_por, consultado_em = now(), publico = EXCLUDED.publico`,
+       observacao = EXCLUDED.observacao, confirmado_por = EXCLUDED.confirmado_por, consultado_em = now(), publico = EXCLUDED.publico, origem = 'corretor'`,
     [
       fazendaId, chave, confirmado ? "confirmado" : "indicado", e.achado, JSON.stringify(valor ?? null),
       confirmado ? `Confirmado por ${e.confirmado_por}` : (e.fonte?.trim() || "Informado pelo corretor (sem documento)"),
@@ -50,15 +55,17 @@ export async function gravarAutomatico(
   db: Db, fazendaId: number, chave: string,
   p: { achado: Achado; valor?: unknown; fonte: string; observacao?: string },
 ): Promise<"gravado" | "mantido"> {
-  const atual = await db.query<{ estado: string }>("SELECT estado FROM fazenda_atributos WHERE fazenda_id=$1 AND chave=$2", [fazendaId, chave]);
+  const atual = await db.query<{ estado: string; achado: string }>("SELECT estado, achado FROM fazenda_atributos WHERE fazenda_id=$1 AND chave=$2", [fazendaId, chave]);
   if (atual.rows[0]?.estado === "confirmado") return "mantido";
+  // Falha de consulta não apaga uma leitura anterior boa (falha não é ausência).
+  if (p.achado === "indeterminado" && atual.rows[0] && atual.rows[0].achado !== "indeterminado") return "mantido";
   const estado = estadoAutomatico(p.achado);
   await db.query(
-    `INSERT INTO fazenda_atributos (fazenda_id, chave, estado, achado, valor_json, fonte, observacao, confirmado_por, consultado_em, publico)
-     VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,NULL, now(), FALSE)
+    `INSERT INTO fazenda_atributos (fazenda_id, chave, estado, achado, valor_json, fonte, observacao, confirmado_por, consultado_em, publico, origem)
+     VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,NULL, now(), FALSE, 'oficial')
      ON CONFLICT (fazenda_id, chave) DO UPDATE SET
        estado = EXCLUDED.estado, achado = EXCLUDED.achado, valor_json = EXCLUDED.valor_json, fonte = EXCLUDED.fonte,
-       observacao = EXCLUDED.observacao, confirmado_por = NULL, consultado_em = now()`,
+       observacao = EXCLUDED.observacao, confirmado_por = NULL, consultado_em = now(), origem = 'oficial'`,
     [fazendaId, chave, estado, p.achado, JSON.stringify(p.achado === "indeterminado" ? null : (p.valor ?? null)), p.fonte, p.observacao ?? null],
   );
   return "gravado";

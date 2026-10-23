@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import type { Request, Response, NextFunction } from "express";
 import type { Db } from "./db";
+import { marcaSenha } from "./lib/seguranca";
 
 declare module "express-session" {
   interface SessionData { usuarioId?: number }
@@ -21,8 +22,8 @@ export function validarEmail(e: unknown): string | null {
 }
 export function validarSenha(s: unknown): string | null {
   if (typeof s !== "string") return "Senha inválida.";
-  if (s.length < 8) return "A senha precisa ter ao menos 8 caracteres.";
-  if (s.length > 200) return "Senha muito longa.";
+  if (s.length < 12) return "A senha precisa ter ao menos 12 caracteres.";
+  if (Buffer.byteLength(s, "utf8") > 72) return "A senha deve ter no máximo 72 bytes (caracteres acentuados podem ocupar mais de um byte).";
   return null;
 }
 export function limparTelefone(t: unknown): string | null {
@@ -43,7 +44,18 @@ export async function carregarUsuario(db: Db, id: number | undefined): Promise<U
 
 export function middlewaresDeAuth(db: Db) {
   const anexar = async (req: Request, _res: Response, next: NextFunction) => {
-    try { (req as any).usuario = await carregarUsuario(db, req.session?.usuarioId); } catch (e) { return next(e); }
+    try {
+      const id = req.session?.usuarioId;
+      (req as any).usuario = null;
+      if (id) {
+        const r = await db.query<{ senha_hash: string }>("SELECT senha_hash FROM usuarios WHERE id=$1", [id]);
+        if (!r.rows[0] || req.session.senhaMarca !== marcaSenha(r.rows[0].senha_hash)) {
+          return req.session.regenerate((erro) => next(erro));
+        }
+        (req as any).usuario = await carregarUsuario(db, id);
+        if (!(req as any).usuario) return req.session.regenerate((erro) => next(erro));
+      }
+    } catch (e) { return next(e); }
     next();
   };
   const exigirLogin = (req: Request, res: Response, next: NextFunction) => {
