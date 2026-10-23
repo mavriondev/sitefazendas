@@ -5,8 +5,13 @@ import type { Db } from "../db";
 import { lerSeo, validarSeo, imagensSeo, resolverSeo } from "../lib/seo";
 import { sanitizarImagem } from "../lib/foto";
 import { salvarArquivo, apagarArquivo } from "../lib/arquivos";
+import { rastreamentoPadrao, validarRastreamento } from "../../shared/rastreamento";
 
 export function registrarRotasSeo(app: Express, db: Db, uploadsDir:string, siteUrl?:string) {
+  app.get("/api/public/rastreamento", async (_req, res) => {
+    const c = (await lerSeo(db)).rastreamento;
+    res.set("Cache-Control", "no-store").json(validarRastreamento(c) ? rastreamentoPadrao() : c);
+  });
   app.get("/api/public/seo",async(req,res)=>{
     const c=req.query.caminho;
     if(typeof c!=="string"||c.length>250||!c.startsWith("/")||/[\\?#\u0000-\u0020]/.test(c)) return res.status(400).json({message:"Caminho inválido."});

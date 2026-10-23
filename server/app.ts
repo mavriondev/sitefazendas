@@ -12,6 +12,7 @@ import { registrarRotasPesquisa } from "./routes/pesquisa";
 import { lerSeo, origemSeo, resolverSeo, tagsSeo } from "./lib/seo";
 import { PAGINAS_SEO } from "../shared/seo";
 import { registrarRotasSeo } from "./routes/seo";
+import { caminhoRastreavel } from "../shared/rastreamento";
 import type { Hub } from "./lib/hub";
 import type { FontesMalha } from "./lib/ibge-malha";
 import { caminhoDoArquivo } from "./lib/arquivos";
@@ -45,11 +46,11 @@ export function criarApp(o: OpcoesApp): Express {
     contentSecurityPolicy: {
       useDefaults: true,
       directives: {
-        "img-src": ["'self'", "data:", "https://tile.openstreetmap.org", "https://i.ytimg.com"],
+        "img-src": ["'self'", "data:", "https://tile.openstreetmap.org", "https://i.ytimg.com", "https://www.facebook.com", "https://www.google-analytics.com", "https://region1.google-analytics.com"],
         "frame-src": ["https://www.youtube-nocookie.com"],
         "style-src": ["'self'", "'unsafe-inline'"],
-        "script-src": ["'self'"],
-        "connect-src": ["'self'"],
+        "script-src": [(req: any) => caminhoRastreavel(req.path) ? "'self' https://www.googletagmanager.com https://connect.facebook.net" : "'self'"],
+        "connect-src": [(req: any) => caminhoRastreavel(req.path) ? "'self' https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://www.facebook.com" : "'self'"],
         "upgrade-insecure-requests": o.producao ? [] : null,
       },
     },

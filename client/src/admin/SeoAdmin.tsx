@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
+import { rastreamentoPadrao, validarRastreamento } from "../../../shared/rastreamento";
 import { Erro, Ok } from "../components/Avisos";
 import { PAGINAS_SEO, paginaSeoVazia, seoPadrao } from "../../../shared/seo";
 import type { ConfigSeo, PaginaSeo } from "../../../shared/seo";
@@ -13,7 +14,7 @@ const IMG_PADRAO = "/images/gramogol/fazenda-aerea.jpg";
 const L = { titulo: 160, descricao: 320, base: 200, imagem: 250, ver: 200 };
 
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
-const completar = (c: any): ConfigSeo => ({ ...seoPadrao(), ...c, paginas: { ...(c?.paginas ?? {}) } });
+const completar = (c: any): ConfigSeo => ({ ...seoPadrao(), ...c, paginas: { ...(c?.paginas ?? {}) }, rastreamento: { ...rastreamentoPadrao(), ...c?.rastreamento } });
 const lerRascunho = (): ConfigSeo | null => {
   try { const t = sessionStorage.getItem(CHAVE); if (!t) return null; const j = JSON.parse(t); return j && typeof j === "object" && j.paginas ? completar(j) : null; } catch { return null; }
 };
@@ -120,12 +121,16 @@ export default function SeoAdmin() {
     if (!rascunho || !servidor) return;
     if (!urlBaseValida(rascunho.url_base)) return setErro({ message: "Endereço do site inválido. Use apenas a origem HTTPS, como https://seudominio.com.br, sem barra final ou caminho." });
     if (!codigoValido(rascunho.google_verificacao) || !codigoValido(rascunho.bing_verificacao)) return setErro({ message: "Os códigos de verificação aceitam apenas letras, números, hífen e sublinhado." });
+    const trackingInvalido = validarRastreamento(rascunho.rastreamento);
+    if (trackingInvalido) return setErro({ message: trackingInvalido });
     if (rascunho.bloquear_indexacao && !servidor.bloquear_indexacao &&
       !window.confirm("ATENÇÃO: você vai publicar o bloqueio de TODO o site para buscadores. As fazendas deixarão de aparecer no Google e no Bing com o tempo. Confirma?")) return;
     setSalvando(true); setErro(null); setOk(""); setConflito(false);
     try {
       const salvo = completar(await api.put<ConfigSeo>("/api/admin/seo", rascunho));
       setServidor(salvo); setRascunho(clone(salvo)); setOk("Configurações de SEO salvas e publicadas.");
+      try { localStorage.setItem("gramogol:rastreamento-atualizado", String(Date.now())); } catch { /* Salvo no servidor mesmo sem armazenamento local. */ }
+      window.dispatchEvent(new Event("gramogol:rastreamento-atualizado"));
     } catch (x: any) {
       if (x?.status === 409) setConflito(true); else setErro(x);
     } finally { setSalvando(false); }
@@ -221,6 +226,16 @@ export default function SeoAdmin() {
                 <p className="suave pequeno">Opcional. Sugestão: JPEG ou PNG horizontal, proporção próxima de 1,91:1 (ex.: 1200 x 630).</p>
               </section>
 
+              <section className="seo-card">
+                <h3>Analytics e Pixel</h3>
+                <p className="suave pequeno">Configuração dinâmica: salve aqui para aplicar no site, sem nova publicação. Cole apenas os IDs, nunca código ou tags HTML.</p>
+                <Campo id="seo-ga4" rotulo="ID do Google Analytics 4" valor={rascunho.rastreamento.ga4_id} max={22} placeholder="G-XXXXXXXXXX" onChange={v => mudar(c => { c.rastreamento.ga4_id = v.trim().toUpperCase(); })} dica="Disponível em Administrador → Fluxos de dados → Web, na sua conta do Google Analytics." />
+                <label className="check"><input type="checkbox" checked={rascunho.rastreamento.ga4_ativo} onChange={e => mudar(c => { c.rastreamento.ga4_ativo = e.target.checked; })} /> Ativar Google Analytics 4, somente após consentimento de Analytics</label>
+                <Campo id="seo-meta" rotulo="ID do Pixel da Meta" valor={rascunho.rastreamento.meta_pixel_id} max={25} placeholder="Somente números" onChange={v => mudar(c => { c.rastreamento.meta_pixel_id = v.trim(); })} dica="Copie o ID no Gerenciador de Eventos da Meta. Não cole o script completo." />
+                <label className="check"><input type="checkbox" checked={rascunho.rastreamento.meta_pixel_ativo} onChange={e => mudar(c => { c.rastreamento.meta_pixel_ativo = e.target.checked; })} /> Ativar Pixel da Meta, somente após consentimento de marketing</label>
+                <p className="pequeno">Nada é carregado antes da autorização do visitante. Ele pode rejeitar ou rever a escolha em “Preferências de cookies”. Painel, conta, login, pesquisa por CAR e PDF não são medidos. A configuração é revalidada ao navegar, voltar à aba e a cada 30 segundos.</p>
+                <p className="pequeno suave">Revise a política de privacidade antes de ativar. No GA4, desative as opções automáticas de formulários e de visualizações por mudanças no histórico: o site já envia visualizações de página, sem parâmetros de busca. Scripts livres, correspondência avançada e envio de dados de formulários não são habilitados pelo site.</p>
+              </section>
               <section className="seo-card">
                 <h3>Verificação nos buscadores</h3>
                 <p className="suave pequeno">Cole apenas o código de verificação (o valor de content), nunca a tag HTML nem scripts.</p>
