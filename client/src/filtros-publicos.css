@@ -27,6 +27,36 @@
 .gf-chips .chip svg{width:14px;height:14px;flex:none}
 .gf-aviso{font-size:.85rem}
 @media(min-width:900px){.gf-toggle{display:none}.gf-more{display:grid}.gf-top{grid-template-columns:1fr}}
-.gf-busca{display:grid;gap:12px;width:100%}
-.gf-busca .gf-linha{display:grid;gap:10px;grid-template-columns:1fr}
-@media(min-width:700px){.gf-busca .gf-linha{grid-template-columns:repeat(4,1fr)}}
+/* A busca rápida tem uma linha de campos e um botão, não cinco filhos diretos.
+   Manter este escopo mais específico que o grid legado de ga-search-live. */
+.site-public .ga-search-live.gf-busca {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 16px;
+  align-items: end;
+}
+.site-public .ga-search-live.gf-busca > .gf-linha {
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  grid-column: auto;
+  gap: 16px;
+  align-items: end;
+  min-width: 0;
+}
+.site-public .ga-search-live.gf-busca > .gf-linha > div { min-width: 0; }
+.site-public .ga-search-live.gf-busca > .ga-btn {
+  grid-column: auto;
+  justify-content: center;
+  min-width: 0;
+}
+@media(max-width:1200px) {
+  .site-public .ga-search-live.gf-busca { grid-template-columns: minmax(0,1fr); }
+  .site-public .ga-search-live.gf-busca > .ga-btn { width: 100%; }
+}
+@media(max-width:900px) {
+  .site-public .ga-search-live.gf-busca > .gf-linha { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:480px) {
+  .site-public .ga-search-live.gf-busca > .gf-linha { grid-template-columns: minmax(0,1fr); }
+}
