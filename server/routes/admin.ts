@@ -430,8 +430,9 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
 
   // ---------- usuários ----------
   app.get("/api/admin/usuarios", exigirAdmin, async (_req, res) => {
+    const total = Number((await db.query("SELECT COUNT(*) AS n FROM usuarios")).rows[0]?.n ?? 0);
     const r = await db.query("SELECT id, email, nome, whatsapp, papel, nivel_acesso, bloqueado, criado_em, ultimo_login_em FROM usuarios ORDER BY criado_em DESC LIMIT 500");
-    res.json({ usuarios: r.rows });
+    res.json({ usuarios: r.rows, total, limite: 500 });
   });
   app.put("/api/admin/usuarios/:id", exigirAdmin, async (req, res) => {
     const id = idDe(req);
@@ -474,12 +475,13 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
 
   // ---------- contatos e registro de apresentação ----------
   app.get("/api/admin/contatos", exigirAdmin, async (_req, res) => {
+    const total = Number((await db.query("SELECT COUNT(*) AS n FROM contatos")).rows[0]?.n ?? 0);
     const r = await db.query(
       `SELECT c.*, f.titulo AS fazenda_titulo, pt.cod_imovel AS pesquisa_cod_imovel, pt.uf AS pesquisa_uf
          FROM contatos c LEFT JOIN fazendas f ON f.id = c.fazenda_id LEFT JOIN pesquisa_tokens pt ON pt.token = c.pesquisa_token
         ORDER BY c.criado_em DESC LIMIT 500`,
     );
-    res.json({ contatos: r.rows });
+    res.json({ contatos: r.rows, total, limite: 500 });
   });
   app.put("/api/admin/contatos/:id", exigirAdmin, async (req, res) => {
     if (!["novo", "atendido"].includes(req.body?.status)) return res.status(400).json({ message: "Status inválido." });
@@ -487,8 +489,9 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     res.json({ ok: true });
   });
   app.get("/api/admin/apresentacoes", exigirAdmin, async (_req, res) => {
+    const total = Number((await db.query("SELECT COUNT(*) AS n FROM apresentacoes")).rows[0]?.n ?? 0);
     const r = await db.query(`SELECT a.*, f.titulo AS fazenda_titulo FROM apresentacoes a LEFT JOIN fazendas f ON f.id = a.fazenda_id ORDER BY a.apresentado_em DESC LIMIT 500`);
-    res.json({ apresentacoes: r.rows });
+    res.json({ apresentacoes: r.rows, total, limite: 500 });
   });
   app.post("/api/admin/apresentacoes", exigirAdmin, async (req, res) => {
     const b = req.body ?? {};

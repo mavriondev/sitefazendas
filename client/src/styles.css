@@ -361,14 +361,34 @@ input[type="file"] { width: auto; max-width: 100%; padding: 6px; background: tra
   .admin-menu a { padding: 6px 12px; }
 }
 @media (max-width: 760px) {
-  .tabela thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .tabela, .tabela tbody { display: block; }
-  .tabela tr { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 12px 0; border-bottom: 1px solid var(--linha); }
-  .tabela td { border: 0; padding: 0; }
-  .tabela td:first-child { flex-basis: 100%; font-weight: 700; }
-  .tabela td:nth-child(3):not(:only-child)::before { content: "Fotos: "; color: var(--suave); }
-  .tabela td:nth-child(4)::before { content: "CAR: "; color: var(--suave); }
-  .tabela td:last-child:not(:only-child) { margin-left: auto; }
+  /* Regras antigas, só para tabelas sem a versão em cartões (.tabela-responsiva usa data-rotulo). */
+  .tabela:not(.tabela-responsiva) thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .tabela:not(.tabela-responsiva), .tabela:not(.tabela-responsiva) tbody { display: block; }
+  .tabela:not(.tabela-responsiva) tr { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 12px 0; border-bottom: 1px solid var(--linha); }
+  .tabela:not(.tabela-responsiva) td { border: 0; padding: 0; }
+  .tabela:not(.tabela-responsiva) td:first-child { flex-basis: 100%; font-weight: 700; }
+  .tabela:not(.tabela-responsiva) td:last-child:not(:only-child) { margin-left: auto; }
 }
 .filtros-lateral .opcao { flex-wrap: nowrap; margin: 0; }
 @media (max-width: 600px) { .parceiros-faixa { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- painel: ações em andamento, confirmação e listas ---------- */
+.ocupado { opacity: .6; pointer-events: none; transition: opacity .15s; }
+.dica-campo { margin: 4px 0 0; }
+dialog.confirmar { border: 0; border-radius: var(--raio); padding: 22px; max-width: min(440px, calc(100vw - 32px)); box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+dialog.confirmar::backdrop { background: rgba(15, 30, 20, .55); }
+dialog.confirmar h2 { font-size: 1.15rem; margin: 0 0 8px; }
+dialog.confirmar p { margin: 0 0 16px; }
+dialog.confirmar .linha { justify-content: flex-end; }
+.barra-lista { display: grid; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); gap: 12px; align-items: end; margin-bottom: 12px; }
+.barra-lista label { margin-top: 0; }
+@media (max-width: 760px) { .barra-lista { grid-template-columns: 1fr; } }
+.resumo-lista { margin: 0 0 8px; }
+.acoes-linha { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+button.link-acao { background: none; border: 0; padding: 0; font: inherit; color: var(--verde); text-decoration: underline; cursor: pointer; }
+button.link-acao.perigo { color: var(--erro); }
+.salvar-barra { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+
+.travado { pointer-events: none; }
+/* O painel.filtros da busca pública sobe sobre o slider; no painel administrativo não deve cobrir o texto acima. */
+.admin-layout .painel.filtros { margin-top: 0; position: static; box-shadow: none; border-radius: var(--raio); }

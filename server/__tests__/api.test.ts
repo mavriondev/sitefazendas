@@ -155,6 +155,12 @@ export async function rodar() {
     assert.equal((await anon.post("/api/public/contato", { nome: "Robô", whatsapp: "11988887777", website: "http://spam" })).json.ok, true);   // isca: finge sucesso
     const contatos = (await admin.get("/api/admin/contatos")).json.contatos;
     assert.equal(contatos.length, 1); assert.equal(contatos[0].origem, "vitrine");
+    // As listas avisam quando há mais registros do que o limite mostrado (total e limite acompanham a lista).
+    const listaContatos = (await admin.get("/api/admin/contatos")).json;
+    assert.equal(listaContatos.total, 1); assert.equal(listaContatos.limite, 500);
+    assert.equal(typeof (await admin.get("/api/admin/apresentacoes")).json.total, "number");
+    assert.ok((await admin.get("/api/admin/usuarios")).json.total >= 1);
+    assert.equal((await anon.get("/api/admin/contatos")).status, 401);
     await admin.put(`/api/admin/fazendas/${id}`, { destaque: true });
     assert.equal((await anon.get("/api/public/home")).json.destaques.length, 1);
     assert.equal((await admin.post("/api/admin/slides", { titulo: "x", link_tipo: "url", url: "javascript:alert(1)" })).status, 400);

@@ -1,29 +1,33 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api";
-import { Erro } from "../components/Avisos";
+import { Erro, Ok } from "../components/Avisos";
+import { AvisoLimite, useAcaoUnica, useConfirmar } from "./comuns";
 
 export default function UsuariosAdmin() {
   const [l, setL] = useState<any[]>([]);
   const [erro, setErro] = useState<unknown>(null);
-  const carregar = useCallback(() => api.get("/api/admin/usuarios").then((r) => setL(r.usuarios)).catch(setErro), []);
+  const carregar = useCallback(() => api.get("/api/admin/usuarios").then((r) => { setL(r.usuarios); setTotal(r.total); }).catch(setErro), []);
   useEffect(() => { void carregar(); }, [carregar]);
-  const mudar = async (id: number, corpo: object) => { setErro(null); try { await api.put(`/api/admin/usuarios/${id}`, corpo); await carregar(); } catch (x) { setErro(x); } };
+  const [total, setTotal] = useState<number | undefined>();
+  const [ok, setOk] = useState("");
+  const [confirmar, dialogo] = useConfirmar();
+  const [executar, ocupado] = useAcaoUnica(async (fn: () => Promise<unknown>, m: string = "Salvo.") => {
+    setErro(null); setOk(""); try { await fn(); setOk(m); await carregar(); } catch (x) { setErro(x); }
+  });
+  const mudar = (id: number, corpo: object) => executar(() => api.put(`/api/admin/usuarios/${id}`, corpo), "Alteração salva.");
   const [link, setLink] = useState("");
-  const gerarLink = async (u: any) => {
-    setErro(null);
-    try { const r = await api.post(`/api/admin/usuarios/${u.id}/link-senha`); setLink(`${window.location.origin}${r.caminho}`); } catch (x) { setErro(x); }
-  };
+  const gerarLink = (u: any) => executar(async () => { const r = await api.post(`/api/admin/usuarios/${u.id}/link-senha`); setLink(`${window.location.origin}${r.caminho}`); }, `Link gerado para ${u.nome}.`);
   const excluir = async (u: any) => {
-    if (!confirm(`Excluir ${u.nome}? Os dados da conta serão apagados e os contatos feitos por ela, anonimizados.`)) return;
-    setErro(null);
-    try { await api.del(`/api/admin/usuarios/${u.id}`); await carregar(); } catch (x) { setErro(x); }
+    if (!(await confirmar({ titulo: `Excluir ${u.nome}?`, texto: "Os dados da conta serão apagados e os contatos feitos por ela, anonimizados. Isso não pode ser desfeito.", confirmar: "Excluir conta", perigo: true }))) return;
+    void executar(() => api.del(`/api/admin/usuarios/${u.id}`), "Conta excluída.");
   };
   return (
     <>
+    <div aria-busy={ocupado} className={ocupado ? "travado" : ""}>
       <h1>Usuários</h1>
-      {link && <div className="msg ok">Envie este link ao usuário (vale 1 hora, uso único):<br /><input readOnly value={link} onFocus={(e) => e.target.select()} /></div>}
       <p className="suave">O nível define o detalhe que o usuário vê na pesquisa de terras: aberto (faixas amplas), desbloqueado (faixas finas) e completo (valores exatos, nunca a localização).</p>
-      <Erro erro={erro} />
+      <Erro erro={erro} />{ok && <Ok>{ok}</Ok>}
+      <AvisoLimite total={total} mostrados={l.length} />
       <div className="tabela-rolagem" role="region" aria-label="Lista de usuários" tabIndex={0}>
       <table className="tabela tabela-responsiva">
         <thead><tr><th>Nome</th><th>Contato</th><th>Papel</th><th>Nível</th><th>Bloqueado</th><th>Ações</th></tr></thead>
@@ -38,6 +42,28 @@ export default function UsuariosAdmin() {
             </td>
           </tr>))}</tbody>
       </table></div>
+    </div>
+    {dialogo}
+    {link && <DialogoLink link={link} aoFechar={() => setLink("")} />}
     </>
+  );
+}
+
+/** O link aparece num diálogo (e não numa faixa acima da lista) para a tabela não mudar de lugar sob o dedo. */
+function DialogoLink({ link, aoFechar }: { link: string; aoFechar: () => void }) {
+  const ref = useRef<HTMLDialogElement | null>(null);
+  const [copiado, setCopiado] = useState(false);
+  useEffect(() => { ref.current?.showModal(); }, []);
+  const copiar = async () => { try { await navigator.clipboard.writeText(link); setCopiado(true); } catch { setCopiado(false); } };
+  return (
+    <dialog ref={ref} className="confirmar" aria-labelledby="link-titulo" onClose={aoFechar} onCancel={(e) => { e.preventDefault(); aoFechar(); }}>
+      <h2 id="link-titulo">Link de nova senha</h2>
+      <p>Envie este link ao usuário. Vale 1 hora e só pode ser usado uma vez.</p>
+      <input readOnly value={link} aria-label="Link de nova senha" onFocus={(e) => e.target.select()} />
+      <div className="linha" style={{ marginTop: 14 }}>
+        <button type="button" className="btn" onClick={() => void copiar()}>{copiado ? "Copiado" : "Copiar link"}</button>
+        <button type="button" className="btn sec" onClick={aoFechar} autoFocus>Fechar</button>
+      </div>
+    </dialog>
   );
 }
