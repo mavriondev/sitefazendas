@@ -1,0 +1,17 @@
+.dg-card{border:1px solid #d9d5c2;border-radius:12px;padding:16px;margin:14px 0;background:rgba(255,255,255,.5)}
+.dg-card h3{margin-top:0}
+.dg-lista{list-style:none;padding:0;margin:10px 0;display:grid;gap:8px}
+.dg-lista li{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;padding:10px;border:1px solid #d9d5c2;border-radius:8px;background:#fff;overflow-wrap:anywhere}
+.dg-sel{font-size:.8rem;font-weight:700;padding:2px 8px;border-radius:12px;background:#e9e6d8;color:#3d3a2a}
+.dg-sel.ok{background:#dcebd9;color:#245a31}.dg-sel.ruim{background:#f3d9d4;color:#8b2a22}.dg-sel.med{background:#f2e6c4;color:#6e5208}
+.dg-pagina{max-width:720px;margin:0 auto;padding:20px 16px 48px;font:15px/1.55 "Instrument Sans",sans-serif;color:#193521;box-sizing:border-box}
+.dg-pagina h1{font-size:1.7rem;color:#173c25}
+.dg-pagina a{color:#275a32;text-decoration:underline}
+.dg-pagina fieldset{border:1px solid #cbd7c8;border-radius:10px;padding:12px;margin:14px 0}
+.dg-pagina label{display:flex;gap:10px;align-items:flex-start;padding:8px 0}
+.dg-pagina input[type=checkbox]{flex:none;width:20px;height:20px;accent-color:#275a32}
+.dg-acoes{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.dg-acoes button{flex:1 1 200px;min-height:44px;padding:10px 12px;background:#f5f8f0;border:1px solid #345b3b;border-radius:10px;color:#173c25;font:700 14px/1.3 inherit;font-family:inherit;cursor:pointer}
+.dg-acoes button:hover:not(:disabled){background:#e7edda}.dg-acoes button:disabled{opacity:.5;cursor:not-allowed}
+.dg-acoes button:focus-visible,.dg-pagina a:focus-visible,.dg-pagina input:focus-visible{outline:3px solid #648128;outline-offset:3px}
+.dg-erro{border:1px solid #a33;background:#fbeceb;border-radius:10px;padding:12px;margin:12px 0}
