@@ -56,14 +56,15 @@ export async function resolverSeo(db: Db, caminho: string, siteUrl?: string): Pr
   const slugFicha = caminho.match(/^\/fazenda\/([^/]+)\/pdf$/)?.[1];
   const ficha = slugFicha ? await obterPublicaPorSlug(db,slugFicha,cfg.whatsapp_padrao) : null;
   const publico = !!fixo || !!fazenda;
+  const diagnostico = caminho === "/diagnostico-rastreamento";
   const tituloNatural = fazenda?.titulo || (caminho==="/sobre" ? cfg.sobre_titulo : valores["topo.titulo"]) || fixo?.nome || "Página não encontrada";
   const restrito = /^\/(?:admin(?:\/|$)|entrar$|cadastro$|conta$|redefinir-senha$|pesquisa$)/.test(caminho);
-  const titulo = ficha ? `${ficha.titulo} - ficha | ${cfg.nome_site}` : publico ? (pagina?.titulo || (caminho==="/" ? seo.titulo_padrao || `${cfg.nome_site} | Fazendas à venda` : `${tituloNatural} | ${cfg.nome_site}`)) : `${restrito?"Acesso restrito":"Página não encontrada"} | ${cfg.nome_site}`;
-  const descricao = publico ? pagina?.descricao || (fazenda?.descricao || valores["topo.texto"] || seo.descricao_padrao || `Conheça a ${cfg.nome_site}. Fazendas à venda e atendimento especializado em imóveis rurais.`).replace(/\s+/g," ").slice(0,320) : "";
+  const titulo = diagnostico ? `Diagnóstico de Analytics e Pixel | ${cfg.nome_site}` : ficha ? `${ficha.titulo} - ficha | ${cfg.nome_site}` : publico ? (pagina?.titulo || (caminho==="/" ? seo.titulo_padrao || `${cfg.nome_site} | Fazendas à venda` : `${tituloNatural} | ${cfg.nome_site}`)) : `${restrito?"Acesso restrito":"Página não encontrada"} | ${cfg.nome_site}`;
+  const descricao = diagnostico ? "Teste assistido de carregamento do Google Analytics e Pixel da Meta, somente mediante consentimento explícito." : publico ? pagina?.descricao || (fazenda?.descricao || valores["topo.texto"] || seo.descricao_padrao || `Conheça a ${cfg.nome_site}. Fazendas à venda e atendimento especializado em imóveis rurais.`).replace(/\s+/g," ").slice(0,320) : "";
   const foto = publico ? pagina?.imagem || fazenda?.capa || seo.imagem_padrao || conteudo.paginas.home.valores["hero.imagem"] : "";
   return {
     titulo,descricao,imagem:foto&&base ? base+foto : "",canonical:publico&&base ? base+caminho : "",
-    indexar:publico&&!seo.bloquear_indexacao&&!pagina?.nao_indexar,status:publico||restrito||ficha?200:404,
+    indexar:publico&&!seo.bloquear_indexacao&&!pagina?.nao_indexar,status:publico||restrito||ficha||diagnostico?200:404,
     google:publico?seo.google_verificacao:"",bing:publico?seo.bing_verificacao:"",nome_site:cfg.nome_site,
   };
 }

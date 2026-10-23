@@ -1,4 +1,7 @@
-import { caminhoRastreavel, lerConsentimento, validarRastreamento, type ConfigRastreamento, type Consentimento } from "../../../shared/rastreamento";
+import { CAMINHO_DIAGNOSTICO, caminhoRastreavel, idGa4Valido, idPixelValido, lerConsentimento, validarRastreamento, type ConfigRastreamento, type Consentimento } from "../../../shared/rastreamento";
+export { CAMINHO_DIAGNOSTICO } from "../../../shared/rastreamento";
+
+export type EstadoBiblioteca = "nao-iniciado" | "carregando" | "carregada" | "erro" | "tempo-esgotado";
 
 type Comando = (...args: any[]) => void;
 type Pixel = Comando & { queue: unknown[][]; callMethod?: Comando; push?: Pixel; loaded: boolean; version: string };
@@ -38,20 +41,39 @@ export function apagarCookiesRastreio(analytics: boolean, marketing: boolean) {
     document.cookie = `${n}=; Max-Age=0; path=/; SameSite=Lax${dominio ? "; domain=" + dominio : ""}`;
 }
 
-export function criarRastreadores(w: Janela = window) {
+export function criarRastreadores(w: Janela = window, notificar: () => void = () => {}, modoDiagnostico = false) {
   let ga = "", meta = "", ultimaGa = "", ultimaMeta = "";
   let configAtual: ConfigRastreamento | null = null, consentimentoAtual: Consentimento | null = null;
   let caminhoAtual = "";
   const tentar = (acao: () => void) => { try { acao(); } catch { /* Falha isolada por provedor. */ } };
-  const carregar = (id: string, src: string) => {
+  let encerrado = false;
+  const estados: Record<"ga4" | "meta", EstadoBiblioteca> = { ga4: "nao-iniciado", meta: "nao-iniciado" };
+  const limpezas: (() => void)[] = [];
+  const carregar = (id: string, src: string, provedor: "ga4" | "meta") => {
     if (document.getElementById(id)) return;
     const s = document.createElement("script");
     s.id = id; s.async = true; s.src = src;
-    s.onerror = () => window.dispatchEvent(new CustomEvent("gramogol:tracking-error", { detail: id }));
+    const mudar = (estado: EstadoBiblioteca) => {
+      if (encerrado) return;
+      estados[provedor] = estado;
+      notificar();
+    };
+    const falhar = (estado: "erro" | "tempo-esgotado") => {
+      mudar(estado);
+      window.dispatchEvent(new CustomEvent("gramogol:tracking-error", { detail: id }));
+    };
+    mudar("carregando");
+    // Prazo não prova bloqueador: também pode ser rede lenta. Nunca tenta outro domínio.
+    const timer = setTimeout(() => falhar("tempo-esgotado"), 12000);
+    s.onload = () => { clearTimeout(timer); mudar("carregada"); };
+    s.onerror = () => { clearTimeout(timer); falhar("erro"); };
+    limpezas.push(() => { clearTimeout(timer); s.onload = null; s.onerror = null; });
     document.head.appendChild(s);
   };
   const parar = () => {
+    encerrado = true;
     configAtual = null; consentimentoAtual = null; caminhoAtual = "";
+    limpezas.splice(0).forEach(limpar => limpar());
     if (ga) {
       (w as unknown as Record<string, unknown>)["ga-disable-" + ga] = true;
       tentar(() => w.gtag?.("consent", "update", { analytics_storage: "denied", ad_storage: "denied", ad_user_data: "denied", ad_personalization: "denied" }));
@@ -64,15 +86,15 @@ export function criarRastreadores(w: Janela = window) {
   };
   return {
     temRastreadores: () => !!ga || !!meta,
+    diagnostico: () => ({ ...estados }),
     registrar(acao: AcaoFazenda, slug: string, origem: OrigemFazenda) {
       const c = configAtual;
       const consent = consentimentoAtual && lerConsentimento(JSON.stringify(consentimentoAtual));
       const caminho = `/fazenda/${slug}`;
-      if (!c || validarRastreamento(c) || !consent || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ||
+      if (encerrado || modoDiagnostico || !c || validarRastreamento(c) || !consent || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ||
         caminhoAtual !== caminho || location.pathname !== caminho ||
         !(acao === "whatsapp_click" && (origem === "whatsapp_flutuante" || origem === "tenho_interesse") ||
           acao === "pdf_open" && origem === "ficha_pdf")) return;
-      // Allowlist fechada: mesmo chamadas JS com propriedades extras não as enviam.
       const dados = { fazenda_slug: slug, origem };
       if (ga && c.ga4_ativo && c.ga4_id === ga && consent.analytics)
         tentar(() => w.gtag?.("event", acao, {
@@ -83,11 +105,12 @@ export function criarRastreadores(w: Janela = window) {
         tentar(() => w.fbq?.("trackSingleCustom", meta, acao, dados));
     },
     atualizar(c: ConfigRastreamento, consent: Consentimento | null, caminho: string): boolean {
-      const valido = !validarRastreamento(c) && caminhoRastreavel(caminho);
+      const valido = caminhoRastreavel(caminho) || modoDiagnostico && caminho === CAMINHO_DIAGNOSTICO;
       const autorizado = consent && lerConsentimento(JSON.stringify(consent));
-      const novoGa = valido && c.ga4_ativo && autorizado?.analytics ? c.ga4_id : "";
-      const novoMeta = valido && c.meta_pixel_ativo && autorizado?.marketing && !location.search && !location.hash ? c.meta_pixel_id : "";
+      const novoGa = valido && c.ga4_ativo === true && idGa4Valido(c.ga4_id) && autorizado?.analytics ? c.ga4_id : "";
+      const novoMeta = valido && c.meta_pixel_ativo === true && idPixelValido(c.meta_pixel_id) && autorizado?.marketing && !location.search && !location.hash ? c.meta_pixel_id : "";
       if (ga && ga !== novoGa || meta && meta !== novoMeta) { parar(); return true; }
+      if (encerrado) return true;
       configAtual = { ...c }; consentimentoAtual = autorizado ? { ...autorizado } : null; caminhoAtual = caminho;
       if (novoGa && !ga) {
         ga = novoGa;
@@ -99,7 +122,7 @@ export function criarRastreadores(w: Janela = window) {
           send_page_view: false, allow_google_signals: false, allow_ad_personalization_signals: false,
           page_location: location.origin + caminho, page_referrer: "", cookie_expires: 15552000,
         });
-        carregar("gramogol-ga4", `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(ga)}`);
+        carregar("gramogol-ga4", `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(ga)}`, "ga4");
       }
       if (novoMeta && !meta) {
         meta = novoMeta;
@@ -113,7 +136,7 @@ export function criarRastreadores(w: Janela = window) {
         w.fbq("consent", "grant");
         w.fbq("set", "autoConfig", false, meta);
         w.fbq("init", meta);
-        carregar("gramogol-meta", "https://connect.facebook.net/en_US/fbevents.js");
+        carregar("gramogol-meta", "https://connect.facebook.net/en_US/fbevents.js", "meta");
       }
       // Um evento por navegação, sem repetir em refetch, focus ou renderização.
       if (novoGa && ultimaGa !== caminho) {
