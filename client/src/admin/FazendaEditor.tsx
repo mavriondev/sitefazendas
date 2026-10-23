@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api";
 import { Erro, Ok, Aviso } from "../components/Avisos";
 import { VideosAdmin } from "./VideosAdmin";
-import { Campo, difere, useAcaoUnica, useAvisoAlteracao, useConfirmar } from "./comuns";
+import { Campo, useAcaoUnica, useConfirmar, useFormularioComRascunho } from "./comuns";
 
 type Confirmar = ReturnType<typeof useConfirmar>[0];
 type Aba = "dados" | "atributos" | "fotos" | "videos" | "publicar";
@@ -31,7 +31,7 @@ export default function FazendaEditor() {
       <div className="abas" role="tablist" aria-label="Seções da fazenda" onKeyDown={(e) => {
         const abas: Aba[] = ["dados", "atributos", "fotos", "videos", "publicar"];
         const i = abas.indexOf(aba);
-        const j = e.key === "ArrowRight" ? (i + 1) % abas.length : e.key === "ArrowLeft" ? (i + abas.length - 1) % abas.length : -1;
+        const j = e.key === "ArrowRight" ? (i + 1) % abas.length : e.key === "ArrowLeft" ? (i + abas.length - 1) % abas.length : e.key === "Home" ? 0 : e.key === "End" ? abas.length - 1 : -1;
         if (j < 0) return;
         e.preventDefault(); setAba(abas[j]);
         requestAnimationFrame(() => document.getElementById(`aba-${abas[j]}`)?.focus());
@@ -40,7 +40,7 @@ export default function FazendaEditor() {
           className={aba === a ? "ativo" : ""} onClick={() => setAba(a)}>{{ dados: "Dados", atributos: "Dados da terra", fotos: "Fotos", videos: "Vídeos", publicar: "Publicação" }[a]}</button>))}</div>
       <Erro erro={erro} />{ok && <Ok>{ok}</Ok>}
       <div id="painel-aba" role="tabpanel" aria-labelledby={`aba-${aba}`} aria-busy={ocupado} className={ocupado ? "ocupado" : ""}>
-        {aba === "dados" && <Dados key={String(f.atualizado_em)} f={f} acao={acao} id={id!} confirmar={confirmar} />}
+        <div hidden={aba !== "dados"}><Dados key={String(f.atualizado_em)} f={f} acao={acao} id={id!} confirmar={confirmar} /></div>
         {aba === "atributos" && <Atributos d={d} acao={acao} id={id!} confirmar={confirmar} />}
         {aba === "fotos" && <Fotos d={d} acao={acao} id={id!} confirmar={confirmar} />}
         {aba === "videos" && <VideosAdmin videos={d.videos ?? []} acao={acao} id={id!} confirmar={confirmar}/>}
@@ -52,15 +52,13 @@ export default function FazendaEditor() {
 }
 
 function Dados({ f, acao, id, confirmar }: { f: any; acao: any; id: string; confirmar: Confirmar }) {
-  const [v, setV] = useState({
+  const inicial = {
     titulo: f.titulo ?? "", regiao_publica: f.regiao_publica ?? "", culturas: (f.culturas ?? []).join(", "), area_ha: f.area_ha ?? "",
     area_exibicao: f.area_exibicao, preco_exibicao: f.preco_exibicao ?? "", descricao_publica: f.descricao_publica ?? "",
     destaque: f.destaque, destaque_ordem: f.destaque_ordem ?? 0, mostrar_mapa: f.mostrar_mapa, mostrar_regiao: f.mostrar_regiao, geojson_novo: "", whatsapp_proprio: f.whatsapp_proprio ?? "",
     car_codigo: f.car_codigo ?? "", municipio: f.municipio ?? "", uf: f.uf ?? "", latitude: f.latitude ?? "", longitude: f.longitude ?? "", notas_internas: f.notas_internas ?? "",
-  });
-  const base = useRef(JSON.stringify(v));
-  const sujo = difere(v, JSON.parse(base.current));
-  useAvisoAlteracao(sujo);
+  };
+  const { v, setV, sujo, recuperado, descartar } = useFormularioComRascunho(`rascunho-fazenda-${id}`, inicial);
   const [sug, setSug] = useState("");
   const [obs, setObs] = useState("");
   const [erroIA, setErroIA] = useState<unknown>(null);
@@ -83,6 +81,7 @@ function Dados({ f, acao, id, confirmar }: { f: any; acao: any; id: string; conf
   return (
     <>
       <form onSubmit={salvar} className="painel">
+        {recuperado && sujo && <Aviso>Recuperamos o que você digitou e ainda não tinha salvo. Revise e salve, ou <button type="button" className="link-acao" onClick={descartar}>descarte as alterações</button>.</Aviso>}
         {T("titulo", "Título")}{T("regiao_publica", "Região (pública, ampla: ex. Sul de Goiás)")}{T("culturas", "Culturas (separadas por vírgula)")}
         <div className="filtros">
           {T("area_ha", "Área (ha)", { inputMode: "decimal" })}
@@ -103,6 +102,7 @@ function Dados({ f, acao, id, confirmar }: { f: any; acao: any; id: string; conf
         <label htmlFor="nt">Notas internas</label><textarea id="nt" rows={3} value={v.notas_internas} onChange={set("notas_internas")} />
         <div className="salvar-barra">
           <button className="btn" type="submit" disabled={!sujo}>Salvar alterações</button>
+          {sujo && <button type="button" className="btn sec" onClick={descartar}>Descartar alterações</button>}
           <span className="suave pequeno" role="status">{sujo ? "Há alterações não salvas." : "Tudo salvo."}</span>
         </div>
       </form>

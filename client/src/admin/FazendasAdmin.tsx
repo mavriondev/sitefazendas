@@ -47,7 +47,8 @@ export default function FazendasAdmin() {
   }, [lista, busca, status, ordem]);
 
   return (
-    <div aria-busy={criando || excluindo}>
+    <>
+    <div aria-busy={criando || excluindo} className={criando || excluindo ? "travado" : ""}>
       <h1>Fazendas</h1>
       <Erro erro={erro} />{ok && <Ok>{ok}</Ok>}
       <form className="painel linha" onSubmit={criar}>
@@ -85,7 +86,8 @@ export default function FazendasAdmin() {
           </tbody>
         </table>
       </div>
-      {dialogo}
     </div>
+    {dialogo}
+    </>
   );
 }

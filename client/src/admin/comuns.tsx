@@ -67,10 +67,17 @@ export function difere(atual: unknown, base: unknown): boolean {
 export function useAcaoUnica<A extends any[]>(executar: (...args: A) => Promise<void>) {
   const [ocupado, setOcupado] = useState(false);
   const emAndamento = useRef(false);
+  const soltar = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(soltar.current), []);
   const envolvida = useCallback(async (...args: A) => {
     if (emAndamento.current) return;
-    emAndamento.current = true; setOcupado(true);
-    try { await executar(...args); } finally { emAndamento.current = false; setOcupado(false); }
+    emAndamento.current = true; clearTimeout(soltar.current); setOcupado(true);
+    try { await executar(...args); } finally {
+      emAndamento.current = false;
+      // Pequena pausa: a lista pode ter mudado de lugar (mensagem nova, linha que sumiu) e um segundo clique
+      // rápido cairia em outro botão. Durante a pausa o botão continua travado.
+      soltar.current = setTimeout(() => setOcupado(false), 450);
+    }
   }, [executar]);
   return [envolvida, ocupado] as const;
 }
@@ -121,4 +128,24 @@ export function useConfirmar() {
 export function AvisoLimite({ total, mostrados }: { total?: number; mostrados: number }) {
   if (!total || total <= mostrados) return null;
   return <div className="msg aviso" role="status">Mostrando os {mostrados} mais recentes de {total}. Os mais antigos não aparecem nesta tela.</div>;
+}
+
+/* ---------- rascunho local (recuperação ao voltar com o botão do navegador, fechar a aba por engano etc.) ---------- */
+
+const lerRascunho = (chave: string): any => { try { const t = sessionStorage.getItem(chave); return t ? JSON.parse(t) : null; } catch { return null; } };
+const gravarRascunho = (chave: string, valor: unknown | null) => { try { if (valor === null) sessionStorage.removeItem(chave); else sessionStorage.setItem(chave, JSON.stringify(valor)); } catch { /* sem armazenamento: segue sem recuperação */ } };
+
+/**
+ * Estado de formulário que guarda um rascunho na sessão do navegador enquanto houver alterações não salvas.
+ * Ao reabrir a tela (por exemplo depois do botão Voltar), recupera o que foi digitado.
+ * Dura só enquanto a aba estiver aberta (sessionStorage) e nunca vai para o servidor.
+ */
+export function useFormularioComRascunho<T>(chave: string, base: T) {
+  const [v, setV] = useState<T>(() => { const r = lerRascunho(chave); return r && difere(r, base) ? (r as T) : base; });
+  const recuperado = useRef(difere(v, base)).current;
+  const sujo = difere(v, base);
+  useAvisoAlteracao(sujo);
+  useEffect(() => { gravarRascunho(chave, sujo ? v : null); }, [chave, v, sujo]);
+  const descartar = () => { gravarRascunho(chave, null); setV(base); };
+  return { v, setV, sujo, recuperado, descartar };
 }

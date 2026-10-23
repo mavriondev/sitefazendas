@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { Erro, Ok } from "../components/Avisos";
 import { AvisoLimite, useAcaoUnica, useConfirmar } from "./comuns";
@@ -22,9 +22,9 @@ export default function UsuariosAdmin() {
     void executar(() => api.del(`/api/admin/usuarios/${u.id}`), "Conta excluída.");
   };
   return (
-    <div aria-busy={ocupado}>
+    <>
+    <div aria-busy={ocupado} className={ocupado ? "travado" : ""}>
       <h1>Usuários</h1>
-      {link && <div className="msg ok">Envie este link ao usuário (vale 1 hora, uso único):<br /><input readOnly value={link} onFocus={(e) => e.target.select()} /></div>}
       <p className="suave">O nível define o detalhe que o usuário vê na pesquisa de terras: aberto (faixas amplas), desbloqueado (faixas finas) e completo (valores exatos, nunca a localização).</p>
       <Erro erro={erro} />{ok && <Ok>{ok}</Ok>}
       <AvisoLimite total={total} mostrados={l.length} />
@@ -42,7 +42,28 @@ export default function UsuariosAdmin() {
             </td>
           </tr>))}</tbody>
       </table></div>
-      {dialogo}
     </div>
+    {dialogo}
+    {link && <DialogoLink link={link} aoFechar={() => setLink("")} />}
+    </>
+  );
+}
+
+/** O link aparece num diálogo (e não numa faixa acima da lista) para a tabela não mudar de lugar sob o dedo. */
+function DialogoLink({ link, aoFechar }: { link: string; aoFechar: () => void }) {
+  const ref = useRef<HTMLDialogElement | null>(null);
+  const [copiado, setCopiado] = useState(false);
+  useEffect(() => { ref.current?.showModal(); }, []);
+  const copiar = async () => { try { await navigator.clipboard.writeText(link); setCopiado(true); } catch { setCopiado(false); } };
+  return (
+    <dialog ref={ref} className="confirmar" aria-labelledby="link-titulo" onClose={aoFechar} onCancel={(e) => { e.preventDefault(); aoFechar(); }}>
+      <h2 id="link-titulo">Link de nova senha</h2>
+      <p>Envie este link ao usuário. Vale 1 hora e só pode ser usado uma vez.</p>
+      <input readOnly value={link} aria-label="Link de nova senha" onFocus={(e) => e.target.select()} />
+      <div className="linha" style={{ marginTop: 14 }}>
+        <button type="button" className="btn" onClick={() => void copiar()}>{copiado ? "Copiado" : "Copiar link"}</button>
+        <button type="button" className="btn sec" onClick={aoFechar} autoFocus>Fechar</button>
+      </div>
+    </dialog>
   );
 }

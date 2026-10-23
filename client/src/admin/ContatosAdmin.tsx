@@ -55,7 +55,7 @@ export default function ContatosAdmin() {
   }, [l, filtro, busca]);
 
   return (
-    <div aria-busy={ocupado}>
+    <div aria-busy={ocupado} className={ocupado ? "travado" : ""}>
       <h1>Contatos</h1>
       <Erro erro={erro} />{ok && <Ok>{ok}</Ok>}
       <div className="barra-lista" role="search" aria-label="Filtrar contatos">
