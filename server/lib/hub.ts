@@ -35,8 +35,13 @@ export interface FiltrosHub {
   limite?: number; deslocamento?: number;
 }
 
+/** Sobreposição do polígono com uma base oficial. `itens` guarda o detalhe (só para o painel; nunca vai ao público). */
+export interface SobreposicaoHub { sobrepoe: boolean; itens: Array<{ nome: string; detalhe: string }> }
+
 export interface Hub {
   configurado(): boolean;
+  sobreposicaoTerraIndigena(geometry: unknown): Promise<HubResultado<SobreposicaoHub>>;
+  sobreposicaoUnidadeConservacao(geometry: unknown): Promise<HubResultado<SobreposicaoHub>>;
   buscarPorCodigo(cod: string): Promise<HubResultado<HubImovel | null>>;
   buscar(f: FiltrosHub): Promise<HubResultado<{ total: number; imoveis: HubImovel[] }>>;
 }
@@ -61,8 +66,35 @@ export function criarHub(opts: { baseUrl?: string; apiKey?: string; fetchFn?: ty
     }
   }
 
+  async function post(path: string, body: unknown): Promise<HubResultado<any>> {
+    if (!key) return { ok: false, motivo: "Hub API não configurada (falta HUB_API_KEY)." };
+    try {
+      const r = await f(`${base}${path}`, { method: "POST", headers: { "x-api-key": key, "content-type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(25000) });
+      if (r.status === 401) return { ok: false, motivo: "Hub API recusou a chave (HUB_API_KEY inválida)." };
+      if (!r.ok) return { ok: false, motivo: `Hub API respondeu ${r.status}.` };
+      return { ok: true, data: await r.json() };
+    } catch (e: any) {
+      return { ok: false, motivo: `Hub API indisponível (${e?.name === "TimeoutError" ? "tempo esgotado" : "falha de rede"}).` };
+    }
+  }
+  const pct = (v: unknown) => { const n = numero(v); return n === null ? "" : `${n.toLocaleString("pt-BR")}% do imóvel`; };
+
   return {
     configurado: () => !!key,
+    async sobreposicaoTerraIndigena(geometry) {
+      const r = await post("/api/funai/sobreposicao-poligono", { geometry });
+      if (!r.ok) return r;
+      if (!Array.isArray(r.data?.terras)) return { ok: false, motivo: "Hub API devolveu uma resposta inesperada para terra indígena." };
+      const itens = r.data.terras.map((t: any) => ({ nome: String(t.nome_ti ?? "Terra indígena"), detalhe: [t.etnia, t.fase_ti, pct(t.pct_sobreposicao_input)].filter(Boolean).join(" · ") }));
+      return { ok: true, data: { sobrepoe: itens.length > 0, itens } };
+    },
+    async sobreposicaoUnidadeConservacao(geometry) {
+      const r = await post("/api/icmbio/sobreposicao", { geometry });
+      if (!r.ok) return r;
+      if (!Array.isArray(r.data?.ucs)) return { ok: false, motivo: "Hub API devolveu uma resposta inesperada para unidade de conservação." };
+      const itens = r.data.ucs.map((u: any) => ({ nome: String(u.nome ?? "Unidade de conservação"), detalhe: [u.categoria, u.grupo, pct(u.pct_sobreposicao_input)].filter(Boolean).join(" · ") }));
+      return { ok: true, data: { sobrepoe: itens.length > 0, itens } };
+    },
     async buscarPorCodigo(cod) {
       const r = await get("/api/sicar/imoveis", { cod_imovel: cod, include_geometry: "true", limit: 5 });
       if (!r.ok) return r;

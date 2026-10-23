@@ -118,19 +118,34 @@ function Dados({ f, acao, id, confirmar }: { f: any; acao: any; id: string; conf
   );
 }
 
+const dataHora = (iso?: string) => { const t = iso ? new Date(iso) : null; return t && !Number.isNaN(t.getTime()) ? t.toLocaleDateString("pt-BR") : null; };
+
 function Atributos({ d, acao, id, confirmar }: { d: any; acao: any; id: string; confirmar: Confirmar }) {
   const [res, setRes] = useState<any>(null);
   const porChave: Record<string, any> = Object.fromEntries(d.atributos.map((a: any) => [a.chave, a]));
+  const oficiais = d.atributos_catalogo.filter((x: any) => x.grupo === "oficial");
+  const doCorretor = d.atributos_catalogo.filter((x: any) => x.grupo !== "oficial");
+  const ultima = d.atributos.filter((a: any) => a.origem === "oficial").map((a: any) => a.consultado_em).sort().pop();
+  const resumo = res?.resultado ? Object.entries(res.resultado).filter(([k]) => k !== "aviso_poligono").length : 0;
   return (
     <>
       <div className="painel">
-        <h3>Enriquecer pelo CAR</h3>
-        <p className="suave pequeno">Busca altitude e argila na base da Hub. Resultado automático nunca vira “confirmado”: só você confirma, com vendedor, documento ou visita.</p>
-        {!d.fazenda.car_codigo && <Aviso>Informe o CAR na aba Dados, ou preencha manualmente abaixo.</Aviso>}
-        <button className="btn" disabled={!d.fazenda.car_codigo} onClick={() => acao(async () => setRes(await api.post(`/api/admin/fazendas/${id}/enriquecer`)), "Consulta feita.")}>Buscar dados da Hub</button>
-        {res && <pre className="pequeno">{JSON.stringify(res.resultado, null, 1)}</pre>}
+        <h3>Dados oficiais</h3>
+        <p className="suave pequeno">Vêm de bases públicas (SICAR, IBGE, FUNAI, ICMBio) e aparecem no site na aba “Informações governamentais”, com a fonte e a data. Nada é publicado sozinho: você escolhe o que mostrar. Leitura automática nunca vira “confirmado”; só você confirma, com vendedor, documento ou visita.</p>
+        {!d.fazenda.car_codigo && <Aviso>Informe o CAR na aba Dados para poder atualizar.</Aviso>}
+        <div className="linha">
+          <button className="btn" disabled={!d.fazenda.car_codigo} onClick={() => acao(async () => setRes(await api.post(`/api/admin/fazendas/${id}/enriquecer`)), "Dados oficiais atualizados.")}>Atualizar dados oficiais</button>
+          <span className="suave pequeno">{dataHora(ultima) ? `Última atualização: ${dataHora(ultima)}` : "Ainda não atualizado."}</span>
+        </div>
+        {res?.resultado?.aviso_poligono && <Aviso>Esta fazenda ainda não tem o desenho do imóvel: sobreposições e logística não foram consultadas.</Aviso>}
+        {res && resumo > 0 && <p className="suave pequeno">{resumo} itens consultados. Itens sem resposta da fonte ficam como “sem dado” (isso não significa que não existam).</p>}
       </div>
-      {d.atributos_catalogo.map((def: any) => <LinhaAtributo key={def.chave} def={def} a={porChave[def.chave]} acao={acao} id={id} confirmar={confirmar} />)}
+      {oficiais.map((def: any) => <LinhaAtributo key={def.chave} def={def} a={porChave[def.chave]} acao={acao} id={id} confirmar={confirmar} />)}
+      <div className="painel">
+        <h3>Informado por você (corretor)</h3>
+        <p className="suave pequeno">Dados que não estão em bases do governo, como poço artesiano, benfeitorias e documentação. Aparecem no site na aba “Informações do imóvel”.</p>
+      </div>
+      {doCorretor.map((def: any) => <LinhaAtributo key={def.chave} def={def} a={porChave[def.chave]} acao={acao} id={id} confirmar={confirmar} />)}
     </>
   );
 }
@@ -159,7 +174,7 @@ function LinhaAtributo({ def, a, acao, id, confirmar }: { def: any; a: any; acao
         )}
         {!def.publicavel && <span className="etiqueta">nunca público</span>}
       </div>
-      {a?.fonte && <p className="suave pequeno">Fonte: {a.fonte}{a.observacao ? ` — ${a.observacao}` : ""}</p>}
+      {a?.fonte && <p className="suave pequeno">Fonte: {a.fonte}{dataHora(a.consultado_em) ? ` · ${dataHora(a.consultado_em)}` : ""}{a.observacao ? ` — ${a.observacao}` : ""}</p>}
       <div className="filtros">
         <Campo rotulo="Achado"><select value={achado} onChange={(e) => setAchado(e.target.value)}><option value="detectado">Informar valor</option><option value="nao_detectado">Não detectado</option></select></Campo>
         {achado === "detectado" && <Campo rotulo="Valor"><input value={valor} onChange={(e) => setValor(e.target.value)} /></Campo>}

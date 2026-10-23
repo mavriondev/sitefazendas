@@ -58,6 +58,9 @@ export const MIGRACOES: string[] = [
     publico BOOLEAN NOT NULL DEFAULT FALSE,
     UNIQUE (fazenda_id, chave)
   )`,
+  // Origem do dado: "oficial" (leitura automática de base pública) ou "corretor" (digitado/confirmado por uma pessoa).
+  `ALTER TABLE fazenda_atributos ADD COLUMN IF NOT EXISTS origem TEXT NOT NULL DEFAULT 'corretor'`,
+  `UPDATE fazenda_atributos SET origem = 'oficial' WHERE origem = 'corretor' AND confirmado_por IS NULL AND (fonte LIKE 'Base SICAR espelhada%' OR fonte LIKE 'IBGE%' OR fonte LIKE 'FUNAI%' OR fonte LIKE 'ICMBio%')`,
   `CREATE TABLE IF NOT EXISTS fazenda_fotos (
     id SERIAL PRIMARY KEY,
     fazenda_id INTEGER NOT NULL REFERENCES fazendas(id) ON DELETE CASCADE,
