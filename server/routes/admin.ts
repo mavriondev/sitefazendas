@@ -8,7 +8,8 @@ import { gerarSlug } from "../lib/slug";
 import { sanitizarImagem } from "../lib/foto";
 import { validarGeoJsonPoligono, centroAproximado } from "../lib/geojson";
 import { validarPublicacao, atributoParaPublico, type AtributoRow, type FazendaRow, type FotoRow } from "../lib/publico";
-import { gravarManual, gravarAutomatico, validarEntradaManual } from "../lib/atributos-db";
+import { atributoManual, gravarManual, gravarAutomatico, validarEntradaManual } from "../lib/atributos-db";
+import { vazaDadoSensivel } from "../lib/sigilo";
 import { ATRIBUTOS, chaveValida } from "../../shared/atributos";
 import { ESTADOS } from "../../shared/confianca";
 import { criarHub, type Hub } from "../lib/hub";
@@ -78,6 +79,9 @@ export function aplicarCamposFazenda(f: FazendaRow, b: Record<string, any>): { e
     }
   }
   if ("notas_internas" in b) n.notas_internas = txt(b.notas_internas, 4000);
+  // Títulos de rascunho podem ter localização. Só antes da primeira publicação,
+  // saneia o endereço ao corrigir o título, sem quebrar links já publicados.
+  if (!n.publicado_em && vazaDadoSensivel(n.slug, n).length && !vazaDadoSensivel(n.titulo, n).length) n.slug = gerarSlug(n.titulo);
   return { novo: n };
 }
 
@@ -101,7 +105,7 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     await salvarArquivo(op.uploadsDir, nome, limpa.dados);
     return nome;
   }
-  const apagarArquivo = (nome: string | null) => { void apagarArquivoUpload(op.uploadsDir, nome); };
+  const apagarArquivo = (nome: string | null) => apagarArquivoUpload(op.uploadsDir, nome);
 
   // ---------- fazendas ----------
   app.get("/api/admin/fazendas", exigirAdmin, async (_req, res) => {
@@ -133,10 +137,10 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     await db.query(
       `UPDATE fazendas SET titulo=$2, descricao_publica=$3, regiao_publica=$4, culturas=$5, area_ha=$6, area_exibicao=$7, preco_exibicao=$8,
          mostrar_mapa=$9, destaque=$10, destaque_ordem=$11, whatsapp_proprio=$12, car_codigo=$13, municipio=$14, uf=$15,
-         latitude=$16, longitude=$17, geojson=$18::jsonb, notas_internas=$19, mostrar_regiao=$20, atualizado_em=now() WHERE id=$1`,
+         latitude=$16, longitude=$17, geojson=$18::jsonb, notas_internas=$19, mostrar_regiao=$20, slug=$21, atualizado_em=now() WHERE id=$1`,
       [id, n.titulo, n.descricao_publica, n.regiao_publica, n.culturas, n.area_ha, n.area_exibicao, n.preco_exibicao,
         n.mostrar_mapa, n.destaque, n.destaque_ordem, n.whatsapp_proprio, n.car_codigo, n.municipio, n.uf,
-        n.latitude, n.longitude, n.geojson ? JSON.stringify(n.geojson) : null, n.notas_internas, n.mostrar_regiao],
+        n.latitude, n.longitude, n.geojson ? JSON.stringify(n.geojson) : null, n.notas_internas, n.mostrar_regiao, n.slug],
     );
   }
 
@@ -198,37 +202,36 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
   app.put("/api/admin/fazendas/:id/atributos/:chave", exigirAdmin, async (req, res) => {
     const id = idDe(req); const chave = String(req.params.chave);
     if (!chaveValida(chave)) return res.status(404).json({ message: "Atributo desconhecido." });
-    if (!(await db.query("SELECT 1 FROM fazendas WHERE id=$1", [id])).rowCount) return res.status(404).json({ message: "Fazenda não encontrada." });
+    const c = await carregar(db, id);
+    if (!c) return res.status(404).json({ message: "Fazenda não encontrada." });
     const erro = validarEntradaManual(chave, req.body ?? {});
     if (erro) return res.status(400).json({ message: erro });
-    await gravarManual(db, id, chave, req.body);
-    // Se a fazenda está publicada, a mudança não pode violar as regras.
-    const c = await carregar(db, id);
-    if (c!.f.status === "publicada") {
-      const prob = validarPublicacao(c!.f, c!.fotos, c!.atributos, c!.videos);
-      if (prob.length) {
-        await db.query("UPDATE fazenda_atributos SET publico = FALSE WHERE fazenda_id=$1 AND chave=$2", [id, chave]);
-        return res.status(409).json({ message: "Atributo salvo como privado: tornar público violaria as regras.", problemas: prob });
-      }
+    if (c.f.status === "publicada") {
+      const candidatos = [...c.atributos.filter(a => a.chave !== chave), atributoManual(chave, req.body)];
+      const prob = validarPublicacao(c.f, c.fotos, candidatos, c.videos);
+      if (prob.length) return res.status(409).json({ message: "Atributo não salvo: violaria as regras de publicação.", problemas: prob });
     }
+    await gravarManual(db, id, chave, req.body);
     res.json({ ok: true });
   });
 
   app.put("/api/admin/fazendas/:id/atributos/:chave/publico", exigirAdmin, async (req, res) => {
     const id = idDe(req); const chave = String(req.params.chave);
-    const publico = req.body?.publico === true;
+    if (typeof req.body?.publico !== "boolean") return res.status(400).json({ message: "publico deve ser booleano." });
+    const publico = req.body.publico;
     const def = ATRIBUTOS.find((a) => a.chave === chave);
     if (!def) return res.status(404).json({ message: "Atributo desconhecido." });
     if (publico && !def.publicavel) return res.status(400).json({ message: `"${def.rotulo}" nunca pode ser público.` });
     const r = await db.query<{ estado: string }>("SELECT estado FROM fazenda_atributos WHERE fazenda_id=$1 AND chave=$2", [id, chave]);
     if (!r.rows[0]) return res.status(404).json({ message: "Atributo não cadastrado nesta fazenda." });
     if (publico && !ESTADOS.slice(0, 2).includes(r.rows[0].estado as any)) return res.status(400).json({ message: "Atributo sem dado não pode ser público." });
-    await db.query("UPDATE fazenda_atributos SET publico=$3 WHERE fazenda_id=$1 AND chave=$2", [id, chave, publico]);
     const c = await carregar(db, id);
     if (publico && c!.f.status === "publicada") {
-      const prob = validarPublicacao(c!.f, c!.fotos, c!.atributos, c!.videos);
-      if (prob.length) { await db.query("UPDATE fazenda_atributos SET publico=FALSE WHERE fazenda_id=$1 AND chave=$2", [id, chave]); return res.status(409).json({ message: "Violaria as regras de publicação.", problemas: prob }); }
+      const candidatos = c!.atributos.map(a => a.chave === chave ? { ...a, publico } : a);
+      const prob = validarPublicacao(c!.f, c!.fotos, candidatos, c!.videos);
+      if (prob.length) return res.status(409).json({ message: "Violaria as regras de publicação.", problemas: prob });
     }
+    await db.query("UPDATE fazenda_atributos SET publico=$3 WHERE fazenda_id=$1 AND chave=$2", [id, chave, publico]);
     res.json({ ok: true });
   });
 
@@ -295,16 +298,23 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
   // ---------- fotos ----------
   app.post("/api/admin/fazendas/:id/fotos", exigirAdmin, upload.single("arquivo"), async (req, res) => {
     const id = idDe(req);
-    if (!(await db.query("SELECT 1 FROM fazendas WHERE id=$1", [id])).rowCount) return res.status(404).json({ message: "Fazenda não encontrada." });
+    const c = await carregar(db, id);
+    if (!c) return res.status(404).json({ message: "Fazenda não encontrada." });
+    const legenda = txt(req.body?.legenda, 200);
+    if (c.f.status === "publicada") {
+      const prob = validarPublicacao(c.f, [...c.fotos, { id: 0, arquivo: "", ordem: 0, capa: false, legenda }], c.atributos, c.videos);
+      if (prob.length) return res.status(409).json({ message: "A legenda violaria as regras.", problemas: prob });
+    }
     if (!req.file) return res.status(400).json({ message: "Envie um arquivo JPEG ou PNG." });
-    const nome = await salvarImagem(req.file.buffer);
-    if (!nome) return res.status(415).json({ message: "Formato não aceito. Use JPEG ou PNG." });
     const temCapa = (await db.query("SELECT 1 FROM fazenda_fotos WHERE fazenda_id=$1 AND capa", [id])).rowCount > 0;
     const ordem = Number((await db.query<{ m: string }>("SELECT COALESCE(MAX(ordem),0)+1 AS m FROM fazenda_fotos WHERE fazenda_id=$1", [id])).rows[0].m);
-    const r = await db.query<{ id: number }>(
+    const nome = await salvarImagem(req.file.buffer);
+    if (!nome) return res.status(415).json({ message: "Formato não aceito. Use JPEG ou PNG." });
+    let r;
+    try { r = await db.query<{ id: number }>(
       "INSERT INTO fazenda_fotos (fazenda_id, arquivo, ordem, capa, legenda) VALUES ($1,$2,$3,$4,$5) RETURNING id",
-      [id, nome, ordem, !temCapa, txt(req.body?.legenda, 200)],
-    );
+      [id, nome, ordem, !temCapa, legenda],
+    ); } catch (e) { await apagarArquivo(nome); throw e; }
     res.status(201).json({ id: r.rows[0].id, arquivo: nome });
   });
 
@@ -350,7 +360,9 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     let fazendaId: number | null = null, url: string | null = null;
     if (tipo === "fazenda") {
       fazendaId = Number(b.fazenda_id);
-      if (!(await db.query("SELECT 1 FROM fazendas WHERE id=$1", [fazendaId])).rowCount) return { erro: "Fazenda do slide não existe." };
+      const f = (await db.query<FazendaRow>("SELECT * FROM fazendas WHERE id=$1", [fazendaId])).rows[0];
+      if (!f) return { erro: "Fazenda do slide não existe." };
+      if ([titulo, subtitulo].some(t => vazaDadoSensivel(t, f).length)) return { erro: "O texto do slide contém dados privados da fazenda." };
     }
     if (tipo === "url") { url = txt(b.url, 500); if (!url || !/^https?:\/\//i.test(url)) return { erro: "URL deve começar com http:// ou https://." }; }
     return { v: { titulo, subtitulo, tipo, fazendaId, url, ordem: Number.isInteger(b.ordem) ? b.ordem : 0, ativo: b.ativo !== false } };

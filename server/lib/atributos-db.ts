@@ -1,4 +1,5 @@
 import type { Db } from "../db";
+import type { AtributoRow } from "./publico";
 import { defAtributo } from "../../shared/atributos";
 import { estadoBrasileiro } from "../../shared/filtros-publicos";
 import { estadoAutomatico, validarConfirmacao, type Achado } from "../../shared/confianca";
@@ -12,6 +13,10 @@ export interface EntradaManual {
 export function validarEntradaManual(chave: string, e: EntradaManual): string | null {
   const def = defAtributo(chave);
   if (!def) return "Atributo desconhecido.";
+  for (const k of ["fonte", "observacao", "confirmado_por"] as const) {
+    if (e[k] != null && typeof e[k] !== "string") return `${k} deve ser texto.`;
+  }
+  if (e.publico !== undefined && typeof e.publico !== "boolean") return "publico deve ser booleano.";
   if (e.achado !== "detectado" && e.achado !== "nao_detectado") return "achado deve ser detectado ou nao_detectado.";
   if (e.confirmado_por) {
     const erro = validarConfirmacao({ achado: e.achado, origem: e.confirmado_por });
@@ -33,9 +38,20 @@ export function validarEntradaManual(chave: string, e: EntradaManual): string | 
   return null;
 }
 
-export async function gravarManual(db: Db, fazendaId: number, chave: string, e: EntradaManual): Promise<void> {
+/** Mesma projeção usada na validação ANTES do único UPSERT atômico. */
+export function atributoManual(chave: string, e: EntradaManual): AtributoRow {
   const confirmado = !!e.confirmado_por;
-  const valor = e.achado === "detectado" ? e.valor : null;
+  return {
+    chave, estado: confirmado ? "confirmado" : "indicado", achado: e.achado as AtributoRow["achado"],
+    valor_json: e.achado === "detectado" ? e.valor ?? null : null,
+    fonte: confirmado ? `Confirmado por ${e.confirmado_por}` : (e.fonte?.trim() || "Informado pelo corretor (sem documento)"),
+    observacao: e.observacao?.trim() || null, confirmado_por: e.confirmado_por ?? null,
+    consultado_em: new Date().toISOString(), publico: !!e.publico, origem: "corretor",
+  };
+}
+
+export async function gravarManual(db: Db, fazendaId: number, chave: string, e: EntradaManual): Promise<void> {
+  const a = atributoManual(chave, e);
   await db.query(
     `INSERT INTO fazenda_atributos (fazenda_id, chave, estado, achado, valor_json, fonte, observacao, confirmado_por, consultado_em, publico, origem)
      VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,$8, now(), $9, 'corretor')
@@ -43,9 +59,8 @@ export async function gravarManual(db: Db, fazendaId: number, chave: string, e: 
        estado = EXCLUDED.estado, achado = EXCLUDED.achado, valor_json = EXCLUDED.valor_json, fonte = EXCLUDED.fonte,
        observacao = EXCLUDED.observacao, confirmado_por = EXCLUDED.confirmado_por, consultado_em = now(), publico = EXCLUDED.publico, origem = 'corretor'`,
     [
-      fazendaId, chave, confirmado ? "confirmado" : "indicado", e.achado, JSON.stringify(valor ?? null),
-      confirmado ? `Confirmado por ${e.confirmado_por}` : (e.fonte?.trim() || "Informado pelo corretor (sem documento)"),
-      e.observacao?.trim() || null, e.confirmado_por ?? null, !!e.publico,
+      fazendaId, chave, a.estado, a.achado, JSON.stringify(a.valor_json),
+      a.fonte, a.observacao, a.confirmado_por, a.publico,
     ],
   );
 }

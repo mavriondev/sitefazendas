@@ -111,7 +111,19 @@ export async function rodar() {
     const detalhe = await anon.get(`/api/public/fazendas/${lista.json.fazendas[0].slug}`);
     for (const resp of [lista.texto, detalhe.texto, (await anon.get("/api/public/home")).texto, (await anon.get("/api/public/filtros")).texto]) {
       for (const proibido of ["Botumirim", "3108107", "AAAA", "-16.8", "-43.0", "Grão Mogol", "TI X", "car_codigo", "municipio", "latitude", "notas_internas", "847", "850", "999", "1454.4"]) {
-        assert.ok(!resp.includes(proibido), `API pública vaza "${proibido}"`);
+        // Procura o conteúdo dos valores, não substrings acidentais de IDs aleatórios de uploads.
+        const valores: unknown[] = [];
+        const visitar = (v: unknown): void => {
+          if (Array.isArray(v)) v.forEach(visitar);
+          else if (v && typeof v === "object") Object.entries(v).forEach(([k, x]) => {
+            valores.push(k);
+            if (typeof x === "string" && /^\/uploads\/[a-f0-9]{32}\.(jpg|png)$/.test(x)) return;
+            visitar(k === "slug" && typeof x === "string" ? x.replace(/-[a-z0-9]{5}$/, "") : x);
+          });
+          else valores.push(v);
+        };
+        visitar(JSON.parse(resp));
+        assert.ok(!valores.some(v => String(v).includes(proibido)), `API pública vaza "${proibido}"`);
       }
     }
     const d = detalhe.json;
@@ -333,7 +345,7 @@ export async function rodar() {
     await admin.post(`/api/admin/fazendas/${id}/status`, { status: "arquivada" });
     assert.equal((await anon.get("/api/public/fazendas")).json.total, 0);
     assert.equal((await anon.get(`/api/public/fazendas/${d.slug}`)).status, 404);
-    assert.equal((await anon.get("/api/public/home")).json.slides[0].link, null);       // slide não aponta para fazenda fora do ar
+    assert.equal((await anon.get("/api/public/home")).json.slides.length, 0);       // slide e sua imagem saem junto com a fazenda
     assert.equal((await anon.get("/sitemap.xml")).texto.includes(d.slug), false);          // arquivada sai do sitemap
     // foto de fazenda não publicada: só o admin abre
     const fotoArq = (await admin.get(`/api/admin/fazendas/${id}`)).json.fotos[0].arquivo;

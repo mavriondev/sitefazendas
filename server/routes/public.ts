@@ -5,6 +5,7 @@ import { estadoBrasileiro, REGIOES_BRASIL, faixaValida } from "../../shared/filt
 import { lerConfig } from "../config";
 import { listarPublicas, obterPublicaPorSlug, opcoesFiltros, type FiltrosPublicos } from "../lib/publico";
 import { limparTelefone, validarEmail } from "../auth";
+import { vazaDadoSensivel } from "../lib/sigilo";
 
 const num = (v: unknown): number | undefined => {
   if (typeof v !== "string" || v.trim() === "") return undefined;
@@ -37,11 +38,12 @@ export function registrarRotasPublicas(app: Express, db: Db, opts: { limitar: bo
   app.get("/api/public/home", async (_req, res) => {
     const c = await lerConfig(db);
     const s = await db.query(
-      `SELECT s.id, s.titulo, s.subtitulo, s.arquivo, s.link_tipo, s.url, f.slug AS fazenda_slug
+       `SELECT s.id, s.titulo, s.subtitulo, s.arquivo, s.link_tipo, s.url, f.slug AS fazenda_slug,
+               f.municipio, f.uf, f.car_codigo, f.latitude, f.longitude
          FROM slides s LEFT JOIN fazendas f ON f.id = s.fazenda_id AND f.status = 'publicada'
-        WHERE s.ativo ORDER BY s.ordem, s.id`,
+         WHERE s.ativo AND (s.link_tipo <> 'fazenda' OR f.id IS NOT NULL) ORDER BY s.ordem, s.id`,
     );
-    const slides = s.rows.map((x: any) => ({
+    const slides = s.rows.filter((x: any) => x.link_tipo !== "fazenda" || ![x.titulo, x.subtitulo].some(t => vazaDadoSensivel(t, x).length)).map((x: any) => ({
       id: x.id, titulo: x.titulo, subtitulo: x.subtitulo, imagem: x.arquivo ? `/uploads/${x.arquivo}` : null,
       link: x.link_tipo === "fazenda" && x.fazenda_slug ? `/fazenda/${x.fazenda_slug}` : x.link_tipo === "url" ? x.url : null,
     }));
