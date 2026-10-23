@@ -6,6 +6,7 @@ import { linkWhatsapp } from "../api";
 import { useConteudo, LinkConteudo, Secoes, fundoConteudo } from "./Conteudo";
 import { AccountDropdown } from "./AccountDropdown";
 import { SeoPagina } from "./SeoPagina";
+import { WhatsappFlutuante } from "./WhatsappFlutuante";
 import "../agrezen.css";
 import "../agrezen-integration.css";
 import "../conteudo-publico.css";
@@ -38,7 +39,7 @@ export function Layout() {
       </div>
     </div></header>
     <main id="conteudo"><Outlet/></main>
-    {zap && <a className="ga-floating-whatsapp" href={zap} target="_blank" rel="noopener noreferrer" aria-label={t("marca.whatsapp") || "Falar no WhatsApp"}><MessageCircle aria-hidden="true"/></a>}
+    {!pathname.startsWith("/fazenda/") && <WhatsappFlutuante href={zap} rotulo={t("marca.whatsapp") || "Falar no WhatsApp"}/>}
     <footer className="ga-footer cms-fundo" style={fundoConteudo(t("marca.fundo_rodape"))} id="contato-rodape"><div className="ga-wrap">
       <div className="ga-footer-grid">
         <Secoes pagina="global" blocos={{
