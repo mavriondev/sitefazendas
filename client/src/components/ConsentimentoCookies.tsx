@@ -68,17 +68,23 @@ export function ConsentimentoCookies() {
     const c: Consentimento = { versao: 1, analytics: a && !!cfg?.ga4_ativo, marketing: m && !!cfg?.meta_pixel_ativo, expira: Date.now() + DURACAO_CONSENTIMENTO };
     try { localStorage.setItem(CHAVE_CONSENTIMENTO, JSON.stringify(c)); setAviso(""); }
     catch { setAviso("A preferência vale nesta página. O navegador não permitiu lembrá-la para a próxima visita."); }
+    setEscolha(c); setAberto(false); setPersonalizar(false);
     if (!c.analytics || !c.marketing) apagarCookiesRastreio(!c.analytics, !c.marketing);
-    setEscolha(c); setAberto(false);
-    if (rastreadores.current!.atualizar(cfg || rastreamentoPadrao(), c, pathname)) location.reload();
-    else botaoPreferencias.current?.focus();
+    // O efeito aplica a escolha aos provedores; não executar duas vezes no clique.
+    botaoPreferencias.current?.focus({ preventScroll: true });
   };
   const abrir = () => { setAnalytics(!!escolha?.analytics); setMarketing(!!escolha?.marketing); setPersonalizar(true); setAberto(true); };
   if (!publico || !cfg) return null;
   const ativo = cfg.ga4_ativo || cfg.meta_pixel_ativo;
+  const painelVisivel = aberto || ativo && !escolha;
+  const fechar = () => {
+    if (!escolha) salvar(false, false);
+    else { setAberto(false); setPersonalizar(false); botaoPreferencias.current?.focus({ preventScroll: true }); }
+  };
   return <>
-    <button ref={botaoPreferencias} type="button" className="cookie-preferencias" onClick={abrir}>Preferências de cookies</button>
-    {(aberto || ativo && !escolha) && <section className="cookie-painel" role="region" aria-labelledby="cookie-titulo">
+    <div className="cookie-preferencias-area"><button ref={botaoPreferencias} type="button" className="cookie-preferencias" aria-expanded={painelVisivel} aria-controls="cookie-painel" onClick={painelVisivel ? fechar : abrir}>Preferências de cookies</button></div>
+    {painelVisivel && <section id="cookie-painel" className="cookie-painel" role="region" aria-labelledby="cookie-titulo">
+      <button type="button" className="cookie-fechar" aria-label="Fechar preferências de cookies" onClick={fechar}>×</button>
       <h2 id="cookie-titulo">Sua escolha de cookies</h2>
       <p>Os essenciais mantêm a segurança e as suas preferências. {cfg.ga4_ativo && "Com sua autorização, usamos Google Analytics para medir visitas. "}{cfg.meta_pixel_ativo && "O Pixel da Meta mede publicidade, somente se você permitir marketing. "}Você pode rejeitar os não essenciais e continuar navegando normalmente.</p>
       <Link to="/privacidade">Política de privacidade</Link>
