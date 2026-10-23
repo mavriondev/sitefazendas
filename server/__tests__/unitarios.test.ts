@@ -7,7 +7,7 @@ import { estadoAutomatico, estaVencida, validarConfirmacao } from "../../shared/
 import { gerarSlug } from "../lib/slug";
 import { regiaoAproximada, RAIO_REGIAO_KM } from "../lib/regiao";
 import { validarGeoJsonPoligono } from "../lib/geojson";
-import { normalizarImovelHub } from "../lib/hub";
+import { criarHub, normalizarImovelHub } from "../lib/hub";
 import { anonimizarImovel, ajustarFiltros, filtroSuficiente, tokenDoImovel } from "../lib/pesquisa";
 import { atributoParaPublico, projetarFazendaPublica, validarPublicacao, type FazendaRow, type AtributoRow } from "../lib/publico";
 import { jpegComExif } from "./helpers";
@@ -87,6 +87,28 @@ export async function rodar() {
   const h = normalizarImovelHub({ cod_imovel: "MG-1", uf: "mg", num_area: "1454.5", alt_media: -9999, alt_min: -9999, alt_max: -9999, argila_media: -1, argila_pct: null });
   assert.equal(h.alt_media, null); assert.equal(h.argila_media, null); assert.equal(h.area_ha, 1454.5); assert.equal(h.uf, "MG");
   assert.equal(normalizarImovelHub({ cod_imovel: "x", argila_media: null, argila_pct: 31.2 }).argila_media, 31.2);
+
+  // ---- consulta por CAR: usa a UF existente no código, sem mudar o contrato da Hub
+  const chamadasHub: URL[] = [];
+  const codigoTeste = "MG-3108107-AAAA";
+  const hubConsulta = criarHub({
+    apiKey: "chave-ficticia-de-teste",
+    baseUrl: "https://hub.teste.invalid",
+    fetchFn: (async (url) => {
+      chamadasHub.push(new URL(String(url)));
+      return new Response(JSON.stringify({ data: [{ cod_imovel: codigoTeste }] }), { status: 200 });
+    }) as typeof fetch,
+  });
+  const consultaCar = await hubConsulta.buscarPorCodigo(codigoTeste);
+  assert.ok(consultaCar.ok && consultaCar.data?.cod_imovel === codigoTeste);
+  assert.equal(chamadasHub[0].pathname, "/api/sicar/imoveis");
+  assert.equal(chamadasHub[0].searchParams.get("uf"), "MG");
+  assert.equal(chamadasHub[0].searchParams.get("cod_imovel"), codigoTeste);
+  assert.equal(chamadasHub[0].searchParams.get("include_geometry"), "true");
+  await hubConsulta.buscarPorCodigo("mg3108107aaaa");
+  assert.equal(chamadasHub[1].searchParams.get("uf"), "MG");
+  await hubConsulta.buscarPorCodigo("codigo-incompleto");
+  assert.equal(chamadasHub[2].searchParams.has("uf"), false);
 
   // ---- pesquisa: níveis, grade de filtros e token
   const im = { cod_imovel: "MG-3108107-AAAA", uf: "MG", municipio: "Botumirim", area_ha: 1454.4, alt_media: 847.6, alt_min: 800, alt_max: 900, argila_media: 37.46, geojson: { x: 1 } };

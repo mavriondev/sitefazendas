@@ -96,7 +96,10 @@ export function criarHub(opts: { baseUrl?: string; apiKey?: string; fetchFn?: ty
       return { ok: true, data: { sobrepoe: itens.length > 0, itens } };
     },
     async buscarPorCodigo(cod) {
-      const r = await get("/api/sicar/imoveis", { cod_imovel: cod, include_geometry: "true", limit: 5 });
+      // O CAR já identifica a UF. Restringir a busca evita varrer a base nacional
+      // pelo filtro parcial da Hub, sem mudar a API nem suas configurações.
+      const uf = /^([a-z]{2})-?\d{7}/i.exec(cod.trim())?.[1].toUpperCase();
+      const r = await get("/api/sicar/imoveis", { uf, cod_imovel: cod, include_geometry: "true", limit: 5 });
       if (!r.ok) return r;
       const alvo = String(cod).replace(/[^A-Za-z0-9]/g, "").toLowerCase();
       const achado = (r.data?.data ?? []).find((x: any) => String(x?.cod_imovel ?? "").replace(/[^A-Za-z0-9]/g, "").toLowerCase() === alvo);
