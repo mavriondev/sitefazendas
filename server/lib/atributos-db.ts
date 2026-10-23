@@ -32,11 +32,11 @@ export async function gravarManual(db: Db, fazendaId: number, chave: string, e: 
   const confirmado = !!e.confirmado_por;
   const valor = e.achado === "detectado" ? e.valor : null;
   await db.query(
-    `INSERT INTO fazenda_atributos (fazenda_id, chave, estado, achado, valor_json, fonte, observacao, confirmado_por, consultado_em, publico)
-     VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,$8, now(), $9)
+    `INSERT INTO fazenda_atributos (fazenda_id, chave, estado, achado, valor_json, fonte, observacao, confirmado_por, consultado_em, publico, origem)
+     VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,$8, now(), $9, 'corretor')
      ON CONFLICT (fazenda_id, chave) DO UPDATE SET
        estado = EXCLUDED.estado, achado = EXCLUDED.achado, valor_json = EXCLUDED.valor_json, fonte = EXCLUDED.fonte,
-       observacao = EXCLUDED.observacao, confirmado_por = EXCLUDED.confirmado_por, consultado_em = now(), publico = EXCLUDED.publico`,
+       observacao = EXCLUDED.observacao, confirmado_por = EXCLUDED.confirmado_por, consultado_em = now(), publico = EXCLUDED.publico, origem = 'corretor'`,
     [
       fazendaId, chave, confirmado ? "confirmado" : "indicado", e.achado, JSON.stringify(valor ?? null),
       confirmado ? `Confirmado por ${e.confirmado_por}` : (e.fonte?.trim() || "Informado pelo corretor (sem documento)"),
@@ -50,15 +50,17 @@ export async function gravarAutomatico(
   db: Db, fazendaId: number, chave: string,
   p: { achado: Achado; valor?: unknown; fonte: string; observacao?: string },
 ): Promise<"gravado" | "mantido"> {
-  const atual = await db.query<{ estado: string }>("SELECT estado FROM fazenda_atributos WHERE fazenda_id=$1 AND chave=$2", [fazendaId, chave]);
+  const atual = await db.query<{ estado: string; achado: string }>("SELECT estado, achado FROM fazenda_atributos WHERE fazenda_id=$1 AND chave=$2", [fazendaId, chave]);
   if (atual.rows[0]?.estado === "confirmado") return "mantido";
+  // Falha de consulta não apaga uma leitura anterior boa (falha não é ausência).
+  if (p.achado === "indeterminado" && atual.rows[0] && atual.rows[0].achado !== "indeterminado") return "mantido";
   const estado = estadoAutomatico(p.achado);
   await db.query(
-    `INSERT INTO fazenda_atributos (fazenda_id, chave, estado, achado, valor_json, fonte, observacao, confirmado_por, consultado_em, publico)
-     VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,NULL, now(), FALSE)
+    `INSERT INTO fazenda_atributos (fazenda_id, chave, estado, achado, valor_json, fonte, observacao, confirmado_por, consultado_em, publico, origem)
+     VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,NULL, now(), FALSE, 'oficial')
      ON CONFLICT (fazenda_id, chave) DO UPDATE SET
        estado = EXCLUDED.estado, achado = EXCLUDED.achado, valor_json = EXCLUDED.valor_json, fonte = EXCLUDED.fonte,
-       observacao = EXCLUDED.observacao, confirmado_por = NULL, consultado_em = now()`,
+       observacao = EXCLUDED.observacao, confirmado_por = NULL, consultado_em = now(), origem = 'oficial'`,
     [fazendaId, chave, estado, p.achado, JSON.stringify(p.achado === "indeterminado" ? null : (p.valor ?? null)), p.fonte, p.observacao ?? null],
   );
   return "gravado";
