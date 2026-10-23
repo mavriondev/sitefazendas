@@ -3,6 +3,7 @@ import { lerConfig } from "../config";
 import { lerConteudo } from "./conteudo";
 import { obterPublicaPorSlug } from "./publico";
 import { PAGINAS_SEO, seoPadrao, type ConfigSeo, type MetaSeo } from "../../shared/seo";
+import { rastreamentoPadrao, validarRastreamento } from "../../shared/rastreamento";
 
 const CAMINHO_FAZENDA = /^\/fazenda\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const imagemValida = (s: string) => !s || /^\/(?:images\/gramogol\/[\w-]+\.(?:jpg|jpeg|png|webp)|uploads\/[a-f0-9]{32}\.(?:jpg|png))$/.test(s);
@@ -17,7 +18,7 @@ export function origemSeo(s: string, permitirHttp = false): string {
 }
 export async function lerSeo(db: Db): Promise<ConfigSeo> {
   const r = await db.query<{valor:ConfigSeo}>("SELECT valor FROM configuracoes WHERE chave='seo_site'");
-  return { ...seoPadrao(), ...r.rows[0]?.valor };
+  return { ...seoPadrao(), ...r.rows[0]?.valor, rastreamento: { ...rastreamentoPadrao(), ...r.rows[0]?.valor?.rastreamento } };
 }
 export function validarSeo(b: any): string | null {
   if (!b || typeof b !== "object" || Array.isArray(b) || !Number.isSafeInteger(b.revisao) || b.revisao < 0 ||
@@ -28,6 +29,8 @@ export function validarSeo(b: any): string | null {
   if (b.url_base && (!origemSeo(b.url_base) || /[\s\\]/.test(b.url_base))) return "Informe somente a origem HTTPS do domínio, sem caminho, parâmetros ou credenciais.";
   if (!imagemValida(b.imagem_padrao)) return "Selecione uma imagem da biblioteca de SEO.";
   if ([b.google_verificacao,b.bing_verificacao].some(v => v && !/^[A-Za-z0-9_-]+$/.test(v))) return "Informe apenas o código de verificação, sem tags HTML.";
+  const rastreamentoInvalido = validarRastreamento(b.rastreamento);
+  if (rastreamentoInvalido) return rastreamentoInvalido;
   if (typeof b.bloquear_indexacao !== "boolean" || !b.paginas || typeof b.paginas !== "object" || Array.isArray(b.paginas) || Object.keys(b.paginas).length > 2000) return "Páginas de SEO inválidas.";
   for (const [c,p] of Object.entries(b.paginas) as [string,any][]) {
     if (!caminhoSeoValido(c) || !p || typeof p !== "object" || Array.isArray(p) || Object.keys(p).sort().join() !== "descricao,imagem,nao_indexar,titulo" ||

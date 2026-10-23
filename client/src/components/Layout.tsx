@@ -6,6 +6,7 @@ import { linkWhatsapp } from "../api";
 import { useConteudo, LinkConteudo, Secoes, fundoConteudo } from "./Conteudo";
 import { AccountDropdown } from "./AccountDropdown";
 import { SeoPagina } from "./SeoPagina";
+import { ConsentimentoCookies } from "./ConsentimentoCookies";
 import { WhatsappFlutuante } from "./WhatsappFlutuante";
 import "../agrezen.css";
 import "../agrezen-integration.css";
@@ -54,5 +55,6 @@ export function Layout() {
         }}/>
       </div>{visivel("rodape_creditos")&&<div className="ga-footer-bottom">© {new Date().getFullYear()} {nome} · {t("rodape_creditos.texto")}</div>}
     </div></footer>
+    <ConsentimentoCookies />
   </div>;
 }
