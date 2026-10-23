@@ -5,6 +5,7 @@ import { useSite } from "../contexto";
 import { useConteudo } from "../components/Conteudo";
 import { ICONES } from "../components/Caracteristicas";
 import { Info } from "lucide-react";
+import { paginarFotos } from "../lib/ficha";
 import "../ficha.css";
 
 const dataBr = (iso?: string) => { const m = iso?.match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? `${m[3]}/${m[2]}/${m[1]}` : null; };
@@ -55,7 +56,7 @@ export default function FazendaFicha() {
   const governo = f.atributos.filter((a) => a.origem === "oficial");
   const ultima = dataBr(governo.map((a) => a.atualizado_em || "").sort().pop());
   const fontes = [...new Set(governo.map((a) => a.fonte).filter(Boolean))].join(", ");
-  const fotos = f.fotos.slice(0, 4);
+  const paginasFotos = paginarFotos(f.fotos);
   const hoje = new Date().toLocaleDateString("pt-BR");
   const Item = ({ a, gov }: { a: FazendaPublica["atributos"][number]; gov: boolean }) => {
     const Icon = ICONES[a.chave] || Info;
@@ -92,13 +93,25 @@ export default function FazendaFicha() {
         {corretor.length > 0 && <><h2>Informações do imóvel</h2><ul className="ficha-lista">{corretor.map((a) => <Item key={a.chave} a={a} gov={false} />)}</ul></>}
         {governo.length > 0 && <><h2>Dados do governo sobre o ativo</h2><ul className="ficha-lista">{governo.map((a) => <Item key={a.chave} a={a} gov />)}</ul>
           <p className="ficha-nota">Dados de bases públicas do governo ({fontes}){ultima ? `; última atualização em ${ultima}` : ""}. São indicativos, não substituem documentos nem medição em campo e podem estar defasados.</p></>}
-        {fotos.length > 0 && <><h2>Fotos</h2><div className="ficha-fotos">{fotos.map((x, i) => <figure key={i}><img src={x.url} alt={x.legenda || ""} />{x.legenda && <figcaption>{x.legenda}</figcaption>}</figure>)}</div></>}
         <footer className="ficha-rodape">
           <div className="ficha-fale"><strong>Fale com o corretor</strong>{contatos.map((c) => <span key={c}>{c}</span>)}{config?.contato_horario && <span>{config.contato_horario}</span>}{config?.texto_creci && <span>{config.texto_creci}</span>}</div>
           <p>{config?.aviso_intermediacao || "As informações são indicativas e não substituem a verificação documental. Localização detalhada e documentação são tratadas em atendimento direto."}</p>
           <p>Ficha gerada em {hoje} · {nome}</p>
         </footer>
       </section>
+      {paginasFotos.map((fotos, pagina) => (
+        <section className="ficha-pagina ficha-galeria" aria-label={`Fotos — página ${pagina + 1} de ${paginasFotos.length}`} key={pagina}>
+          <header className="ficha-cab"><strong>{f.titulo}</strong><span>Fotos · {pagina + 1} de {paginasFotos.length}</span></header>
+          <div className="ficha-fotos">
+            {fotos.map((foto, indice) => (
+              <figure key={`${foto.url}-${indice}`}>
+                <img src={foto.url} alt={foto.legenda || `Foto ${pagina * 2 + indice + 1} da fazenda ${f.titulo}`} />
+                {foto.legenda && <figcaption>{foto.legenda}</figcaption>}
+              </figure>
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }
