@@ -61,7 +61,7 @@ function Dados({ f, acao, id, confirmar }: { f: any; acao: any; id: string; conf
     destaque: f.destaque, destaque_ordem: f.destaque_ordem ?? 0, mostrar_mapa: f.mostrar_mapa, mostrar_regiao: f.mostrar_regiao, geojson_novo: "", whatsapp_proprio: f.whatsapp_proprio ?? "",
     car_codigo: f.car_codigo ?? "", municipio: f.municipio ?? "", uf: f.uf ?? "", latitude: f.latitude ?? "", longitude: f.longitude ?? "", notas_internas: f.notas_internas ?? "",
   };
-  const { v, setV, sujo, recuperado, descartar } = useFormularioComRascunho(`rascunho-fazenda-${id}`, inicial);
+  const { v, setV, sujo, recuperado, descartar, confirmarSalvo } = useFormularioComRascunho(`rascunho-fazenda-${id}`, inicial);
   const [sug, setSug] = useState("");
   const [obs, setObs] = useState("");
   const [erroIA, setErroIA] = useState<unknown>(null);
@@ -70,11 +70,11 @@ function Dados({ f, acao, id, confirmar }: { f: any; acao: any; id: string; conf
   const set = (k: string) => (e: any) => setV({ ...v, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value });
   const salvar = (e: React.FormEvent) => {
     e.preventDefault();
-    void acao(() => api.put(`/api/admin/fazendas/${id}`, {
+    void acao(async () => { await api.put(`/api/admin/fazendas/${id}`, {
       ...v, culturas: v.culturas.split(",").map((s: string) => s.trim()).filter(Boolean), area_ha: num(v.area_ha),
       latitude: num(v.latitude), longitude: num(v.longitude), destaque_ordem: Number(v.destaque_ordem) || 0,
       geojson_novo: undefined, ...(v.geojson_novo.trim() ? { geojson: v.geojson_novo.trim() } : {}),
-    }));
+    }); confirmarSalvo(); });
   };
   const sugerir = async () => {
     setErroIA(null); setIaBusy(true);

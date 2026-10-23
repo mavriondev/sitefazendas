@@ -63,7 +63,9 @@ export interface FazendaPublica {
 export const soDigitos = (s: string) => s.replace(/\D/g, "");
 export function linkWhatsapp(numero: string | null | undefined, texto: string): string | null {
   const d = numero ? soDigitos(numero) : "";
-  if (d.length < 10) return null;
-  const completo = d.startsWith("55") ? d : `55${d}`;
+  const nacional = d.length === 10 || d.length === 11;
+  const internacional = (d.length === 12 || d.length === 13) && d.startsWith("55");
+  if (!nacional && !internacional) return null;
+  const completo = internacional ? d : `55${d}`;
   return `https://wa.me/${completo}?text=${encodeURIComponent(texto)}`;
 }

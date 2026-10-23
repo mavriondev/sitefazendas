@@ -91,6 +91,8 @@ export function atributoParaPublico(a: AtributoRow): AtributoPublico | null {
 }
 
 export function projetarFazendaPublica(f: FazendaRow, atributos: AtributoRow[], fotos: FotoRow[], whatsappPadrao = ""): FazendaPublica {
+  // Defesa também na leitura: dados legados ou edições concorrentes nunca liberam texto privado.
+  const seguro = (texto: string | null) => vazaDadoSensivel(texto, f).length ? null : texto;
   const fotosOrd = [...fotos].sort((a, b) => Number(b.capa) - Number(a.capa) || a.ordem - b.ordem || a.id - b.id);
   // O cadastro privado não autoriza divulgação: a área precisa do mesmo opt-in
   // dos demais atributos. Mesmo registros legados "exata" só saem como faixa.
@@ -106,9 +108,9 @@ export function projetarFazendaPublica(f: FazendaRow, atributos: AtributoRow[], 
     preco: f.preco_exibicao || null,
     destaque: f.destaque,
     capa: fotosOrd[0] ? `/uploads/${fotosOrd[0].arquivo}` : null,
-    fotos: fotosOrd.map((x) => ({ url: `/uploads/${x.arquivo}`, legenda: x.legenda })),
+    fotos: fotosOrd.map((x) => ({ url: `/uploads/${x.arquivo}`, legenda: seguro(x.legenda) })),
     videos: [],
-    atributos: atributos.map(atributoParaPublico).filter((x): x is AtributoPublico => x !== null),
+    atributos: atributos.map(atributoParaPublico).filter((x): x is AtributoPublico => x !== null && seguro(x.texto) !== null),
     forma: f.mostrar_mapa && f.geojson ? formaSvgAnonima(f.geojson) : null,
     regiao_mapa: f.mostrar_regiao ? regiaoAproximada(f.latitude, f.longitude, f.regiao_ang, f.regiao_dist) : null,
     whatsapp: f.whatsapp_proprio || whatsappPadrao || null,
@@ -125,7 +127,7 @@ export function validarPublicacao(f: FazendaRow, fotos: FotoRow[], atributos: At
   if (fotos.length === 0) p.push("Adicione ao menos uma foto.");
   const priv: DadosPrivados = { municipio: f.municipio, uf: f.uf, car_codigo: f.car_codigo, latitude: f.latitude, longitude: f.longitude };
   const campos: Array<[string, string | null | undefined]> = [
-    ["título", f.titulo], ["descrição", f.descricao_publica], ["região", f.regiao_publica], ["preço", f.preco_exibicao],
+    ["título", f.titulo], ["endereço da página", f.slug], ["descrição", f.descricao_publica], ["região", f.regiao_publica], ["preço", f.preco_exibicao],
     ...fotos.map((x, i) => [`legenda da foto ${i + 1}`, x.legenda] as [string, string | null]),
     ...f.culturas.map((c) => ["cultura", c] as [string, string]),
     ...videos.filter(v => v.publico).map(v => ["título do vídeo", v.titulo] as [string, string]),

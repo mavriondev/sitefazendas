@@ -10,6 +10,7 @@ export interface HubImovel {
 export type HubResultado<T> = { ok: true; data: T } | { ok: false; motivo: string };
 
 const numero = (v: unknown): number | null => {
+  if (typeof v === "string" && !v.trim()) return null;
   const n = typeof v === "string" ? Number(v) : v;
   return typeof n === "number" && Number.isFinite(n) ? n : null;
 };

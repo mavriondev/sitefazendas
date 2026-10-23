@@ -126,7 +126,7 @@ export function criarApp(o: OpcoesApp): Express {
       const r = await o.db.query<{ publico: boolean }>(
         `SELECT
            EXISTS (SELECT 1 FROM fazenda_fotos p JOIN fazendas f ON f.id=p.fazenda_id WHERE p.arquivo=$1 AND f.status='publicada')
-           OR EXISTS (SELECT 1 FROM slides s WHERE s.arquivo=$1 AND s.ativo)
+           OR EXISTS (SELECT 1 FROM slides s LEFT JOIN fazendas f ON f.id=s.fazenda_id WHERE s.arquivo=$1 AND s.ativo AND (s.link_tipo <> 'fazenda' OR f.status='publicada'))
            OR EXISTS (SELECT 1 FROM parceiros pr WHERE pr.arquivo=$1 AND pr.ativo)
            OR EXISTS (SELECT 1 FROM site_midias m WHERE m.arquivo=$1 AND m.publicado)
            OR EXISTS (

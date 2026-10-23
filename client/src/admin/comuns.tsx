@@ -73,10 +73,9 @@ export function useAcaoUnica<A extends any[]>(executar: (...args: A) => Promise<
     if (emAndamento.current) return;
     emAndamento.current = true; clearTimeout(soltar.current); setOcupado(true);
     try { await executar(...args); } finally {
-      emAndamento.current = false;
       // Pequena pausa: a lista pode ter mudado de lugar (mensagem nova, linha que sumiu) e um segundo clique
       // rápido cairia em outro botão. Durante a pausa o botão continua travado.
-      soltar.current = setTimeout(() => setOcupado(false), 450);
+      soltar.current = setTimeout(() => { emAndamento.current = false; setOcupado(false); }, 450);
     }
   }, [executar]);
   return [envolvida, ocupado] as const;
@@ -147,5 +146,9 @@ export function useFormularioComRascunho<T>(chave: string, base: T) {
   useAvisoAlteracao(sujo);
   useEffect(() => { gravarRascunho(chave, sujo ? v : null); }, [chave, v, sujo]);
   const descartar = () => { gravarRascunho(chave, null); setV(base); };
-  return { v, setV, sujo, recuperado, descartar };
+  // Limpa só a versão enviada: digitação mais nova durante o envio continua recuperável.
+  const confirmarSalvo = () => {
+    if (!difere(lerRascunho(chave), v)) gravarRascunho(chave, null);
+  };
+  return { v, setV, sujo, recuperado, descartar, confirmarSalvo };
 }
