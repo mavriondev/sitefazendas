@@ -18,6 +18,8 @@ import UsuariosAdmin from "./admin/UsuariosAdmin";
 import ContatosAdmin from "./admin/ContatosAdmin";
 import ConteudoAdmin from "./admin/ConteudoAdmin";
 import SeoAdmin from "./admin/SeoAdmin";
+import AgroAdmin from "./admin/AgroAdmin";
+import { Noticia, Noticias } from "./pages/Noticias";
 
 export default function App() {
   return (
@@ -27,6 +29,8 @@ export default function App() {
         <Route index element={<Home />} />
         <Route path="fazendas" element={<Fazendas />} />
         <Route path="fazenda/:slug" element={<FazendaDetalhe />} />
+        <Route path="noticias" element={<Noticias />} />
+        <Route path="noticias/:slug" element={<Noticia />} />
         <Route path="sobre" element={<Sobre />} />
         <Route path="parceiros" element={<Parceiros />} />
         <Route path="contato" element={<Contato />} />
@@ -46,6 +50,7 @@ export default function App() {
           <Route path="usuarios" element={<UsuariosAdmin />} />
           <Route path="config" element={<ConfigAdmin />} />
           <Route path="conteudo" element={<ConteudoAdmin />} />
+          <Route path="agro" element={<AgroAdmin />} />
           <Route path="seo" element={<SeoAdmin />} />
         </Route>
         <Route path="*" element={<div className="container pagina"><h1>Página não encontrada</h1></div>} />

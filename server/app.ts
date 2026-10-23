@@ -6,6 +6,7 @@ import path from "node:path";
 import type { Db } from "./db";
 import { middlewaresDeAuth } from "./auth";
 import { registrarRotasAuth } from "./routes/auth";
+import { registrarRotasAgro } from "./routes/agro";
 import { registrarRotasPublicas } from "./routes/public";
 import { registrarRotasAdmin } from "./routes/admin";
 import { registrarRotasPesquisa } from "./routes/pesquisa";
@@ -30,6 +31,8 @@ export interface OpcoesApp {
   sessionStore?: session.Store;
   hub?: Hub;
   fetchIA?: typeof fetch;
+  fetchAgro?: typeof fetch;
+  agroAutomatico?: boolean;
   fontesMalha?: FontesMalha;
   /** Pasta do front-end compilado (dist/public). */
   clientDir?: string;
@@ -87,6 +90,7 @@ export function criarApp(o: OpcoesApp): Express {
   const rotas = rotasSeguras(app);
   for (const nome of ["id", "fotoId", "videoId"]) app.param(nome, (req, res, next) => validarParametros(req, res, next));
   registrarRotasAuth(rotas, o.db, { limitar: o.limitar });
+  registrarRotasAgro(rotas, o.db, { automatico: o.agroAutomatico ?? process.env.NODE_ENV !== "test", buscar: o.fetchAgro });
   registrarRotasPublicas(rotas, o.db, { limitar: o.limitar });
   registrarRotasConteudo(rotas, o.db, o.uploadsDir);
   registrarRotasAdmin(rotas, o.db, exigirAdmin, { uploadsDir: o.uploadsDir, hub: o.hub, fetchIA: o.fetchIA, fontesMalha: o.fontesMalha });
