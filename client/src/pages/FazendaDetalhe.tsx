@@ -55,7 +55,8 @@ export default function FazendaDetalhe() {
         {!wa&&<><p className="ga-disclaimer">WhatsApp ainda não configurado para este anúncio.</p><Link className="ga-btn" to="/contato">{t("imovel.sem_whatsapp")} <ArrowUpRight/></Link></>}
         <div className="ga-sidebar-rule"/>
         {wa&&<a className="ga-btn" href={wa} target="_blank" rel="noopener noreferrer"><MessageCircle/>TENHO INTERESSE</a>}
-        <a className="ga-btn" href={`/fazenda/${f.slug}/pdf?imprimir=1`} target="_blank" rel="noopener"><FileDown/>Gerar PDF da fazenda</a><h4>{t("imovel.compartilhar_titulo")}</h4><div className="ga-share-row"><button className="ga-icon-button" onClick={()=>void copiar()}><Copy/>{t("imovel.copiar")}</button><a className="ga-icon-button" href={`https://wa.me/?text=${encodeURIComponent(mensagem)}`} target="_blank" rel="noopener noreferrer"><Share2/>WhatsApp</a></div>
+        <a className="ga-btn" href={`/fazenda/${f.slug}/pdf?imprimir=1`} target="_blank" rel="noopener"><FileDown/>Gerar PDF da fazenda</a>
+        <button type="button" className="ga-btn" onClick={()=>void copiar()}><Copy/>{t("imovel.copiar")}</button>
         {aviso&&<p role="status" className="ga-disclaimer">{aviso}</p>}
         <div className="ga-broker-note">{config?.aviso_intermediacao || "Atendimento direto com o corretor. Localização detalhada, documentação e visitas são tratados em conversa privada."}{config?.texto_creci&&<p>{config.texto_creci}</p>}</div>
       </aside></div>
