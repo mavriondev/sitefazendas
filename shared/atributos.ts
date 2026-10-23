@@ -25,6 +25,8 @@ export interface DefAtributo {
 }
 
 export const ATRIBUTOS: DefAtributo[] = [
+  { chave: "estado_publico", rotulo: "Estado público", tipo: "texto", publicavel: true, validadeDias: 3650, filtravel: true, grupo: "corretor" },
+  { chave: "area_total_ha", rotulo: "Área total pública", tipo: "numero", unidade: "ha", publicavel: true, validadeDias: 3650, filtravel: true, grupo: "corretor" },
   { chave: "altitude_media", rotulo: "Altitude", tipo: "numero", unidade: "m", publicavel: true, passoFaixa: 100, validadeDias: 3650, filtravel: true, grupo: "oficial", fontePublica: "SRTM/NASA (via base do SICAR)" },
   { chave: "argila_media", rotulo: "Argila no solo", tipo: "numero", unidade: "%", publicavel: true, passoFaixa: 5, validadeDias: 3650, filtravel: true, grupo: "oficial", fontePublica: "OpenGeoHub (modelo de solo, 250 m)" },
   { chave: "declividade_media", rotulo: "Relevo", tipo: "numero", unidade: "%", publicavel: true, validadeDias: 3650, grupo: "oficial", fontePublica: "SRTM/NASA" },

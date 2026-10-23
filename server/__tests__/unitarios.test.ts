@@ -159,7 +159,9 @@ export async function rodar() {
   assert.equal(pub.atributos.find((a) => a.chave === "logistica_rodovia")!.texto, "de 5 a 15 km");
   assert.ok(pub.forma && !pub.forma.d.includes("-16"));
   assert.equal(projetarFazendaPublica({ ...fz, mostrar_mapa: false }, [], []).forma, null);
-  assert.equal(projetarFazendaPublica({ ...fz, area_exibicao: "faixa" }, [], []).area, "1.000 a 2.500 ha");
+  assert.equal(projetarFazendaPublica({ ...fz, area_exibicao: "faixa" }, [], []).area, null);
+  assert.equal(projetarFazendaPublica(fz, [at("area_total_ha",{valor_json:1454})], []).area,"1.000 a 2.500 ha");
+  assert.equal(projetarFazendaPublica(fz, [at("area_total_ha",{valor_json:1454,publico:false})], []).area,null);
   assert.equal(atributoParaPublico(at("ndvi", { valor_json: 0.5 })), null);         // não publicável
   assert.equal(atributoParaPublico(at("uso_solo", { valor_json: { descricao: "~60% vegetação nativa" } }))!.texto, "~60% vegetação nativa");
 
