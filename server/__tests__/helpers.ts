@@ -39,11 +39,11 @@ export function criarHubFalso(): HubFalso {
   return h;
 }
 
-export async function subirApp(opts: { hub?: Hub; fetchIA?: typeof fetch; limitar?: boolean; clientDir?: string; fontesMalha?: FontesMalha } = {}) {
+export async function subirApp(opts: { hub?: Hub; fetchIA?: typeof fetch; fetchAgro?: typeof fetch; limitar?: boolean; clientDir?: string; fontesMalha?: FontesMalha } = {}) {
   const db = await criarDbTeste();
   await garantirAdmin(db, "admin@teste.com", "senha-forte-1");
   const uploadsDir = fs.mkdtempSync(path.join(os.tmpdir(), "sf-up-"));
-  const app = criarApp({ db, uploadsDir, segredo: "segredo-de-teste", producao: false, limitar: opts.limitar ?? false, hub: opts.hub, fetchIA: opts.fetchIA, fontesMalha: opts.fontesMalha ?? malhaOffline, clientDir:opts.clientDir,siteUrl:"https://portal.teste.example" });
+  const app = criarApp({ db, uploadsDir, segredo: "segredo-de-teste", producao: false, limitar: opts.limitar ?? false, hub: opts.hub, fetchIA: opts.fetchIA, fetchAgro: opts.fetchAgro, fontesMalha: opts.fontesMalha ?? malhaOffline, clientDir:opts.clientDir,siteUrl:"https://portal.teste.example" });
   const server = await new Promise<import("node:http").Server>((ok) => { const s = app.listen(0, "127.0.0.1", () => ok(s)); });
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 

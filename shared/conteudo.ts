@@ -40,6 +40,8 @@ export const PAGINAS_CONTEUDO: PaginaRegistro[] = [
       ["Peça os detalhes", "Uma propriedade chamou sua atenção? Converse com o corretor sobre os dados complementares."],
       ["Conheça com segurança", "O corretor acompanha a conversa, a visita e os próximos passos da negociação."],
     ])]),
+    s("cotacoes", "Cotações do agro", [t("rotulo", "Chamada", "Mercado agropecuário"), t("titulo", "Título", "Cotações para acompanhar o mercado."), p("texto", "Apresentação", "Dólar de referência e preços agrícolas, com identificação da fonte, da praça e da data.")]),
+    s("noticias", "Notícias do agro", [t("rotulo", "Chamada", "Informação para o campo"), t("titulo", "Título", "O agro em pauta."), p("texto", "Apresentação", "Acompanhe notícias de fontes identificadas e leia os conteúdos disponíveis aqui na Gramogol.")]),
     s("venda", "Convite aos proprietários", [t("rotulo", "Chamada", "Venda sua fazenda"), t("titulo", "Título", "A propriedade certa merece a conversa certa."), p("texto", "Texto", "Quer apresentar uma fazenda ao mercado? Fale com a equipe para entender a intermediação e quais informações podem ser divulgadas."), t("botao", "Botão", "Conversar sobre venda"), l("link", "Destino", "/venda-sua-fazenda"), i("imagem", "Imagem principal", "silos-armazem.jpg"), i("imagem_menor", "Imagem menor", "lavoura-milho.jpg")]),
     s("parceiros", "Rede de parceiros", [t("rotulo", "Chamada", "Rede de parceiros"), t("titulo", "Título", "Conhecimento que soma à negociação."), t("botao", "Botão", "Ver parceiros"), l("link", "Destino", "/parceiros")]),
     s("convite", "Convite final", [t("rotulo", "Chamada", "Gramogol Fazendas"), t("titulo", "Título", "Terra, propósito e uma negociação bem conduzida."), p("texto", "Texto", "Atendimento pessoal para comprar ou vender sua propriedade rural, com discrição do primeiro contato ao fechamento."), t("botao", "Botão WhatsApp", "Falar com o corretor"), t("botao_alternativo", "Botão sem WhatsApp", "Falar com a equipe"), l("link_alternativo", "Destino sem WhatsApp", "/contato"), i("imagem", "Imagem de fundo", "grao-mogol-serra.jpg")]),
@@ -89,6 +91,9 @@ export const PAGINAS_CONTEUDO: PaginaRegistro[] = [
     s("imovel", "Dados, fotos e atendimento do imóvel", [t("destaque", "Selo de destaque", "Seleção do corretor"), t("rotulo", "Selo comum", "Propriedade rural"), t("compartilhar", "Botão compartilhar", "Compartilhar"), t("voltar", "Botão de retorno", "Todas as fazendas"), t("sobre", "Título da descrição", "Sobre a propriedade"), t("valor", "Rótulo do preço", "Valor anunciado"), t("consulta", "Preço não divulgado", "Sob consulta"), t("botao", "Botão de atendimento", "Falar com o corretor"), t("sem_whatsapp", "Botão alternativo", "Canais de atendimento"), t("compartilhar_titulo", "Título de compartilhamento", "Compartilhar propriedade"), t("copiar", "Botão copiar", "Copiar link")]),
     s("similares", "Fazendas semelhantes", [t("rotulo", "Chamada", "Mais propriedades"), t("titulo", "Título de semelhantes", "Fazendas semelhantes"), t("titulo_alternativo", "Título de outras fazendas", "Outras fazendas disponíveis"), t("botao", "Link do catálogo", "Ver catálogo"), l("link", "Destino", "/fazendas")]),
   ] },
+  { id: "noticias", titulo: "Notícias do agro", rota: "/noticias", organizar: false, secoes: [
+    s("topo", "Apresentação", [t("rotulo", "Chamada", "Campo e mercado"), t("titulo", "Título", "Notícias do agro"), p("texto", "Apresentação", "Matérias de fontes identificadas, com crédito e link para o original. Cada item indica se o texto é integral ou resumo.")]),
+  ] },
   { id: "formularios", titulo: "Textos dos formulários", rota: "/contato", organizar: false, nota: "Os campos obrigatórios, limites e validações de segurança não podem ser removidos ou reordenados pelo editor.", secoes: [
     s("rotulos", "Rótulos e botões", [t("nome", "Campo nome", "Nome"), t("whatsapp", "Campo WhatsApp", "WhatsApp (com DDD)"), t("email", "Campo e-mail", "E-mail (opcional)"), t("mensagem", "Campo mensagem", "Mensagem"), t("fazenda", "Título dos dados da fazenda", "Sobre a fazenda"), t("regiao", "Campo região", "Município / região"), t("area", "Campo área", "Área aproximada"), t("area_exemplo", "Exemplo de área", "ex.: 1.200 ha"), t("culturas", "Campo culturas", "Culturas / atividade"), t("car", "Campo CAR", "Código do CAR (se tiver)"), t("enviar_contato", "Botão contato", "Enviar mensagem"), t("enviar_venda", "Botão de venda", "Enviar minha fazenda")]),
     s("orientacoes", "Orientações", [p("car_opcional", "Orientação sobre CAR", "Pode enviar sem o CAR: cadastramos a fazenda do mesmo jeito e completamos os dados com você."), p("privacidade", "Orientação sobre dados pessoais", "Seus dados serão usados para responder à sua solicitação. Não envie senhas ou documentos pessoais."), t("link_privacidade", "Link da política", "Consulte a política de privacidade.")]),
@@ -127,7 +132,12 @@ export function completarConteudo(entrada?: Partial<ConteudoSite> | null): Conte
     const base = padrao.paginas[pagina.id];
     for (const chave of Object.keys(base.valores)) if (typeof salvo.valores?.[chave] === "string") base.valores[chave] = salvo.valores[chave];
     const ids = new Set(base.ordem);
-    base.ordem = [...new Set((salvo.ordem ?? []).filter(id => ids.has(id))), ...base.ordem.filter(id => !salvo.ordem?.includes(id))];
+    const ordem = [...new Set((salvo.ordem ?? []).filter(id => ids.has(id)))];
+    for (const novo of base.ordem.filter(id => !ordem.includes(id))) {
+      const anterior = base.ordem.slice(0, base.ordem.indexOf(novo)).reverse().find(id => ordem.includes(id));
+      ordem.splice(anterior ? ordem.indexOf(anterior) + 1 : 0, 0, novo);
+    }
+    base.ordem = ordem;
     base.ocultas = [...new Set((salvo.ocultas ?? []).filter(id => ids.has(id)))];
   }
   return padrao;

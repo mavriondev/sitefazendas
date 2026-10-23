@@ -2,6 +2,26 @@ import type { Db } from "./db";
 
 // Migrações idempotentes (CREATE ... IF NOT EXISTS): rodam a cada start, nunca apagam dados.
 export const MIGRACOES: string[] = [
+  `CREATE TABLE IF NOT EXISTS site_noticias (
+    id SERIAL PRIMARY KEY,
+    slug TEXT NOT NULL UNIQUE,
+    titulo TEXT NOT NULL,
+    chamada TEXT NOT NULL DEFAULT '',
+    resumo TEXT,
+    resumo_fonte TEXT NOT NULL DEFAULT '',
+    corpo JSONB NOT NULL DEFAULT '[]',
+    fonte TEXT NOT NULL CHECK (fonte IN ('mapa','canal-rural')),
+    fonte_nome TEXT NOT NULL,
+    fonte_url TEXT NOT NULL UNIQUE,
+    autor TEXT NOT NULL DEFAULT '',
+    publicado_em TIMESTAMPTZ,
+    importado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    formato TEXT NOT NULL CHECK (formato IN ('integral','resumo')),
+    licenca TEXT,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    ordem INTEGER NOT NULL DEFAULT 1000
+  )`,
+  `CREATE INDEX IF NOT EXISTS site_noticias_publicas_idx ON site_noticias(ativo,ordem,publicado_em DESC)`,
   `CREATE TABLE IF NOT EXISTS usuarios (
     id SERIAL PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,

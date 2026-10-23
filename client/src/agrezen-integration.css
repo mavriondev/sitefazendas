@@ -95,7 +95,7 @@
   .site-public .ga-head-inner { padding-block: 12px; }
   .ga-head-actions { gap: 8px; }
   .site-public .ga-nav { font-size: 12px; gap: 8px 13px; }
-  .site-public .ga-logo { width: 141px; }
+  .site-public .ga-logo { width: 130px; }
   .site-public .ga-head-cta { display: inline-flex; padding: 10px 12px; min-height: 42px; font-size: 12px; }
   .site-public .ga-hero { height: auto; min-height: 825px; padding-bottom: 80px; }
   .site-public .ga-hero-content { padding-top: 145px; }
@@ -238,7 +238,7 @@
 }
 @media(max-width:380px) {
   .site-public .ga-head-inner { gap: 8px; }
-  .site-public .ga-logo { width: 100px; }
+  .site-public .ga-logo { width: 92px; }
   .site-public .ga-head-cta svg { display: none; }
 }
 

@@ -4,6 +4,7 @@ export const PAGINAS_SEO = [
   { caminho: "/sobre", nome: "Sobre" }, { caminho: "/parceiros", nome: "Parceiros" },
   { caminho: "/contato", nome: "Contato" }, { caminho: "/venda-sua-fazenda", nome: "Venda sua fazenda" },
   { caminho: "/privacidade", nome: "Política de privacidade" },
+  { caminho: "/noticias", nome: "Notícias do agro" },
 ];
 export interface PaginaSeo { titulo: string; descricao: string; imagem: string; nao_indexar: boolean }
 export interface ConfigSeo {

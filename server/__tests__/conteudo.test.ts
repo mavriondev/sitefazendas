@@ -25,7 +25,7 @@ export async function rodar() {
     const alterado = structuredClone(original);
     alterado.paginas.home.valores["destaques.titulo"] = "Seleção do administrador";
     alterado.paginas.home.ocultas = ["etapas"];
-    alterado.paginas.home.ordem = ["hero","busca","sobre","destaques","etapas","venda","parceiros","convite"];
+    alterado.paginas.home.ordem = ["hero","busca","sobre","destaques","etapas","cotacoes","noticias","venda","parceiros","convite"];
     const salvo = await t.admin.put("/api/admin/conteudo", alterado);
     assert.equal(salvo.status, 200);
     assert.equal(salvo.json.revisao, 1);

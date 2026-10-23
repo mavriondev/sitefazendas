@@ -7,6 +7,7 @@ import type { SlideItem } from "../components/Slider";
 import { CartaoFazenda } from "../components/CartaoFazenda";
 import { BuscaRapida } from "../components/BuscaRapida";
 import { Botanical, Eyebrow, Seals } from "../components/Agrezen";
+import { NoticiasHome, CotacoesHome } from "../components/Mercado";
 import { Secoes, useConteudo, LinkConteudo, fundoConteudo } from "../components/Conteudo";
 
 export default function Home() {
@@ -47,6 +48,8 @@ export default function Home() {
       {quantidade>1 && <div className="ga-hero-controls"><button aria-label="Slide anterior" onClick={()=>setIndice(i=>(i-1+quantidade)%quantidade)}><ArrowLeft/></button><span>{indice%quantidade+1} / {quantidade}</span><button aria-label="Próximo slide" onClick={()=>setIndice(i=>(i+1)%quantidade)}><ArrowRight/></button><button onClick={()=>setPausa(v=>!v)} aria-label={pausa?"Reproduzir apresentação":"Pausar apresentação"}>{pausa?"Reproduzir":"Pausar"}</button></div>}
     </section>,
     busca:<BuscaRapida/>,
+    noticias:<NoticiasHome/>,
+    cotacoes:<CotacoesHome/>,
     destaques:<section className="ga-section" id="fazendas" data-cms-secao="destaques"><div className="ga-wrap">
       <div className="ga-section-head"><div><Eyebrow>{t("destaques.rotulo")}</Eyebrow><h2 className="ga-section-title">{t("destaques.titulo")}</h2></div><LinkConteudo className="ga-link-arrow" href={t("destaques.link")}>{t("destaques.botao")} <ArrowRight/></LinkConteudo></div>
       {erro?<div role="alert" className="msg erro">Não foi possível carregar os anúncios. <Link to="/fazendas">Consultar catálogo</Link></div>:!dados?<p role="status">Carregando fazendas…</p>:dados.destaques.length?<div className="ga-cards">{dados.destaques.map(f=><CartaoFazenda key={f.slug} f={f}/>)}</div>:<div className="vazio"><h3>{t("destaques.vazio_titulo")}</h3><p>{t("destaques.vazio_texto")}</p><LinkConteudo className="ga-btn" href={t("destaques.link")}>{t("destaques.botao")} <ArrowUpRight/></LinkConteudo></div>}
