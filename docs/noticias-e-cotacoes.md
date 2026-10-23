@@ -1,5 +1,12 @@
 # Notícias e cotações na Gramogol
 
+> **Publicação bloqueada:** o teste cruzado em navegador confirmou notícias,
+> painel e dólar, mas o endpoint oficial dos widgets de commodities devolveu
+> desafio HTTP 403 do provedor e os quadros ficaram vazios. O gerador do próprio
+> portal funciona, o que não garante incorporação em outro domínio.
+> Não publicar este PR antes de escolher uma fonte permitida e comprovar as
+> quatro tabelas no site. Não contornar o desafio nem desligar o isolamento.
+
 ## Fontes e direitos
 - **Ministério da Agricultura:** consulta a listagem pública e importa texto
   somente após conferir a licença CC BY-ND 3.0 na própria matéria.
