@@ -18,10 +18,12 @@ import UsuariosAdmin from "./admin/UsuariosAdmin";
 import ContatosAdmin from "./admin/ContatosAdmin";
 import ConteudoAdmin from "./admin/ConteudoAdmin";
 import SeoAdmin from "./admin/SeoAdmin";
+import DiagnosticoRastreamento from "./pages/DiagnosticoRastreamento";
 
 export default function App() {
   return (
     <Routes>
+      <Route path="diagnostico-rastreamento" element={<DiagnosticoRastreamento />} />
       <Route path="fazenda/:slug/pdf" element={<FazendaFicha />} />
       <Route element={<Layout />}>
         <Route index element={<Home />} />

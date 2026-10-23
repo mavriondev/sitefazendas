@@ -4,6 +4,7 @@ import { rastreamentoPadrao, validarRastreamento } from "../../../shared/rastrea
 import { Erro, Ok } from "../components/Avisos";
 import { PAGINAS_SEO, paginaSeoVazia, seoPadrao } from "../../../shared/seo";
 import type { ConfigSeo, PaginaSeo } from "../../../shared/seo";
+import { DiagnosticoAdmin } from "../components/DiagnosticoAdmin";
 import "./SeoAdmin.css";
 
 interface Midia { arquivo: string; url: string; publicado: boolean }
@@ -236,6 +237,7 @@ export default function SeoAdmin() {
                 <p className="pequeno">Nada é carregado antes da autorização do visitante. Ele pode rejeitar ou rever a escolha em “Preferências de cookies”. Painel, conta, login, pesquisa por CAR e PDF não são medidos. A configuração é revalidada ao navegar, voltar à aba e a cada 30 segundos.</p>
                 <p className="pequeno suave">Revise a política de privacidade antes de ativar. No GA4, desative as opções automáticas de formulários e de visualizações por mudanças no histórico: o site já envia visualizações de página, sem parâmetros de busca. Scripts livres, correspondência avançada e envio de dados de formulários não são habilitados pelo site.</p>
               </section>
+              <DiagnosticoAdmin salvo={servidor.rastreamento} sujo={JSON.stringify(servidor.rastreamento) !== JSON.stringify(rascunho.rastreamento)} />
               <section className="seo-card">
                 <h3>Verificação nos buscadores</h3>
                 <p className="suave pequeno">Cole apenas o código de verificação (o valor de content), nunca a tag HTML nem scripts.</p>
