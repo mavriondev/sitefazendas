@@ -115,7 +115,7 @@ export async function rodar() {
       }
     }
     const d = detalhe.json;
-    assert.equal(d.area, "1.454,4 ha".replace(",4", ",4")); // formatação pt-BR da área exata
+    assert.equal(d.area, null); // cadastro interno não autoriza publicação da área
     assert.deepEqual(d.atributos.map((a: any) => a.chave).sort(), ["altitude_media", "argila_media", "energia"]);
     assert.equal(d.atributos.find((a: any) => a.chave === "altitude_media").texto, "800 a 900 m");
     assert.equal(d.atributos.find((a: any) => a.chave === "altitude_media").confianca, "confirmado");
@@ -130,6 +130,7 @@ export async function rodar() {
     assert.equal((await anon.get(`/api/public/fazendas/${(await admin.get(`/api/admin/fazendas/${outra}`)).json.fazenda.slug}`)).status, 404);
 
     // ---------- filtros ----------
+    await admin.put(`/api/admin/fazendas/${id}/atributos/area_total_ha`, {achado:"detectado",valor:1454.4,publico:true});
     const q = async (qs: string) => (await anon.get(`/api/public/fazendas?${qs}`)).json.total;
     assert.equal(await q("altitude_min=800&altitude_max=900"), 1);
     assert.equal(await q("altitude_min=900"), 0);
@@ -140,7 +141,8 @@ export async function rodar() {
     assert.equal(await q("cultura=SOJA"), 1);
     assert.equal(await q("cultura=café"), 0);
     assert.equal(await q("area_min=1000&area_max=2000"), 1);
-    assert.equal(await q("area_min=2000"), 0);
+    assert.equal(await q("area_min=2000"), 1); // mesmo bucket, não permite descobrir a área exata
+    assert.equal(await q("area_min=2500"), 0);
     assert.equal(await q("altitude_min=abc"), 1);                                    // lixo é ignorado, não quebra
 
     // ---------- mapa (forma anonimizada) opcional ----------

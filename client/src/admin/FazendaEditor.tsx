@@ -5,6 +5,7 @@ import { Erro, Ok, Aviso } from "../components/Avisos";
 import { VideosAdmin } from "./VideosAdmin";
 import { ICONES } from "../components/Caracteristicas";
 import { Info } from "lucide-react";
+import { ESTADOS_BRASIL } from "../../../shared/filtros-publicos";
 import { Campo, useAcaoUnica, useConfirmar, useFormularioComRascunho } from "./comuns";
 
 type Confirmar = ReturnType<typeof useConfirmar>[0];
@@ -86,8 +87,8 @@ function Dados({ f, acao, id, confirmar }: { f: any; acao: any; id: string; conf
         {recuperado && sujo && <Aviso>Recuperamos o que você digitou e ainda não tinha salvo. Revise e salve, ou <button type="button" className="link-acao" onClick={descartar}>descarte as alterações</button>.</Aviso>}
         {T("titulo", "Título")}{T("regiao_publica", "Região (pública, ampla: ex. Sul de Goiás)")}{T("culturas", "Culturas (separadas por vírgula)")}
         <div className="filtros">
-          {T("area_ha", "Área (ha)", { inputMode: "decimal" })}
-          <div><label htmlFor="ae">Exibir área como</label><select id="ae" value={v.area_exibicao} onChange={set("area_exibicao")}><option value="faixa">Faixa</option><option value="exata">Exata</option></select></div>
+          {T("area_ha", "Área do cadastro interno (ha)", { inputMode: "decimal" })}
+          <p className="suave pequeno">Para divulgar a área, salve “Área total pública” em Dados da terra e ative “Mostrar no site”. A vitrine e os filtros usam apenas faixas.</p>
           {T("preco_exibicao", "Valor exibido (texto livre, opcional)")}{T("whatsapp_proprio", "WhatsApp desta fazenda (vazio = padrão)")}
         </div>
         <label htmlFor="desc">Descrição pública</label><textarea id="desc" rows={6} value={v.descricao_publica} onChange={set("descricao_publica")} />
@@ -147,13 +148,14 @@ function Atributos({ d, acao, id, confirmar }: { d: any; acao: any; id: string; 
         <h3>Informado por você (corretor)</h3>
         <p className="suave pequeno">Dados que não estão em bases do governo, como poço artesiano, benfeitorias e documentação. Aparecem no site na aba “Informações do imóvel”.</p>
       </div>
-      {doCorretor.map((def: any) => <LinhaAtributo key={def.chave} def={def} a={porChave[def.chave]} acao={acao} id={id} confirmar={confirmar} />)}
+      <p className="suave pequeno">Estado público: escolha explicitamente o estado e ative “Mostrar no site” para permitir busca por estado ou região do Brasil. O CAR e a UF privados nunca são usados nesses filtros.</p>
+      {doCorretor.map((def: any) => <LinhaAtributo key={def.chave} def={def} a={porChave[def.chave]} acao={acao} id={id} confirmar={confirmar} valorPadrao={def.chave==="area_total_ha" ? d.fazenda.area_ha : undefined} />)}
     </>
   );
 }
 
-function LinhaAtributo({ def, a, acao, id, confirmar }: { def: any; a: any; acao: any; id: string; confirmar: Confirmar }) {
-  const valorAtual = a?.valor_json ?? "";
+function LinhaAtributo({ def, a, acao, id, confirmar, valorPadrao }: { def: any; a: any; acao: any; id: string; confirmar: Confirmar; valorPadrao?: unknown }) {
+  const valorAtual = a?.valor_json ?? valorPadrao ?? "";
   const [achado, setAchado] = useState(a?.achado === "nao_detectado" ? "nao_detectado" : "detectado");
   const [valor, setValor] = useState(String(valorAtual));
   const [por, setPor] = useState("");
@@ -184,7 +186,9 @@ function LinhaAtributo({ def, a, acao, id, confirmar }: { def: any; a: any; acao
       {a?.fonte && <p className="suave pequeno">Fonte: {a.fonte}{dataHora(a.consultado_em) ? ` · ${dataHora(a.consultado_em)}` : ""}{a.observacao ? ` — ${a.observacao}` : ""}</p>}
       <div className="filtros">
         <Campo rotulo="Achado"><select value={achado} onChange={(e) => setAchado(e.target.value)}><option value="detectado">Informar valor</option><option value="nao_detectado">Não detectado</option></select></Campo>
-        {achado === "detectado" && <Campo rotulo="Valor"><input value={valor} onChange={(e) => setValor(e.target.value)} /></Campo>}
+        {achado === "detectado" && <Campo rotulo="Valor">{def.chave==="estado_publico"
+          ? <select value={valor} onChange={e=>setValor(e.target.value)} aria-label="Estado público"><option value="">Selecione o estado</option>{ESTADOS_BRASIL.map(e=><option key={e.uf} value={e.uf}>{e.nome}</option>)}</select>
+          : <input type={def.tipo==="numero" ? "number" : "text"} inputMode={def.tipo==="numero" ? "decimal" : undefined} step={def.tipo==="numero" ? "any" : undefined} value={valor} onChange={(e) => setValor(e.target.value)} />}</Campo>}
         <Campo rotulo="Confirmado por"><select value={por} onChange={(e) => setPor(e.target.value)}><option value="">Ninguém (apenas indicado)</option><option value="vendedor">Vendedor</option><option value="documento">Documento</option><option value="visita">Visita</option></select></Campo>
         <Campo rotulo="Observação"><input value={obs} onChange={(e) => setObs(e.target.value)} /></Campo>
         <button className="btn sec" onClick={salvar}>Salvar {def.rotulo.toLowerCase()}</button>

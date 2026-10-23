@@ -1,5 +1,6 @@
 import type { Db } from "../db";
 import { defAtributo } from "../../shared/atributos";
+import { estadoBrasileiro } from "../../shared/filtros-publicos";
 import { estadoAutomatico, validarConfirmacao, type Achado } from "../../shared/confianca";
 
 export interface EntradaManual {
@@ -17,6 +18,10 @@ export function validarEntradaManual(chave: string, e: EntradaManual): string | 
     if (erro) return erro;
   }
   if (e.achado === "detectado") {
+    if (chave === "estado_publico" && !estadoBrasileiro(e.valor)) return "Selecione um estado brasileiro válido.";
+    if (chave === "area_total_ha" && (typeof e.valor !== "number" || e.valor <= 0 || e.valor >= 1e7)) return "Área total pública inválida.";
+    if (chave === "altitude_media" && (typeof e.valor !== "number" || e.valor < 0 || e.valor >= 10000)) return "Altitude fora do intervalo.";
+    if (chave === "argila_media" && (typeof e.valor !== "number" || e.valor < 0 || e.valor > 100)) return "Argila deve ficar entre 0 e 100%.";
     if (def.tipo === "numero") {
       if (typeof e.valor !== "number" || !Number.isFinite(e.valor)) return `${def.rotulo}: informe um número.`;
       if (e.valor < -1000 || e.valor > 1e7) return `${def.rotulo}: valor fora do intervalo.`;
