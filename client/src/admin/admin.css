@@ -1,0 +1,163 @@
+/* Painel administrativo: tudo escopado em .admin-layout (o site público não é afetado) */
+.admin-layout{--ad-gap:16px;grid-template-columns:232px minmax(0,1fr);gap:24px;align-items:start}
+.admin-layout>*{min-width:0}
+.admin-layout .admin-menu{position:sticky;top:84px;display:flex;flex-direction:column;gap:2px;padding:8px}
+.admin-layout .admin-menu a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;font-size:.93rem;line-height:1.3;border-left:3px solid transparent;overflow-wrap:anywhere}
+.admin-layout .admin-menu a svg{width:18px;height:18px;flex:none;stroke-width:1.8}
+.admin-layout .admin-menu a.active{background:#e4edcf;color:var(--verde-esc);font-weight:700;border-left-color:var(--verde)}
+.admin-layout .admin-menu a:focus-visible{outline-offset:-2px}
+.admin-layout h1{font-size:clamp(1.5rem,3vw,2rem);margin:0 0 16px}
+.admin-layout h2{font-size:1.25rem;margin:0 0 12px}
+.admin-layout h3{font-size:1.05rem}
+.admin-layout section{min-width:0}
+
+/* botões: tamanho, alinhamento e hierarquia */
+.admin-layout .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:8px 18px;font-size:.92rem;line-height:1.25;text-align:center;white-space:normal;max-width:100%;transform:none}
+.admin-layout .btn:hover{transform:none}
+.admin-layout .btn.mini{min-height:32px;padding:4px 12px;font-size:.84rem}
+.admin-layout .btn.sec{background:#fff;border:1px solid #b9b9a3;color:var(--verde-esc)}
+.admin-layout .btn.sec:hover{background:#eef3e0;border-color:var(--verde)}
+.admin-layout .btn.perigo{background:var(--erro);color:#fff;border:1px solid var(--erro)}
+.admin-layout .btn.sec.perigo,.admin-layout .btn.mini.perigo{background:#fff;color:var(--erro);border:1px solid #d9a5a5}
+.admin-layout .btn.sec.perigo:hover,.admin-layout .btn.mini.perigo:hover{background:#fbeaea;border-color:var(--erro)}
+.admin-layout dialog.confirmar .btn.perigo{background:var(--erro);color:#fff;border-color:var(--erro)}
+.admin-layout .btn:disabled{opacity:.5}
+
+/* formulários */
+.admin-layout label{margin:12px 0 4px;font-size:.88rem}
+.admin-layout input,.admin-layout select,.admin-layout textarea{min-height:40px;padding:8px 11px;min-width:0;max-width:100%;border-color:#c9c4ad}
+.admin-layout select{text-overflow:ellipsis}
+.admin-layout textarea{min-height:96px}
+.admin-layout input[type=checkbox],.admin-layout input[type=radio]{min-height:0;width:18px;height:18px;margin:2px 0 0;flex:none;accent-color:var(--verde)}
+.admin-layout label:has(>input[type=checkbox]),.admin-layout label:has(>input[type=radio]){display:flex;align-items:flex-start;gap:10px;font-weight:500;margin:10px 0;line-height:1.4}
+.admin-layout .interruptor input[type=checkbox]{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.admin-layout .campo-linha,.admin-layout .filtros{gap:4px 16px;align-items:start;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr))}
+.admin-layout .filtros label{text-transform:none;letter-spacing:0;font-size:.88rem;color:var(--texto)}
+.admin-layout .dica-campo{margin:4px 0 0;font-size:.8rem;overflow-wrap:anywhere}
+.admin-layout input[type=file]{min-height:0;width:100%}
+.admin-layout .painel{padding:18px 20px;margin-bottom:var(--ad-gap);border-radius:12px;box-shadow:none;min-width:0}
+.admin-layout .painel.linha,.admin-layout form.painel.linha{align-items:center;gap:12px}
+.admin-layout .painel.linha>input:not([type=checkbox]){flex:1 1 240px}
+.admin-layout .painel.linha>.btn{flex:none}
+.admin-layout .painel.filtros{margin-top:0;border-radius:12px}
+.admin-layout .linha{gap:10px 12px}
+.admin-layout .salvar-barra{position:static;display:flex;gap:10px 12px;flex-wrap:wrap;align-items:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--linha)}
+.admin-layout .barra-lista{grid-template-columns:minmax(0,2fr) repeat(2,minmax(0,1fr));gap:4px 16px;margin-bottom:8px}
+.admin-layout .msg{margin:0 0 14px;overflow-wrap:anywhere}
+.admin-layout .interruptor,.admin-layout label.interruptor{display:flex;align-items:center;gap:12px;margin:8px 0;font-weight:500;line-height:1.3;width:fit-content;max-width:100%}
+.admin-layout .chave{flex:none;background:#b3b09b}
+.admin-layout .interruptor input:checked+.chave{background:var(--ok)}
+
+.admin-layout .filtros>.btn{align-self:end;justify-self:start}
+.admin-layout form.painel.filtros>.btn[type=submit]{grid-column:1/-1;margin-top:8px}
+.admin-layout .painel-form{max-width:860px}
+.admin-layout .painel-form .salvar-barra{margin-top:16px}
+.admin-layout .ga-video-editor{display:grid;gap:2px;margin-top:14px;padding:16px 18px;background:#fff;border:1px solid var(--linha);border-radius:12px}
+.admin-layout .ga-video-editor h4{margin:0 0 4px;font-size:1rem}
+.admin-layout .ga-video-editor>.linha{margin-top:12px}
+.admin-layout .fotos-admin>div{display:flex;flex-direction:column;gap:8px;min-width:0}
+.admin-layout .fotos-admin img{margin:0}
+.admin-layout .fotos-admin>div>.linha{margin-top:2px;gap:8px}
+.admin-layout .fotos-admin .btn{min-height:34px;padding:4px 12px;font-size:.84rem}
+.admin-layout .cd-campo label,.admin-layout .seo-campo label{margin:0 0 4px}
+.admin-layout .cd-campo input,.admin-layout .cd-campo textarea{min-height:40px}
+.admin-layout .cd-meta .btn,.admin-layout .cd-sec>header .btn{flex:none}
+.admin-layout .cd-img .acoes{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0;max-width:100%}
+.admin-layout .cd-img code,.admin-layout .seo-img code{overflow-wrap:anywhere;word-break:break-all}
+.admin-layout .cd-lib figure,.admin-layout .seo-lib figure{display:flex;flex-direction:column;gap:6px;min-width:0}
+.admin-layout .cd-lib figure>.linha,.admin-layout .cd-lib figure>.btn{margin-top:auto}
+.admin-layout .cd-modal label.btn{margin:12px 0 4px}
+.admin-layout .seo-card{margin:0 0 var(--ad-gap)}
+.admin-layout .seo-social,.admin-layout .seo-previa{max-width:100%}
+.admin-layout .seo-lista h3{margin:12px 0 4px}
+.admin-layout td[data-rotulo="Ações"] .btn{min-height:34px;padding:4px 14px;font-size:.86rem}
+@media (min-width:761px){.admin-layout td[data-rotulo="Quando"],.admin-layout td[data-rotulo="Data"]{white-space:nowrap;overflow-wrap:normal}}
+
+/* abas */
+.admin-layout .abas{display:flex;gap:2px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;margin-bottom:18px;border-bottom:1px solid var(--linha)}
+.admin-layout .abas button{flex:none;padding:10px 16px;white-space:nowrap;margin-bottom:-1px;border-bottom:3px solid transparent;border-radius:8px 8px 0 0}
+.admin-layout .abas button:hover{background:#eef1e3;color:var(--verde-esc)}
+.admin-layout .abas button.ativo{border-bottom-color:var(--verde);color:var(--verde-esc);font-weight:700}
+
+/* tabelas */
+.admin-layout .tabela-rolagem{border:1px solid var(--linha);border-radius:12px;background:var(--papel);overflow-x:auto}
+.admin-layout td .btn{min-width:6.5rem;overflow-wrap:normal;word-break:normal}
+.admin-layout .tabela-contatos{table-layout:fixed;width:100%}
+.admin-layout .tabela-contatos th:nth-child(1){width:14%}
+.admin-layout .tabela-contatos th:nth-child(2){width:24%}
+.admin-layout .tabela-contatos th:nth-child(3){width:20%}
+.admin-layout .tabela-contatos th:nth-child(4){width:26%}
+.admin-layout .tabela-contatos th:nth-child(5){width:16%}
+.admin-layout .tabela-contatos td[data-rotulo="Quando"]{white-space:normal}
+.admin-layout .tabela-contatos td:last-child .btn{width:100%;padding-inline:10px}
+.admin-layout .tabela-usuarios{table-layout:fixed;width:100%}
+.admin-layout .tabela-usuarios th:nth-child(1){width:20%}
+.admin-layout .tabela-usuarios th:nth-child(2){width:25%}
+.admin-layout .tabela-usuarios th:nth-child(3){width:10%}
+.admin-layout .tabela-usuarios th:nth-child(4){width:17%}
+.admin-layout .tabela-usuarios th:nth-child(5){width:11%}
+.admin-layout .tabela-usuarios th:nth-child(6){width:17%}
+.admin-layout .tabela-usuarios td[data-rotulo="Papel"]{overflow-wrap:normal;word-break:normal}
+.admin-layout .tabela-usuarios select{width:100%;padding-inline:10px}
+.admin-layout table{font-size:.9rem}
+.admin-layout th{background:#eef1e3;white-space:nowrap;font-size:.74rem;padding:10px 12px}
+.admin-layout td{padding:10px 12px;vertical-align:middle;overflow-wrap:anywhere}
+.admin-layout tbody tr:last-child td{border-bottom:0}
+.admin-layout tbody tr:hover td{background:#f6f7ec}
+.admin-layout td:last-child .acoes-linha,.admin-layout .acoes-linha{gap:8px;flex-wrap:wrap;align-items:center}
+.admin-layout .resumo-lista{margin:0 0 8px}
+.admin-layout .fotos-admin{gap:14px;grid-template-columns:repeat(auto-fill,minmax(min(100%,190px),1fr))}
+.admin-layout .fotos-admin img{margin-bottom:8px}
+.admin-layout .etiqueta{margin:0 6px 6px 0;white-space:normal;overflow-wrap:anywhere}
+
+/* diálogo de confirmação */
+.admin-layout dialog.confirmar{padding:24px;max-width:min(460px,calc(100vw - 32px));border-radius:14px}
+.admin-layout dialog.confirmar .linha{justify-content:flex-end;margin-top:4px;gap:10px}
+.admin-layout dialog.confirmar .linha .btn{flex:0 1 auto}
+
+/* CMS e SEO: navegação interna em faixa que quebra linha (o painel de trabalho fica com a largura toda) */
+.admin-layout .cd-wrap,.admin-layout .seo-wrap{grid-template-columns:minmax(0,1fr);gap:16px}
+.admin-layout .cd-paginas,.admin-layout .seo-lista{position:static;flex-direction:row;flex-wrap:wrap;gap:6px;max-height:none;overflow:visible;padding:8px;background:var(--papel);border:1px solid var(--linha);border-radius:12px}
+.admin-layout .seo-lista h3{flex:1 0 100%;margin:6px 4px 0}
+.admin-layout .cd-paginas button,.admin-layout .seo-lista button{flex:0 1 auto;max-width:100%;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--linha);border-radius:999px;background:#fff;text-align:left;overflow-wrap:anywhere;font-size:.9rem}
+.admin-layout .cd-paginas button:hover,.admin-layout .seo-lista button:hover{background:#eef3e0}
+.admin-layout .cd-paginas button[aria-current=true],.admin-layout .seo-lista button[aria-current=true]{background:#e4edcf;border-color:var(--verde);color:var(--verde-esc);font-weight:700}
+.admin-layout .cd-barra{position:static;gap:10px 12px;box-shadow:none}
+.admin-layout .cd-sec>header{gap:8px 12px}
+.admin-layout .cd-img img{max-width:100%}
+.admin-layout .seo-barra{gap:8px 12px}
+/* fundo (backdrop) continua em tela cheia; só o cartão interno é limitado e rola */
+.admin-layout .cd-modal>div,.admin-layout .seo-modal>div{width:min(100%,900px);max-width:100%;max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain}
+.admin-layout .seo-modal>div{width:min(100%,760px)}
+.admin-layout .cd-modal>div>.linha,.admin-layout .seo-modal>div>.linha{flex-wrap:nowrap;align-items:center}
+.admin-layout .cd-modal>div>.linha .btn,.admin-layout .seo-modal>div>.linha .btn{flex:none}
+
+@media (max-width:1100px){
+  .admin-layout .tabela-responsiva,.admin-layout .tabela-responsiva tbody{display:block;width:100%}
+  .admin-layout .tabela-responsiva thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .admin-layout .tabela-responsiva tr{display:block;margin-bottom:12px;padding:14px;background:var(--papel);border:1px solid var(--linha);border-radius:12px}
+  .admin-layout .tabela-responsiva td{display:block;width:100%;max-width:100%;padding:8px 0;border:0}
+  .admin-layout .tabela-responsiva td+td{border-top:1px solid var(--linha)}
+  .admin-layout .tabela-responsiva td[data-rotulo]::before{content:attr(data-rotulo);display:block;margin-bottom:4px;font-size:.75rem;font-weight:700;color:var(--suave)}
+  .admin-layout .tabela-responsiva td:last-child .btn{width:auto}
+  .admin-layout .tabela-rolagem{border:0;background:transparent}
+}
+@media (max-width:800px){
+  .admin-layout{grid-template-columns:minmax(0,1fr);gap:14px}
+  .admin-layout .admin-menu{position:static;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px}
+  .admin-layout .admin-menu a{border-left:3px solid transparent;white-space:normal}
+}
+@media (max-width:760px){
+  .admin-layout .barra-lista{grid-template-columns:minmax(0,1fr)}
+  .admin-layout .tabela-rolagem{border:0;background:transparent}
+  .admin-layout .tabela-responsiva tr{margin-bottom:12px}
+  .admin-layout .tabela-responsiva tbody tr:hover td{background:transparent}
+  .admin-layout .painel.linha{align-items:stretch}
+  .admin-layout .painel.linha>.btn{width:100%}
+  .admin-layout .salvar-barra .btn{flex:1 1 auto}
+  .admin-layout .filtros>.btn{justify-self:stretch}
+}
+@media (max-width:480px){
+  .admin-layout .admin-menu{grid-template-columns:1fr 1fr}
+  .admin-layout .admin-menu a{padding:8px 10px;font-size:.88rem}
+}

@@ -101,7 +101,7 @@ function Dados({ f, acao, id, confirmar }: { f: any; acao: any; id: string; conf
         <label htmlFor="gj">Polígono (GeoJSON) — {f.geojson ? "já cadastrado; cole outro para substituir" : "não cadastrado"}</label>
         <textarea id="gj" rows={3} placeholder='{"type":"Polygon","coordinates":[[[-43.1,-16.9],...]]}' value={v.geojson_novo} onChange={set("geojson_novo")} />
         <p className="suave pequeno">Use quando a fazenda não tem CAR. Só Polygon/MultiPolygon. Nunca aparece no site; a silhueta, se ligada, é redesenhada sem escala nem localização.</p>
-        {f.geojson && <button type="button" className="btn sec" onClick={async () => { if (await confirmar({ titulo: "Remover o polígono?", texto: "A silhueta deixa de aparecer no site. Você poderá colar outro polígono depois.", confirmar: "Remover polígono", perigo: true })) void acao(() => api.put(`/api/admin/fazendas/${id}`, { geojson: null, mostrar_mapa: false }), "Polígono removido."); }}>Remover polígono</button>}
+        {f.geojson && <button type="button" className="btn sec perigo" onClick={async () => { if (await confirmar({ titulo: "Remover o polígono?", texto: "A silhueta deixa de aparecer no site. Você poderá colar outro polígono depois.", confirmar: "Remover polígono", perigo: true })) void acao(() => api.put(`/api/admin/fazendas/${id}`, { geojson: null, mostrar_mapa: false }), "Polígono removido."); }}>Remover polígono</button>}
         <label htmlFor="nt">Notas internas</label><textarea id="nt" rows={3} value={v.notas_internas} onChange={set("notas_internas")} />
         <div className="salvar-barra">
           <button className="btn" type="submit" disabled={!sujo}>Salvar alterações</button>
@@ -192,7 +192,7 @@ function LinhaAtributo({ def, a, acao, id, confirmar, valorPadrao }: { def: any;
         <Campo rotulo="Confirmado por"><select value={por} onChange={(e) => setPor(e.target.value)}><option value="">Ninguém (apenas indicado)</option><option value="vendedor">Vendedor</option><option value="documento">Documento</option><option value="visita">Visita</option></select></Campo>
         <Campo rotulo="Observação"><input value={obs} onChange={(e) => setObs(e.target.value)} /></Campo>
         <button className="btn sec" onClick={salvar}>Salvar {def.rotulo.toLowerCase()}</button>
-        {a && <button className="btn sec" onClick={async () => { if (await confirmar({ titulo: `Remover "${def.rotulo}"?`, texto: "O dado deixa de existir neste cadastro e, se era público, some do site.", confirmar: "Remover", perigo: true })) void acao(() => api.del(`/api/admin/fazendas/${id}/atributos/${def.chave}`), "Removido."); }}>Remover</button>}
+        {a && <button className="btn sec perigo" onClick={async () => { if (await confirmar({ titulo: `Remover "${def.rotulo}"?`, texto: "O dado deixa de existir neste cadastro e, se era público, some do site.", confirmar: "Remover", perigo: true })) void acao(() => api.del(`/api/admin/fazendas/${id}/atributos/${def.chave}`), "Removido."); }}>Remover</button>}
       </div>
     </div>
   );
@@ -214,7 +214,7 @@ function Fotos({ d, acao, id, confirmar }: { d: any; acao: any; id: string; conf
             <input aria-label={`Legenda da foto ${p.ordem ?? ""}`.trim()} defaultValue={p.legenda ?? ""} placeholder="Legenda (salva ao sair do campo)" onBlur={(e) => { if (e.target.value !== (p.legenda ?? "")) void acao(() => api.put(`/api/admin/fotos/${p.id}`, { legenda: e.target.value }), "Legenda salva."); }} />
             <div className="linha">
               {p.capa ? <span className="etiqueta">Capa</span> : <button className="btn sec" onClick={() => acao(() => api.put(`/api/admin/fotos/${p.id}`, { capa: true }))}>Tornar capa</button>}
-              <button className="btn sec" onClick={async () => { if (await confirmar({ titulo: "Remover esta foto?", texto: p.capa ? "É a foto de capa. Outra foto passará a ser a capa." : "A foto será apagada do anúncio.", confirmar: "Remover foto", perigo: true })) void acao(() => api.del(`/api/admin/fotos/${p.id}`), "Foto removida."); }}>Remover</button>
+              <button className="btn sec perigo" onClick={async () => { if (await confirmar({ titulo: "Remover esta foto?", texto: p.capa ? "É a foto de capa. Outra foto passará a ser a capa." : "A foto será apagada do anúncio.", confirmar: "Remover foto", perigo: true })) void acao(() => api.del(`/api/admin/fotos/${p.id}`), "Foto removida."); }}>Remover</button>
             </div>
           </div>
         ))}

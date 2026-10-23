@@ -40,7 +40,7 @@ function Editor({id,video,acao,confirmar}: {id:string;video?:Video;acao:Acao;con
     <label className="linha"><input type="checkbox" checked={publico} onChange={e=>setPublico(e.target.checked)}/>Revisei o conteúdo e autorizo exibir este vídeo no anúncio público</label>
     <div className="linha"><button className="btn" disabled={busy} type="submit">{busy?"Salvando…":video?"Salvar vídeo":"Adicionar vídeo"}</button>{video&&<>
       <a className="btn sec" href={`https://www.youtube.com/watch?v=${video.youtube_id}`} target="_blank" rel="noopener noreferrer">Revisar no YouTube</a>
-      <button className="btn perigo" disabled={busy} type="button" onClick={async()=>{if(await confirmar({titulo:"Remover este vídeo da fazenda?",texto:"O vídeo não será apagado do YouTube.",confirmar:"Remover vídeo",perigo:true}))void acao(()=>api.del(`/api/admin/videos/${video.id}`),"Vídeo removido.");}}>Remover vídeo</button>
+      <button className="btn sec perigo" disabled={busy} type="button" onClick={async()=>{if(await confirmar({titulo:"Remover este vídeo da fazenda?",texto:"O vídeo não será apagado do YouTube.",confirmar:"Remover vídeo",perigo:true}))void acao(()=>api.del(`/api/admin/videos/${video.id}`),"Vídeo removido.");}}>Remover vídeo</button>
     </>}</div>
   </form>;
 }

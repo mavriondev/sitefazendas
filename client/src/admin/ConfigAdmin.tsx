@@ -50,7 +50,7 @@ export default function ConfigAdmin() {
     <div aria-busy={ocupado} className={ocupado ? "ocupado" : ""}>
       <h1>Configurações</h1>
       <Erro erro={erro} />{ok && <Ok>{ok}</Ok>}
-      <div className="painel">
+      <div className="painel painel-form">
         <h3>Pesquisa de terras (módulo B)</h3>
         <label className="interruptor">
           <input type="checkbox" checked={!!srv.modulo_pesquisa_ativo} onChange={(e) => void alternarPesquisa(e.target.checked)} />
@@ -60,7 +60,7 @@ export default function ConfigAdmin() {
         <div style={{ maxWidth: 260 }}><Campo rotulo="Pesquisas por usuário por hora"><input inputMode="numeric" value={c.pesquisa_limite_hora} onChange={set("pesquisa_limite_hora")} /></Campo></div>
         {barra(sujoPesquisa, () => salvar({ pesquisa_limite_hora: Number(c.pesquisa_limite_hora) }))}
       </div>
-      <div className="painel">
+      <div className="painel painel-form">
         <h3>Site</h3>
         <Campo rotulo="Nome do site"><input value={c.nome_site} onChange={set("nome_site")} /></Campo>
         <Campo rotulo="WhatsApp padrão (com DDD)"><input value={c.whatsapp_padrao} onChange={set("whatsapp_padrao")} /></Campo>
@@ -71,7 +71,7 @@ export default function ConfigAdmin() {
         <Campo rotulo="Aviso de intermediação (rodapé)"><textarea rows={3} value={c.aviso_intermediacao} onChange={set("aviso_intermediacao")} /></Campo>
         {barra(sujoSite, () => salvar(pegar(c, GRUPO_SITE)))}
       </div>
-      <div className="painel">
+      <div className="painel painel-form">
         <h3>Páginas Sobre e Contato</h3>
         <Campo rotulo="Título da página Sobre"><input value={c.sobre_titulo} onChange={set("sobre_titulo")} /></Campo>
         <Campo rotulo="Texto do Sobre" dica="Deixe uma linha em branco entre os parágrafos."><textarea rows={10} value={c.sobre_texto} onChange={set("sobre_texto")} /></Campo>

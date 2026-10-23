@@ -223,13 +223,15 @@ export default function ConteudoAdmin() {
             const oculta = dados.ocultas.includes(id);
             const g = grupo(pagina, id);
             const movivel = organizar && !!g;
+            const itensDoGrupo = g ? dados.ordem.filter(chave => grupo(pagina, chave) === g) : [];
+            const posicaoNoGrupo = itensDoGrupo.indexOf(id);
             return (
               <section key={id} className={`cd-sec${oculta ? " oculta" : ""}`} aria-labelledby={`sec-${id}`}>
                 <header>
                   <h3 id={`sec-${id}`}>{sec.titulo}{oculta && <span className="suave pequeno"> (oculta)</span>}</h3>
                   {movivel && <>
-                    <button type="button" className="btn mini sec" onClick={() => mover(id, -1)} aria-label={`Mover ${sec.titulo} para cima`}>Subir</button>
-                    <button type="button" className="btn mini sec" onClick={() => mover(id, 1)} aria-label={`Mover ${sec.titulo} para baixo`}>Descer</button>
+                    <button type="button" className="btn mini sec" disabled={posicaoNoGrupo <= 0} onClick={() => mover(id, -1)} aria-label={`Mover ${sec.titulo} para cima`}>Subir</button>
+                    <button type="button" className="btn mini sec" disabled={posicaoNoGrupo >= itensDoGrupo.length - 1} onClick={() => mover(id, 1)} aria-label={`Mover ${sec.titulo} para baixo`}>Descer</button>
                   </>}
                   {organizar && <button type="button" className="btn mini sec" onClick={() => alternar(id)} aria-pressed={oculta}>{oculta ? "Mostrar" : "Ocultar"}</button>}
                 </header>

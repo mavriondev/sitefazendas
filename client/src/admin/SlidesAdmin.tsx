@@ -52,7 +52,7 @@ function Slide({ s, fazendas, acao, confirmar }: { s: any; fazendas: any[]; acao
       <label className="linha" style={{ fontWeight: 400 }}><input type="checkbox" style={{ width: "auto" }} checked={v.ativo} onChange={set("ativo")} />Ativo na home</label>
       <div className="salvar-barra">
         <button className="btn" disabled={!sujo} onClick={() => acao(() => api.put(`/api/admin/slides/${s.id}`, { ...v, fazenda_id: v.link_tipo === "fazenda" ? Number(v.fazenda_id) : undefined, ordem: Number(v.ordem) || 0 }))}>Salvar slide</button>
-        <button className="btn sec" onClick={async () => { if (await confirmar({ titulo: "Remover este slide?", texto: "A imagem e o texto deste slide serão apagados.", confirmar: "Remover slide", perigo: true })) void acao(() => api.del(`/api/admin/slides/${s.id}`), "Slide removido."); }}>Remover</button>
+        <button className="btn sec perigo" onClick={async () => { if (await confirmar({ titulo: "Remover este slide?", texto: "A imagem e o texto deste slide serão apagados.", confirmar: "Remover slide", perigo: true })) void acao(() => api.del(`/api/admin/slides/${s.id}`), "Slide removido."); }}>Remover</button>
         <span className="suave pequeno" role="status">{sujo ? "Há alterações não salvas." : ""}</span>
       </div>
     </div>
