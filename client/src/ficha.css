@@ -30,15 +30,19 @@
 .ficha-item strong { display: block; font-size: 11pt; }
 .ficha-item small { display: block; font-size: 7.5pt; color: #6b5a1a; margin-top: 1mm; }
 .ficha-conteudo .ficha-nota { font-size: 8.5pt; color: #666; margin-top: 3mm; }
-.ficha-fotos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2.5mm; }
-.ficha-fotos figure { margin: 0; break-inside: avoid; }
-.ficha-fotos img { width: 100%; height: 30mm; object-fit: cover; border-radius: 2mm; display: block; }
-.ficha-fotos figcaption { font-size: 8pt; color: #555; margin-top: 1mm; }
+.ficha-galeria { height: 297mm; padding: 10mm 15mm; display: flex; flex-direction: column; }
+.ficha-galeria .ficha-cab { flex: none; gap: 6mm; align-items: flex-start; }
+.ficha-galeria .ficha-cab strong { min-width: 0; overflow-wrap: anywhere; }
+.ficha-galeria .ficha-cab span { flex: none; }
+.ficha-fotos { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 6mm; }
+.ficha-fotos figure { margin: 0; min-height: 0; display: flex; flex-direction: column; gap: 2mm; break-inside: avoid; }
+.ficha-fotos img { flex: 1; min-height: 0; width: 100%; height: 0; object-fit: contain; border-radius: 2mm; display: block; }
+.ficha-fotos figcaption { flex: none; font-size: 8pt; line-height: 1.35; color: #555; overflow-wrap: anywhere; }
 .ficha-rodape { margin-top: 5mm; padding-top: 3mm; border-top: 2px solid var(--verde); break-inside: avoid; }
 .ficha-fale { display: flex; flex-wrap: wrap; gap: 1mm 8mm; font-size: 10.5pt; margin-bottom: 2mm; }
 .ficha-fale strong { width: 100%; color: var(--verde); }
 .ficha-rodape p { font-size: 7.5pt !important; color: #666; margin: 0 0 1mm !important; line-height: 1.35 !important; }
-@media screen and (max-width: 800px) { .ficha-pagina { width: auto; min-height: 0; margin: 12px; } .ficha-capa-foto { height: 220px; } .ficha-lista { grid-template-columns: 1fr; } .ficha-fotos { grid-template-columns: 1fr 1fr; } .ficha-fatos { grid-template-columns: 1fr 1fr; } }
+@media screen and (max-width: 800px) { .ficha-pagina { width: auto; min-height: 0; margin: 12px; } .ficha-capa-foto { height: 220px; } .ficha-lista { grid-template-columns: 1fr; } .ficha-fatos { grid-template-columns: 1fr 1fr; } .ficha-galeria { height: auto; padding: 24px; } .ficha-galeria .ficha-cab { flex-wrap: wrap; } .ficha-fotos { flex: none; grid-template-rows: auto; gap: 24px; } .ficha-fotos img { flex: none; height: auto; } }
 @media print {
   @page { size: A4; margin: 0; }
   html, body { background: #fff !important; }
@@ -46,5 +50,6 @@
   .ficha-barra { display: none !important; }
   .ficha-pagina { width: 210mm; margin: 0; box-shadow: none; }
   .ficha-capa { height: 297mm; break-after: page; }
+  .ficha-galeria { break-before: page; break-inside: avoid; }
   .ficha-conteudo { min-height: 0; }
 }
