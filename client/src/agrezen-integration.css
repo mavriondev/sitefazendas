@@ -24,7 +24,7 @@
 .site-public .ga-property-facts { grid-template-columns: repeat(4,minmax(0,1fr)); }
 .site-public .ga-fact { min-width: 0; }
 .site-public .ga-fact strong { overflow-wrap: anywhere; }
-.site-public .ga-sidebar .ga-btn { font-size: 14px; gap: 8px; }
+.site-public .ga-sidebar .ga-btn { font: 700 14px "Instrument Sans",sans-serif; gap: 8px; }
 .site-public .ga-gallery button { padding: 0; border: 0; }
 .site-public .ga-gallery-single { display: block; }
 .site-public .ga-gallery-single button { width: 100%; height: 440px; }

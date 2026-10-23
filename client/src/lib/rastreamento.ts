@@ -1,4 +1,4 @@
-import { CAMINHO_DIAGNOSTICO, caminhoRastreavel, idGa4Valido, idPixelValido, lerConsentimento, type ConfigRastreamento, type Consentimento } from "../../../shared/rastreamento";
+import { CAMINHO_DIAGNOSTICO, caminhoRastreavel, idGa4Valido, idPixelValido, lerConsentimento, validarRastreamento, type ConfigRastreamento, type Consentimento } from "../../../shared/rastreamento";
 export { CAMINHO_DIAGNOSTICO } from "../../../shared/rastreamento";
 
 export type EstadoBiblioteca = "nao-iniciado" | "carregando" | "carregada" | "erro" | "tempo-esgotado";
@@ -6,6 +6,30 @@ export type EstadoBiblioteca = "nao-iniciado" | "carregando" | "carregada" | "er
 type Comando = (...args: any[]) => void;
 type Pixel = Comando & { queue: unknown[][]; callMethod?: Comando; push?: Pixel; loaded: boolean; version: string };
 type Janela = Window & { dataLayer?: unknown[]; gtag?: Comando; fbq?: Pixel; _fbq?: Pixel };
+
+type AcaoFazenda = "whatsapp_click" | "pdf_open";
+type OrigemFazenda = "whatsapp_flutuante" | "tenho_interesse" | "ficha_pdf";
+type Rastreadores = ReturnType<typeof criarRastreadores>;
+let rastreadoresPublicos: Rastreadores | null = null;
+const interacoesRegistradas = new WeakSet<Event>();
+
+/** Uma conexão por montagem, inclusive em StrictMode; não instala listeners globais. */
+export function conectarRastreadores(r: Rastreadores) {
+  rastreadoresPublicos = r;
+  return () => { if (rastreadoresPublicos === r) rastreadoresPublicos = null; };
+}
+
+/** Somente ações explícitas: nunca lê href, telefone, mensagem ou dados da fazenda. */
+export function registrarInteracaoFazenda(acao: AcaoFazenda, slug: string, origem: OrigemFazenda, evento: Event) {
+  try {
+    if (evento.defaultPrevented || interacoesRegistradas.has(evento) ||
+      "button" in evento && evento.button !== 0 && evento.button !== 1) return;
+    interacoesRegistradas.add(evento);
+    rastreadoresPublicos?.registrar(acao, slug, origem);
+  } catch {
+    // Um bloqueador ou provedor indisponível não pode impedir o link.
+  }
+}
 
 /** Remove somente cookies dos rastreadores conhecidos, não sessão nem preferências. */
 export function apagarCookiesRastreio(analytics: boolean, marketing: boolean) {
@@ -19,6 +43,9 @@ export function apagarCookiesRastreio(analytics: boolean, marketing: boolean) {
 
 export function criarRastreadores(w: Janela = window, notificar: () => void = () => {}, modoDiagnostico = false) {
   let ga = "", meta = "", ultimaGa = "", ultimaMeta = "";
+  let configAtual: ConfigRastreamento | null = null, consentimentoAtual: Consentimento | null = null;
+  let caminhoAtual = "";
+  const tentar = (acao: () => void) => { try { acao(); } catch { /* Falha isolada por provedor. */ } };
   let encerrado = false;
   const estados: Record<"ga4" | "meta", EstadoBiblioteca> = { ga4: "nao-iniciado", meta: "nao-iniciado" };
   const limpezas: (() => void)[] = [];
@@ -45,12 +72,13 @@ export function criarRastreadores(w: Janela = window, notificar: () => void = ()
   };
   const parar = () => {
     encerrado = true;
+    configAtual = null; consentimentoAtual = null; caminhoAtual = "";
     limpezas.splice(0).forEach(limpar => limpar());
     if (ga) {
       (w as unknown as Record<string, unknown>)["ga-disable-" + ga] = true;
-      w.gtag?.("consent", "update", { analytics_storage: "denied", ad_storage: "denied", ad_user_data: "denied", ad_personalization: "denied" });
+      tentar(() => w.gtag?.("consent", "update", { analytics_storage: "denied", ad_storage: "denied", ad_user_data: "denied", ad_personalization: "denied" }));
     }
-    if (meta) w.fbq?.("consent", "revoke");
+    if (meta) tentar(() => w.fbq?.("consent", "revoke"));
     document.getElementById("gramogol-ga4")?.remove();
     document.getElementById("gramogol-meta")?.remove();
     // Remover a tag não descarrega bibliotecas já executadas: o chamador recarrega.
@@ -59,13 +87,31 @@ export function criarRastreadores(w: Janela = window, notificar: () => void = ()
   return {
     temRastreadores: () => !!ga || !!meta,
     diagnostico: () => ({ ...estados }),
+    registrar(acao: AcaoFazenda, slug: string, origem: OrigemFazenda) {
+      const c = configAtual;
+      const consent = consentimentoAtual && lerConsentimento(JSON.stringify(consentimentoAtual));
+      const caminho = `/fazenda/${slug}`;
+      if (encerrado || modoDiagnostico || !c || validarRastreamento(c) || !consent || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ||
+        caminhoAtual !== caminho || location.pathname !== caminho ||
+        !(acao === "whatsapp_click" && (origem === "whatsapp_flutuante" || origem === "tenho_interesse") ||
+          acao === "pdf_open" && origem === "ficha_pdf")) return;
+      const dados = { fazenda_slug: slug, origem };
+      if (ga && c.ga4_ativo && c.ga4_id === ga && consent.analytics)
+        tentar(() => w.gtag?.("event", acao, {
+          ...dados, send_to: ga, page_location: location.origin + caminho, page_referrer: "",
+        }));
+      // Meta inclui a URL do documento automaticamente. Não medir URLs com parâmetros/fragmentos.
+      if (meta && c.meta_pixel_ativo && c.meta_pixel_id === meta && consent.marketing && !location.search && !location.hash)
+        tentar(() => w.fbq?.("trackSingleCustom", meta, acao, dados));
+    },
     atualizar(c: ConfigRastreamento, consent: Consentimento | null, caminho: string): boolean {
       const valido = caminhoRastreavel(caminho) || modoDiagnostico && caminho === CAMINHO_DIAGNOSTICO;
       const autorizado = consent && lerConsentimento(JSON.stringify(consent));
       const novoGa = valido && c.ga4_ativo === true && idGa4Valido(c.ga4_id) && autorizado?.analytics ? c.ga4_id : "";
-      const novoMeta = valido && c.meta_pixel_ativo === true && idPixelValido(c.meta_pixel_id) && autorizado?.marketing ? c.meta_pixel_id : "";
+      const novoMeta = valido && c.meta_pixel_ativo === true && idPixelValido(c.meta_pixel_id) && autorizado?.marketing && !location.search && !location.hash ? c.meta_pixel_id : "";
       if (ga && ga !== novoGa || meta && meta !== novoMeta) { parar(); return true; }
       if (encerrado) return true;
+      configAtual = { ...c }; consentimentoAtual = autorizado ? { ...autorizado } : null; caminhoAtual = caminho;
       if (novoGa && !ga) {
         ga = novoGa;
         w.dataLayer = w.dataLayer || [];
