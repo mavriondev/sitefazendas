@@ -33,9 +33,10 @@ export async function rodar() {
 
   // ---- público: positivo vira texto genérico (sem nome); "não detectado" automático nunca aparece ----
   const pub = (l: any): AtributoRow => ({ ...l, publico: true });
-  const pTi = atributoParaPublico(pub(ti))!;
-  assert.equal(pTi.origem, "oficial"); assert.equal(pTi.fonte, "FUNAI"); assert.match(pTi.atualizado_em!, /^\d{4}-\d{2}-\d{2}$/);
-  assert.ok(!pTi.texto.includes("Exemplo")); assert.match(pTi.texto, /consulte o corretor/);
+  assert.equal(atributoParaPublico(pub(ti)), null);   // sobreposição encontrada nunca vai ao site
+  const alt = atributoParaPublico(pub(await lerLinha(db, id, "logistica_rodovia")))!;
+  assert.equal(alt.origem, "oficial"); assert.match(alt.fonte!, /IBGE/); assert.match(alt.atualizado_em!, /^\d{4}-\d{2}-\d{2}$/);
+  assert.deepEqual(Object.keys(alt).sort(), ["atualizado_em", "chave", "confianca", "fonte", "origem", "rotulo", "texto"]); // sem observação, valor bruto nem dados do dono
   assert.equal(atributoParaPublico(pub(uc)), null);
   // confirmado por documento: aí sim "Sem sobreposição"
   await gravarManual(db, id, "sobrep_unidade_conservacao", { achado: "nao_detectado", confirmado_por: "documento", publico: true });

@@ -21,7 +21,7 @@ export interface DefAtributo {
   /** Fonte exibida ao público na aba de dados oficiais (nunca o nome de sistemas internos). */
   fontePublica?: string;
   /** Texto público fixo, para dados em que o valor exato não deve aparecer (ex.: sobreposições). */
-  textoPublico?: { presente: string; ausente: string };
+  textoPublico?: { ausente: string };
 }
 
 export const ATRIBUTOS: DefAtributo[] = [
@@ -38,11 +38,11 @@ export const ATRIBUTOS: DefAtributo[] = [
   { chave: "logistica_ferrovia", rotulo: "Distância à ferrovia", tipo: "numero", unidade: "m", publicavel: true, validadeDias: 730, grupo: "oficial", fontePublica: "IBGE, Base Cartográfica 1:250.000" },
   { chave: "benfeitorias", rotulo: "Benfeitorias", tipo: "texto", publicavel: true, validadeDias: 730, grupo: "corretor" },
   { chave: "documentacao", rotulo: "Documentação", tipo: "texto", publicavel: true, validadeDias: 365, grupo: "corretor" },
-  // Sobreposições: só aparecem em público se o corretor confirmar; o texto é fixo e nunca nomeia a área.
+  // Sobreposições: só aparece em público o "Sem sobreposição" confirmado pelo corretor. Sobreposição encontrada nunca é exibida no site.
   { chave: "sobrep_terra_indigena", rotulo: "Terra indígena", tipo: "texto", publicavel: true, validadeDias: 180, grupo: "oficial", fontePublica: "FUNAI",
-    textoPublico: { presente: "Há sobreposição identificada; consulte o corretor", ausente: "Sem sobreposição" } },
+    textoPublico: { ausente: "Sem sobreposição" } },
   { chave: "sobrep_unidade_conservacao", rotulo: "Unidade de conservação", tipo: "texto", publicavel: true, validadeDias: 180, grupo: "oficial", fontePublica: "ICMBio (CNUC)",
-    textoPublico: { presente: "Há sobreposição identificada; consulte o corretor", ausente: "Sem sobreposição" } },
+    textoPublico: { ausente: "Sem sobreposição" } },
   // Nunca públicos (só para o corretor): sobreposições e restrições.
   { chave: "sobreposicoes", rotulo: "Sobreposições (TI, quilombola, UC...)", tipo: "texto", publicavel: false, validadeDias: 180, grupo: "oficial" },
   { chave: "alertas_desmatamento", rotulo: "Alertas de desmatamento", tipo: "texto", publicavel: false, validadeDias: 30, grupo: "oficial", fontePublica: "MapBiomas Alerta" },

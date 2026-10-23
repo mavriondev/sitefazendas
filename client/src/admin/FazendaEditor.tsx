@@ -3,6 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import { api } from "../api";
 import { Erro, Ok, Aviso } from "../components/Avisos";
 import { VideosAdmin } from "./VideosAdmin";
+import { ICONES } from "../components/Caracteristicas";
+import { Info } from "lucide-react";
 import { Campo, useAcaoUnica, useConfirmar, useFormularioComRascunho } from "./comuns";
 
 type Confirmar = ReturnType<typeof useConfirmar>[0];
@@ -130,11 +132,11 @@ function Atributos({ d, acao, id, confirmar }: { d: any; acao: any; id: string; 
   return (
     <>
       <div className="painel">
-        <h3>Dados oficiais</h3>
-        <p className="suave pequeno">Vêm de bases públicas (SICAR, IBGE, FUNAI, ICMBio) e aparecem no site na aba “Informações governamentais”, com a fonte e a data. Nada é publicado sozinho: você escolhe o que mostrar. Leitura automática nunca vira “confirmado”; só você confirma, com vendedor, documento ou visita.</p>
+        <h3>Dados do governo sobre o ativo</h3>
+        <p className="suave pequeno">Vêm de bases públicas (SICAR, IBGE, FUNAI, ICMBio) e aparecem no site na aba “Dados do governo sobre o ativo”, com a fonte e a data. Nada é publicado sozinho: cada item tem a sua chave “Mostrar no site”. Dados de proprietário nunca são buscados nem exibidos. Leitura automática nunca vira “confirmado”; só você confirma, com vendedor, documento ou visita.</p>
         {!d.fazenda.car_codigo && <Aviso>Informe o CAR na aba Dados para poder atualizar.</Aviso>}
         <div className="linha">
-          <button className="btn" disabled={!d.fazenda.car_codigo} onClick={() => acao(async () => setRes(await api.post(`/api/admin/fazendas/${id}/enriquecer`)), "Dados oficiais atualizados.")}>Atualizar dados oficiais</button>
+          <button className="btn" disabled={!d.fazenda.car_codigo} onClick={() => acao(async () => setRes(await api.post(`/api/admin/fazendas/${id}/enriquecer`)), "Dados do governo atualizados.")}>Atualizar dados do governo</button>
           <span className="suave pequeno">{dataHora(ultima) ? `Última atualização: ${dataHora(ultima)}` : "Ainda não atualizado."}</span>
         </div>
         {res?.resultado?.aviso_poligono && <Aviso>Esta fazenda ainda não tem o desenho do imóvel: sobreposições e logística não foram consultadas.</Aviso>}
@@ -163,16 +165,21 @@ function LinhaAtributo({ def, a, acao, id, confirmar }: { def: any; a: any; acao
   return (
     <div className="painel">
       <div className="linha">
+        {(() => { const Icone = ICONES[def.chave] || Info; return <Icone aria-hidden="true" width={20} height={20} />; })()}
         <strong>{def.rotulo}{def.unidade ? ` (${def.unidade})` : ""}</strong>
         {a && <span className={`selo ${a.estado}`}>{ESTADO_ROTULO[a.estado]}{a.achado === "nao_detectado" ? " · não detectado" : ""}</span>}
         <span className="espaco" />
-        {a && def.publicavel && a.estado !== "sem_dado" && (
-          <label className="interruptor" title="Mostrar no site">
-            <input type="checkbox" checked={!!a.publico} onChange={(e) => acao(() => api.put(`/api/admin/fazendas/${id}/atributos/${def.chave}/publico`, { publico: e.target.checked }))} />
-            <span className="chave" /> Público
-          </label>
-        )}
-        {!def.publicavel && <span className="etiqueta">nunca público</span>}
+        {!def.publicavel || (def.textoPublico && a?.achado === "detectado")
+          ? <span className="etiqueta">nunca aparece no site</span>
+          : !a || a.estado === "sem_dado" ? null
+          : a.achado === "nao_detectado" && a.estado !== "confirmado"
+            ? <span className="etiqueta" title="Leitura automática não prova ausência. Confirme por documento, vendedor ou visita para poder exibir.">confirme para exibir</span>
+            : (
+              <label className="interruptor" title="Mostrar este item no site">
+                <input type="checkbox" checked={!!a.publico} onChange={(e) => acao(() => api.put(`/api/admin/fazendas/${id}/atributos/${def.chave}/publico`, { publico: e.target.checked }))} />
+                <span className="chave" /> Mostrar no site
+              </label>
+            )}
       </div>
       {a?.fonte && <p className="suave pequeno">Fonte: {a.fonte}{dataHora(a.consultado_em) ? ` · ${dataHora(a.consultado_em)}` : ""}{a.observacao ? ` — ${a.observacao}` : ""}</p>}
       <div className="filtros">

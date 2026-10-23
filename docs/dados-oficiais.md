@@ -1,12 +1,12 @@
-# Dados oficiais da fazenda (aba "Informações governamentais")
+# Dados do governo sobre o ativo (aba pública e seção do painel)
 
 ## Como funciona
 - Cada dado da fazenda tem **origem**: `oficial` (leitura automática de base pública) ou `corretor` (digitado/confirmado por uma pessoa).
 - No site, a página da fazenda mostra duas abas: **Informações do imóvel** (corretor) e **Informações governamentais** (oficial, com fonte e data de cada item e data da última atualização). Sem dados de um dos lados, só aparece o outro, sem abas.
-- No painel (aba "Dados da terra") há duas seções: **Dados oficiais** (botão "Atualizar dados oficiais") e **Informado por você**.
-- Nada é publicado sozinho: cada item tem o interruptor "Público". Leitura automática nunca vira "confirmado".
+- No painel (aba "Dados da terra") há duas seções: **Dados do governo sobre o ativo** (botão "Atualizar dados do governo") e **Informado por você**.
+- Nada é publicado sozinho: cada item tem a sua chave "Mostrar no site". Leitura automática nunca vira "confirmado".
 
-## O que o botão "Atualizar dados oficiais" consulta hoje
+## O que o botão "Atualizar dados do governo" consulta hoje
 | Dado | Fonte | Onde roda |
 |---|---|---|
 | Altitude, argila | SICAR espelhado (Hub) | Hub, mesma chave do site |
@@ -17,7 +17,7 @@
 ## Regras de confiança (iguais às do Connect)
 - Falha de consulta = "sem dado". Nunca vira "não detectado". Falha não apaga uma leitura anterior boa.
 - "Não detectado" por fonte automática nunca aparece no público. "Sem sobreposição" só aparece se o corretor confirmar (documento/vendedor/visita).
-- Sobreposição positiva, se o corretor liberar, aparece com texto fixo ("Há sobreposição identificada; consulte o corretor"), sem nome da área.
+- Sobreposição encontrada nunca aparece no site (só no painel). Dados de proprietário nunca são buscados nem exibidos.
 - Detalhes de sobreposição (nome da TI/UC, %) ficam só no painel.
 
 ## Ainda não incluído (precisa da Hub)

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { BadgeCheck, ChartNoAxesCombined, CloudRain, Droplets, FileCheck2, House, Info, LandPlot, Landmark, Layers, Mountain, Route, ShieldCheck, Sprout, TrainFront, Trees, Zap } from "lucide-react";
 import type { AtributoPublico } from "../api";
 import { useConteudo } from "./Conteudo";
-const ICONES: Record<string,typeof Mountain> = {
+export const ICONES: Record<string,typeof Mountain> = {
   altitude_media:Mountain,argila_media:Layers,declividade_media:ChartNoAxesCombined,precipitacao_anual:CloudRain,
   area_aproveitavel_ha:LandPlot,agua:Droplets,energia:Zap,uso_solo:Sprout,logistica_rodovia:Route,logistica_ferrovia:TrainFront,benfeitorias:House,documentacao:FileCheck2,
   sobrep_terra_indigena:Landmark,sobrep_unidade_conservacao:Trees
@@ -28,12 +28,12 @@ export function Caracteristicas({atributos}: {atributos:AtributoPublico[]}) {
   const fontes=[...new Set(oficial.map(a=>a.fonte).filter(Boolean))].join(", ");
   return <section className="ga-data-panel"><h3>{t("imovel.caracteristicas")}</h3>
     {corretor.length>0&&oficial.length>0&&<div className="ga-data-tabs" role="tablist" aria-label="Tipo de informação">
-      {([["corretor","Informações do imóvel"],["oficial","Informações governamentais"]] as const).map(([k,rot])=><button key={k} type="button" role="tab" id={`ga-aba-${k}`} aria-selected={atual===k} aria-controls="ga-aba-painel" tabIndex={atual===k?0:-1} className={atual===k?"ativo":""} onClick={()=>setAba(k)}>{rot}</button>)}
+      {([["corretor","Informações do imóvel"],["oficial","Dados do governo sobre o ativo"]] as const).map(([k,rot])=><button key={k} type="button" role="tab" id={`ga-aba-${k}`} aria-selected={atual===k} aria-controls="ga-aba-painel" tabIndex={atual===k?0:-1} className={atual===k?"ativo":""} onClick={()=>setAba(k)}>{rot}</button>)}
     </div>}
     <div id="ga-aba-painel" role={corretor.length&&oficial.length?"tabpanel":undefined} aria-labelledby={corretor.length&&oficial.length?`ga-aba-${atual}`:undefined}>
       {atual==="corretor"
         ? <><Grade itens={corretor} oficial={false}/><p className="ga-data-legend">“Confirmado” foi verificado pelo corretor com vendedor, documento ou visita. Os demais itens foram informados pelo corretor e podem mudar.</p></>
-        : <><Grade itens={oficial} oficial/><p className="ga-data-legend">Informações obtidas de bases públicas oficiais ({fontes}){dataBr(ultima)?`; última atualização em ${dataBr(ultima)}`:""}. São indicativas, não substituem documentos nem medição em campo e podem estar defasadas.</p></>}
+        : <><Grade itens={oficial} oficial/><p className="ga-data-legend">Dados obtidos de bases públicas do governo ({fontes}){dataBr(ultima)?`; última atualização em ${dataBr(ultima)}`:""}. São indicativas, não substituem documentos nem medição em campo e podem estar defasadas.</p></>}
     </div>
   </section>;
 }

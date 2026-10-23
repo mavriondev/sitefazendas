@@ -63,9 +63,8 @@ export function atributoParaPublico(a: AtributoRow): AtributoPublico | null {
 
   let texto: string | null = null;
   if (def.textoPublico) {
-    // Sobreposição: texto fixo. "Sem sobreposição" só com confirmação humana; leitura automática nunca afirma ausência.
-    if (a.achado === "detectado") texto = def.textoPublico.presente;
-    else if (a.achado === "nao_detectado" && a.estado === "confirmado") texto = def.textoPublico.ausente;
+    // Sobreposição: só "Sem sobreposição", e só com confirmação humana. Achado positivo e leitura automática nunca aparecem.
+    if (a.achado === "nao_detectado" && a.estado === "confirmado") texto = def.textoPublico.ausente;
   } else if (def.tipo === "numero") {
     const n = numeroDoValor(a.valor_json);
     if (n === null) return null;
