@@ -13,6 +13,7 @@ import { lerSeo, origemSeo, resolverSeo, tagsSeo } from "./lib/seo";
 import { PAGINAS_SEO } from "../shared/seo";
 import { registrarRotasSeo } from "./routes/seo";
 import type { Hub } from "./lib/hub";
+import type { FontesMalha } from "./lib/ibge-malha";
 import { caminhoDoArquivo } from "./lib/arquivos";
 import rateLimit from "express-rate-limit";
 import { instalarCsrf, rotasSeguras, validarCorpo, validarParametros } from "./lib/seguranca";
@@ -28,6 +29,7 @@ export interface OpcoesApp {
   sessionStore?: session.Store;
   hub?: Hub;
   fetchIA?: typeof fetch;
+  fontesMalha?: FontesMalha;
   /** Pasta do front-end compilado (dist/public). */
   clientDir?: string;
   siteUrl?: string;
@@ -86,7 +88,7 @@ export function criarApp(o: OpcoesApp): Express {
   registrarRotasAuth(rotas, o.db, { limitar: o.limitar });
   registrarRotasPublicas(rotas, o.db, { limitar: o.limitar });
   registrarRotasConteudo(rotas, o.db, o.uploadsDir);
-  registrarRotasAdmin(rotas, o.db, exigirAdmin, { uploadsDir: o.uploadsDir, hub: o.hub, fetchIA: o.fetchIA });
+  registrarRotasAdmin(rotas, o.db, exigirAdmin, { uploadsDir: o.uploadsDir, hub: o.hub, fetchIA: o.fetchIA, fontesMalha: o.fontesMalha });
   registrarRotasPesquisa(rotas, o.db, exigirLogin, { hub: o.hub, segredo: o.segredo });
   registrarRotasSeo(rotas, o.db, o.uploadsDir, o.siteUrl);
 

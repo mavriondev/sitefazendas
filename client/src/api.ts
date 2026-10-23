@@ -51,7 +51,7 @@ export interface ConfigPublica {
   hero_titulo: string; hero_subtitulo: string; modulo_pesquisa_ativo: boolean;
   sobre_titulo: string; sobre_texto: string; contato_email: string; contato_endereco: string; contato_horario: string; instagram_url: string;
 }
-export interface AtributoPublico { chave: string; rotulo: string; texto: string; confianca: "confirmado" | "indicado" }
+export interface AtributoPublico { chave: string; rotulo: string; texto: string; confianca: "confirmado" | "indicado"; origem: "oficial" | "corretor"; fonte?: string; atualizado_em?: string }
 export interface FazendaPublica {
   slug: string; titulo: string; descricao: string; regiao: string; culturas: string[]; area: string | null; preco: string | null;
   destaque: boolean; capa: string | null; fotos: Array<{ url: string; legenda: string | null }>;

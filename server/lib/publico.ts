@@ -20,12 +20,17 @@ export interface FazendaRow {
 export interface AtributoRow {
   chave: string; estado: "confirmado" | "indicado" | "sem_dado"; achado: "detectado" | "nao_detectado" | "indeterminado";
   valor_json: unknown; fonte: string | null; observacao: string | null; confirmado_por: string | null;
-  consultado_em: string; publico: boolean;
+  consultado_em: string; publico: boolean; origem?: "oficial" | "corretor";
 }
 export interface FotoRow { id: number; arquivo: string; legenda: string | null; ordem: number; capa: boolean }
 export interface VideoPublico { id: number; youtube_id: string; titulo: string }
 
-export interface AtributoPublico { chave: string; rotulo: string; texto: string; confianca: "confirmado" | "indicado" }
+export interface AtributoPublico {
+  chave: string; rotulo: string; texto: string; confianca: "confirmado" | "indicado";
+  origem: "oficial" | "corretor";
+  /** Só para origem "oficial": fonte pública (do catálogo) e data da última leitura (AAAA-MM-DD). */
+  fonte?: string; atualizado_em?: string;
+}
 export interface FazendaPublica {
   slug: string; titulo: string; descricao: string; regiao: string; culturas: string[];
   area: string | null; preco: string | null; destaque: boolean;
@@ -57,7 +62,10 @@ export function atributoParaPublico(a: AtributoRow): AtributoPublico | null {
   if (a.estado === "indicado" && a.achado !== "detectado") return null;
 
   let texto: string | null = null;
-  if (def.tipo === "numero") {
+  if (def.textoPublico) {
+    // Sobreposição: só "Sem sobreposição", e só com confirmação humana. Achado positivo e leitura automática nunca aparecem.
+    if (a.achado === "nao_detectado" && a.estado === "confirmado") texto = def.textoPublico.ausente;
+  } else if (def.tipo === "numero") {
     const n = numeroDoValor(a.valor_json);
     if (n === null) return null;
     if (a.chave === "declividade_media") texto = classeRelevo(n);
@@ -68,7 +76,14 @@ export function atributoParaPublico(a: AtributoRow): AtributoPublico | null {
     texto = textoDoValor(a.valor_json);
   }
   if (!texto) return null;
-  return { chave: a.chave, rotulo: def.rotulo, texto, confianca: a.estado === "confirmado" ? "confirmado" : "indicado" };
+  const origem = a.origem === "oficial" ? "oficial" : "corretor";
+  const base = { chave: a.chave, rotulo: def.rotulo, texto, confianca: (a.estado === "confirmado" ? "confirmado" : "indicado") as "confirmado" | "indicado", origem } as AtributoPublico;
+  if (origem === "oficial") {
+    base.fonte = def.fontePublica || "Base oficial";
+    const d = new Date(a.consultado_em);
+    if (!Number.isNaN(d.getTime())) base.atualizado_em = d.toISOString().slice(0, 10);
+  }
+  return base;
 }
 
 export function projetarFazendaPublica(f: FazendaRow, atributos: AtributoRow[], fotos: FotoRow[], whatsappPadrao = ""): FazendaPublica {
@@ -116,7 +131,7 @@ export function validarPublicacao(f: FazendaRow, fotos: FotoRow[], atributos: At
     const def = defAtributo(a.chave);
     if (!def?.publicavel) p.push(`O atributo "${def?.rotulo ?? a.chave}" não pode ser público.`);
     else if (a.estado === "sem_dado") p.push(`"${def.rotulo}" está marcado como público mas está sem dado.`);
-    else if (def.tipo === "texto") for (const m of vazaDadoSensivel(textoDoValor(a.valor_json), priv)) p.push(`O atributo "${def.rotulo}" ${m}.`);
+    else if (def.tipo === "texto" && !def.textoPublico) for (const m of vazaDadoSensivel(textoDoValor(a.valor_json), priv)) p.push(`O atributo "${def.rotulo}" ${m}.`);
   }
   if (f.mostrar_mapa && !f.geojson) p.push("O mapa está ligado, mas não há polígono cadastrado.");
   if (f.mostrar_regiao && (f.latitude == null || f.longitude == null)) p.push("O mapa de região está ligado, mas faltam latitude e longitude.");

@@ -12,13 +12,15 @@ import { gravarManual, gravarAutomatico, validarEntradaManual } from "../lib/atr
 import { ATRIBUTOS, chaveValida } from "../../shared/atributos";
 import { ESTADOS } from "../../shared/confianca";
 import { criarHub, type Hub } from "../lib/hub";
+import { atualizarDadosOficiais } from "../lib/dados-oficiais";
+import type { FontesMalha } from "../lib/ibge-malha";
 import { gerarTexto } from "../lib/ia";
 import { apagarArquivo as apagarArquivoUpload, salvarArquivo } from "../lib/arquivos";
 import { registrarRotasVideos } from "./videos";
 
 const STATUS = ["rascunho", "revisao", "publicada", "vendida", "arquivada"];
 
-export interface OpcoesAdmin { uploadsDir: string; hub?: Hub; fetchIA?: typeof fetch }
+export interface OpcoesAdmin { uploadsDir: string; hub?: Hub; fetchIA?: typeof fetch; fontesMalha?: FontesMalha }
 
 const txt = (v: unknown, max: number): string | null => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 const idDe = (req: Request, nome = "id"): number => Number(req.params[nome]);
@@ -265,6 +267,10 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     const cen = geo ? centroAproximado(geo) : null;
     if (cen && c.f.latitude == null) { params.push(cen.lat, cen.lon); sets.push(`latitude = $${params.length - 1}`, `longitude = $${params.length}`); }
     if (sets.length) await db.query(`UPDATE fazendas SET ${sets.join(", ")}, atualizado_em = now() WHERE id = $1`, params);
+    // Sobreposições (Hub) e rodovia/ferrovia (IBGE) precisam do polígono: o da fazenda, ou o que acabou de vir da Hub.
+    const poligono = c.f.geojson || geo;
+    if (poligono) Object.assign(resultado, await atualizarDadosOficiais(db, hub, id, poligono, { fontesMalha: op.fontesMalha }));
+    else resultado.aviso_poligono = "sem polígono: sobreposições e logística não foram consultadas";
     res.json({ ok: true, resultado, preenchido: sets.length > 0 });
   });
 
