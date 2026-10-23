@@ -43,7 +43,7 @@ export default function Home() {
           <LinkConteudo className="ga-btn ga-btn--glass" href={t("hero.link_sobre")}>{t("hero.botao_sobre")} <ArrowUpRight/></LinkConteudo>
         </div></div><Seals/>
       </div><Botanical/>
-      {!slide?.imagem && <span className="ga-hero-note">{t("hero.legenda")}</span>}
+      {!slide?.imagem && t("hero.legenda") && <span className="ga-hero-note">{t("hero.legenda")}</span>}
       {quantidade>1 && <div className="ga-hero-controls"><button aria-label="Slide anterior" onClick={()=>setIndice(i=>(i-1+quantidade)%quantidade)}><ArrowLeft/></button><span>{indice%quantidade+1} / {quantidade}</span><button aria-label="Próximo slide" onClick={()=>setIndice(i=>(i+1)%quantidade)}><ArrowRight/></button><button onClick={()=>setPausa(v=>!v)} aria-label={pausa?"Reproduzir apresentação":"Pausar apresentação"}>{pausa?"Reproduzir":"Pausar"}</button></div>}
     </section>,
     busca:<BuscaRapida/>,
