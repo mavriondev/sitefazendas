@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, ArrowUpRight, Copy, Droplets, MapPin, Ruler, Share2, Sprout } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpRight, Copy, FileDown, Droplets, MapPin, Ruler, Share2, Sprout } from "lucide-react";
 import { api, linkWhatsapp, type FazendaPublica } from "../api";
 import { useSite } from "../contexto";
 import { Erro } from "../components/Avisos";
@@ -53,7 +53,7 @@ export default function FazendaDetalhe() {
         <Caracteristicas atributos={f.atributos}/><GaleriaVideos key={f.slug} videos={f.videos || []}/>
       </div><aside className="ga-sidebar"><span className="ga-price-label">{t("imovel.valor")}</span><strong className="ga-price">{f.preco || t("imovel.consulta")}</strong>
         {!wa&&<><p className="ga-disclaimer">WhatsApp ainda não configurado para este anúncio.</p><Link className="ga-btn" to="/contato">{t("imovel.sem_whatsapp")} <ArrowUpRight/></Link></>}
-        <div className="ga-sidebar-rule"/><h4>{t("imovel.compartilhar_titulo")}</h4><div className="ga-share-row"><button className="ga-icon-button" onClick={()=>void copiar()}><Copy/>{t("imovel.copiar")}</button><a className="ga-icon-button" href={`https://wa.me/?text=${encodeURIComponent(mensagem)}`} target="_blank" rel="noopener noreferrer"><Share2/>WhatsApp</a></div>
+        <div className="ga-sidebar-rule"/><a className="ga-btn" href={`/fazenda/${f.slug}/pdf?imprimir=1`} target="_blank" rel="noopener"><FileDown/>Gerar PDF da fazenda</a><h4>{t("imovel.compartilhar_titulo")}</h4><div className="ga-share-row"><button className="ga-icon-button" onClick={()=>void copiar()}><Copy/>{t("imovel.copiar")}</button><a className="ga-icon-button" href={`https://wa.me/?text=${encodeURIComponent(mensagem)}`} target="_blank" rel="noopener noreferrer"><Share2/>WhatsApp</a></div>
         {aviso&&<p role="status" className="ga-disclaimer">{aviso}</p>}
         <div className="ga-broker-note">{config?.aviso_intermediacao || "Atendimento direto com o corretor. Localização detalhada, documentação e visitas são tratados em conversa privada."}{config?.texto_creci&&<p>{config.texto_creci}</p>}</div>
       </aside></div>
