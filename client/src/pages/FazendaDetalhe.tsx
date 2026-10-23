@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, ArrowUpRight, Copy, FileDown, Droplets, MapPin, MessageCircle, Ruler, Share2, Sprout } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpRight, Copy, FileDown, Droplets, MapPin, Ruler, Share2, Sprout } from "lucide-react";
 import { api, linkWhatsapp, type FazendaPublica } from "../api";
 import { useSite } from "../contexto";
 import { Erro } from "../components/Avisos";
@@ -10,6 +10,7 @@ import { GaleriaFotos } from "../components/GaleriaFotos";
 import { GaleriaVideos } from "../components/GaleriaVideos";
 import { CartaoFazenda } from "../components/CartaoFazenda";
 import { Secoes, useConteudo, LinkConteudo } from "../components/Conteudo";
+import { WhatsappFlutuante } from "../components/WhatsappFlutuante";
 
 export default function FazendaDetalhe() {
   const {slug}=useParams();
@@ -26,7 +27,7 @@ export default function FazendaDetalhe() {
     return()=>{ativo=false;};
   },[slug,config?.nome_site]);
   if(erro)return <div className="ga-wrap pagina"><Erro erro={erro}/><Link to="/fazendas">Voltar às fazendas</Link></div>;
-  if(!f)return <div className="ga-wrap pagina" role="status">Carregando fazenda…</div>;
+  if(!f || f.slug!==slug)return <div className="ga-wrap pagina" role="status">Carregando fazenda…</div>;
   const url=window.location.href;
   const mensagem=`Olá! Tenho interesse na fazenda ${f.titulo}. Gostaria de conversar com o corretor. ${url}`;
   const wa=linkWhatsapp(f.whatsapp,mensagem);
@@ -40,7 +41,7 @@ export default function FazendaDetalhe() {
   const similares=selecionadas.filter(p=>score(p)>0).slice(0,3);
   const recomendadas=similares.length?similares:selecionadas.slice(0,3);
   const agua=f.atributos.find(a=>a.chave==="agua");
-  return <Secoes pagina="fazenda" blocos={{
+  return <><WhatsappFlutuante key={f.slug} href={wa} rotulo={`Falar no WhatsApp sobre ${f.titulo}`}/><Secoes pagina="fazenda" blocos={{
     topo:<Banner titulo={f.titulo}/>,
     imovel:<section className="ga-detail" data-cms-secao="imovel"><div className="ga-wrap">
       <div className="ga-detail-heading"><div><Eyebrow>{t(f.destaque?"imovel.destaque":"imovel.rotulo")}</Eyebrow><h2 className="ga-title">{f.titulo}</h2><p>{[f.regiao,f.area].filter(Boolean).join(" · ")}</p></div><div className="ga-detail-actions"><button className="ga-icon-button" onClick={()=>void compartilhar()}><Share2/>{t("imovel.compartilhar")}</button><Link className="ga-icon-button" to="/fazendas"><ArrowLeft/>{t("imovel.voltar")}</Link></div></div>
@@ -51,12 +52,12 @@ export default function FazendaDetalhe() {
       <div className="ga-detail-grid"><div className="ga-detail-main"><h3>{t("imovel.sobre")}</h3>{f.descricao.split(/\n+/).filter(Boolean).map((p,i)=><p key={i}>{p}</p>)}
         <Caracteristicas atributos={f.atributos}/><GaleriaVideos key={f.slug} videos={f.videos || []}/>
       </div><aside className="ga-sidebar"><span className="ga-price-label">{t("imovel.valor")}</span><strong className="ga-price">{f.preco || t("imovel.consulta")}</strong>
-        {wa?<a className="ga-btn ga-btn--green" href={wa} target="_blank" rel="noopener noreferrer"><MessageCircle/>{t("imovel.botao")} <ArrowUpRight/></a>:<><p className="ga-disclaimer">WhatsApp ainda não configurado para este anúncio.</p><Link className="ga-btn" to="/contato">{t("imovel.sem_whatsapp")} <ArrowUpRight/></Link></>}
+        {!wa&&<><p className="ga-disclaimer">WhatsApp ainda não configurado para este anúncio.</p><Link className="ga-btn" to="/contato">{t("imovel.sem_whatsapp")} <ArrowUpRight/></Link></>}
         <div className="ga-sidebar-rule"/><a className="ga-btn" href={`/fazenda/${f.slug}/pdf?imprimir=1`} target="_blank" rel="noopener"><FileDown/>Gerar PDF da fazenda</a><h4>{t("imovel.compartilhar_titulo")}</h4><div className="ga-share-row"><button className="ga-icon-button" onClick={()=>void copiar()}><Copy/>{t("imovel.copiar")}</button><a className="ga-icon-button" href={`https://wa.me/?text=${encodeURIComponent(mensagem)}`} target="_blank" rel="noopener noreferrer"><Share2/>WhatsApp</a></div>
         {aviso&&<p role="status" className="ga-disclaimer">{aviso}</p>}
         <div className="ga-broker-note">{config?.aviso_intermediacao || "Atendimento direto com o corretor. Localização detalhada, documentação e visitas são tratados em conversa privada."}{config?.texto_creci&&<p>{config.texto_creci}</p>}</div>
       </aside></div>
     </div></section>,
     similares:recomendadas.length>0&&<section className="ga-similar" data-cms-secao="similares"><div className="ga-wrap"><div className="ga-section-head"><div><Eyebrow>{t("similares.rotulo")}</Eyebrow><h2 className="ga-section-title">{t(similares.length?"similares.titulo":"similares.titulo_alternativo")}</h2></div><LinkConteudo className="ga-link-arrow" href={t("similares.link")}>{t("similares.botao")} <ArrowRight/></LinkConteudo></div><div className="ga-cards">{recomendadas.map(p=><CartaoFazenda f={p} key={p.slug}/>)}</div></div></section>,
-  }}/>;
+  }}/></>;
 }
