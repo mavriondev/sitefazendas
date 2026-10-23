@@ -3,6 +3,7 @@ import { Layout } from "./components/Layout";
 import Home from "./pages/Home";
 import Fazendas from "./pages/Fazendas";
 import FazendaDetalhe from "./pages/FazendaDetalhe";
+import FazendaFicha from "./pages/FazendaFicha";
 import { Contato, Parceiros, Sobre, VendaSuaFazenda } from "./pages/Institucional";
 import Pesquisa from "./pages/Pesquisa";
 import Privacidade from "./pages/Privacidade";
@@ -21,6 +22,7 @@ import SeoAdmin from "./admin/SeoAdmin";
 export default function App() {
   return (
     <Routes>
+      <Route path="fazenda/:slug/pdf" element={<FazendaFicha />} />
       <Route element={<Layout />}>
         <Route index element={<Home />} />
         <Route path="fazendas" element={<Fazendas />} />
