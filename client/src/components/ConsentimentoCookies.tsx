@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { api } from "../api";
-import { apagarCookiesRastreio, criarRastreadores } from "../lib/rastreamento";
+import { apagarCookiesRastreio, conectarRastreadores, criarRastreadores } from "../lib/rastreamento";
 import { CHAVE_CONSENTIMENTO, DURACAO_CONSENTIMENTO, caminhoRastreavel, lerConsentimento, rastreamentoPadrao, validarRastreamento, type ConfigRastreamento, type Consentimento } from "../../../shared/rastreamento";
 import "./ConsentimentoCookies.css";
 
@@ -19,6 +19,7 @@ export function ConsentimentoCookies() {
   const botaoPreferencias = useRef<HTMLButtonElement>(null);
   const rastreadores = useRef<ReturnType<typeof criarRastreadores> | null>(null);
   if (!rastreadores.current) rastreadores.current = criarRastreadores();
+  useEffect(() => conectarRastreadores(rastreadores.current!), []);
   useEffect(() => {
     if (!publico) { setCfg(null); return; }
     let ativo = true, sequencia = 0;
