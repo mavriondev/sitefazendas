@@ -53,6 +53,11 @@ export async function rodar() {
     const farm=(await anon.get("/fazenda/fazenda-seo")).texto;
     assert.ok(farm.includes("Fazenda para pecuária"));
     assert.ok(!farm.includes("SEGREDO-PRIVADO"));
+    // ficha em PDF: existe (200) para fazenda publicada, não é indexada; fazenda reservada continua 404
+    const ficha=await fetch(t.base+"/fazenda/fazenda-seo/pdf");
+    assert.equal(ficha.status,200); assert.equal(ficha.headers.get("x-robots-tag"),"noindex, nofollow");
+    assert.equal((await fetch(t.base+"/fazenda/reservada/pdf")).status,404);
+    assert.equal((await fetch(t.base+"/fazenda/inexistente/pdf")).status,404);
     const privada=await anon.get("/fazenda/reservada");
     assert.equal(privada.status,404);
     assert.ok(!privada.texto.includes("TITULO-PRIVADO-SEO"));
