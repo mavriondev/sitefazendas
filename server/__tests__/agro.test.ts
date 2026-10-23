@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { subirApp } from "./helpers";
 import { atualizarAgro, configAgro, dolarAgro } from "../lib/agro";
 import { buscarTexto, lerDolar, lerFeedCanal, lerMateriaMapa, linksMapa, textoPlano, urlFonte, MAPA_URL, CANAL_FEED, DOLAR_URL } from "../lib/agro-fontes";
@@ -8,6 +9,13 @@ const url = MAPA_URL + "/noticia-de-teste";
 const html = `<html><a rel="license" href="https://creativecommons.org/licenses/by-nd/3.0/deed.pt_BR">Licença</a><h1 class="documentFirstHeading">Produção agrícola</h1><p class="documentDescription">Informação oficial.</p><div class="documentPublished"><span class="value">23/10/2026 09h30</span></div><div id="parent-fieldname-text"><p>Texto autorizado para teste.</p><h2>Resultados</h2><table><tr><th>Safra</th><th>Valor</th></tr><tr><td>2026</td><td>10</td></tr></table><script>alert(1)</script><img src="https://terceiro.invalid/foto.jpg"></div></html>`;
 const feed = `<rss xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><item><title>Notícia do portal</title><link>https://www.canalrural.com.br/agricultura/noticia-de-teste/</link><description><![CDATA[<p>Breve apresentação da fonte.</p><script>malicioso()</script>]]></description><content:encoded>NAO-IMPORTAR-INTEGRA</content:encoded><pubDate>Fri, 23 Oct 2026 12:00:00 GMT</pubDate></item><item><title>Privado</title><link>https://127.0.0.1/segredo</link></item></channel></rss>`;
 export async function rodar() {
+  const lock: { packages: Record<string, { resolved?: string }> } = JSON.parse(await readFile(new URL("../../package-lock.json", import.meta.url), "utf8"));
+  for (const [nome, pacote] of Object.entries(lock.packages)) {
+    if (!pacote.resolved) continue;
+    const registro = new URL(pacote.resolved);
+    assert.equal(registro.origin, "https://registry.npmjs.org", `Registro não portável: ${nome}`);
+    assert.equal(registro.username + registro.password, "", `Credencial no lockfile: ${nome}`);
+  }
   assert.equal(textoPlano("<p>A &amp; B</p><script>segredo()</script>"), "A & B");
   for (const proibida of ["http://www.gov.br/agricultura/pt-br/assuntos/noticias/a", "https://www.gov.br@127.0.0.1/a", "https://www.gov.br.evil.invalid/agricultura/pt-br/assuntos/noticias/a", "https://www.gov.br:8080/agricultura/pt-br/assuntos/noticias/a", "https://www.gov.br/agricultura/pt-br/assuntos/noticias/a?q=segredo"]) assert.equal(urlFonte(proibida, "mapa"), null);
   assert.throws(() => lerFeedCanal('<!DOCTYPE rss [<!ENTITY a "b">]><rss/>'));
