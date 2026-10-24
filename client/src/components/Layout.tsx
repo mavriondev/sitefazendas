@@ -6,7 +6,8 @@ import { linkWhatsapp } from "../api";
 import { useConteudo, LinkConteudo, Secoes, fundoConteudo } from "./Conteudo";
 import { AccountDropdown } from "./AccountDropdown";
 import { SeoPagina } from "./SeoPagina";
-import { ConsentimentoCookies } from "./ConsentimentoCookies";
+import { ConsentimentoCookies, abrirPreferenciasCookies } from "./ConsentimentoCookies";
+import { caminhoRastreavel } from "../../../shared/rastreamento";
 import { WhatsappFlutuante } from "./WhatsappFlutuante";
 import "../agrezen.css";
 import "../agrezen-integration.css";
@@ -54,6 +55,7 @@ export function Layout() {
         </div>,
         }}/>
       </div>{visivel("rodape_creditos")&&<div className="ga-footer-bottom">© {new Date().getFullYear()} {nome} · {t("rodape_creditos.texto")}</div>}
+      {caminhoRastreavel(pathname) && <button id="cookie-rodape" type="button" className="cookie-rodape" aria-controls="cookie-painel" onClick={abrirPreferenciasCookies}>Preferências de cookies</button>}
     </div></footer>
     <ConsentimentoCookies />
   </div>;
