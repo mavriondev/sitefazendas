@@ -52,6 +52,22 @@ export async function rodar() {
     assert.equal((await anon.get("/api/public/fazendas?uf=ZZ")).status,400);
     assert.equal((await anon.get("/api/public/fazendas?regiao_brasil=municipio")).status,400);
     assert.equal((await t.admin.put(`/api/admin/fazendas/${a}/atributos/estado_publico`,{achado:"detectado",valor:"Estado inventado"})).status,400);
+    // A área exata é opt-in na ficha/PDF, nunca na busca ou nos filtros.
+    await db.query("UPDATE fazendas SET descricao_publica='Detalhes complementares da propriedade.' WHERE id=$1",[a]);
+    await db.query("INSERT INTO fazenda_fotos (fazenda_id,arquivo,capa) VALUES ($1,$2,true)",[a,"a".repeat(32)+".jpg"]);
+    assert.equal((await anon.get("/api/public/fazendas/alpha")).json.area,"1.000 a 2.500 ha");
+    assert.equal((await t.admin.put(`/api/admin/fazendas/${a}`,{mostrar_area_exata:"true"})).status,400);
+    assert.equal((await t.admin.put(`/api/admin/fazendas/${a}`,{mostrar_area_exata:true})).status,200);
+    assert.equal((await t.admin.get(`/api/admin/fazendas/${a}`)).json.fazenda.mostrar_area_exata,true);
+    const exata=(await anon.get("/api/public/fazendas/alpha")).json;
+    assert.equal(exata.area,"1.454,4 ha"); // atributo autorizado, não os 1.487,23 internos
+    assert.equal(exata.atributos.find((x:any)=>x.chave==="area_total_ha").texto,exata.area);
+    assert.equal((await anon.get("/api/public/fazendas/beta")).json.area,"1.000 a 2.500 ha");
+    assert.equal((await get()).fazendas.find((f:any)=>f.slug==="alpha").area,"1.000 a 2.500 ha");
+    assert.equal((await anon.get("/api/public/fazendas/alpha")).json.mostrar_area_exata,undefined);
+    assert.equal((await t.admin.put(`/api/admin/fazendas/${a}`,{mostrar_area_exata:false})).status,200);
+    assert.equal((await anon.get("/api/public/fazendas/alpha")).json.area,"1.000 a 2.500 ha");
+    await t.admin.put(`/api/admin/fazendas/${a}`,{mostrar_area_exata:true});
     // Desmarcar autorizações remove opções e resultados imediatamente.
     for(const id of [a,b]) await db.query("UPDATE fazenda_atributos SET publico=false WHERE fazenda_id=$1",[id]);
     assert.equal((await get("uf=MG")).total,0);
@@ -59,6 +75,7 @@ export async function rodar() {
     assert.deepEqual((await anon.get("/api/public/filtros")).json.estados,[]);
     assert.deepEqual((await anon.get("/api/public/filtros")).json.faixas.area,[]);
     assert.equal((await get()).fazendas.find((f:any)=>f.slug==="alpha").area,null);
+    assert.equal((await anon.get("/api/public/fazendas/alpha")).json.area,null);
     // Dado legado malformado não derruba consulta nem aparece nas opções.
     await db.query("UPDATE fazenda_atributos SET publico=true,valor_json='\"texto inválido\"'::jsonb WHERE fazenda_id=$1 AND chave='altitude_media'",[a]);
     assert.equal((await get("altitude_faixa=800_900")).total,0);

@@ -185,6 +185,8 @@ export const MIGRACOES: string[] = [
     publicado BOOLEAN NOT NULL DEFAULT FALSE,
     criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
+  // Opt-in por imóvel: nunca transforma a área de cadastros legados em pública.
+  `ALTER TABLE fazendas ADD COLUMN IF NOT EXISTS mostrar_area_exata BOOLEAN NOT NULL DEFAULT FALSE`,
 ];
 
 export async function migrar(db: Db): Promise<void> {
