@@ -57,7 +57,7 @@ export default function FazendaEditor() {
 function Dados({ f, acao, id, confirmar }: { f: any; acao: any; id: string; confirmar: Confirmar }) {
   const inicial = {
     titulo: f.titulo ?? "", regiao_publica: f.regiao_publica ?? "", culturas: (f.culturas ?? []).join(", "), area_ha: f.area_ha ?? "",
-    area_exibicao: f.area_exibicao, preco_exibicao: f.preco_exibicao ?? "", descricao_publica: f.descricao_publica ?? "",
+    area_exibicao: f.area_exibicao, mostrar_area_exata: f.mostrar_area_exata === true, preco_exibicao: f.preco_exibicao ?? "", descricao_publica: f.descricao_publica ?? "",
     destaque: f.destaque, destaque_ordem: f.destaque_ordem ?? 0, mostrar_mapa: f.mostrar_mapa, mostrar_regiao: f.mostrar_regiao, geojson_novo: "", whatsapp_proprio: f.whatsapp_proprio ?? "",
     car_codigo: f.car_codigo ?? "", municipio: f.municipio ?? "", uf: f.uf ?? "", latitude: f.latitude ?? "", longitude: f.longitude ?? "", notas_internas: f.notas_internas ?? "",
   };
@@ -88,7 +88,9 @@ function Dados({ f, acao, id, confirmar }: { f: any; acao: any; id: string; conf
         {T("titulo", "Título")}{T("regiao_publica", "Região (pública, ampla: ex. Sul de Goiás)")}{T("culturas", "Culturas (separadas por vírgula)")}
         <div className="filtros">
           {T("area_ha", "Área do cadastro interno (ha)", { inputMode: "decimal" })}
-          <p className="suave pequeno">Para divulgar a área, salve “Área total pública” em Dados da terra e ative “Mostrar no site”. A vitrine e os filtros usam apenas faixas.</p>
+          <div><p className="suave pequeno">Para divulgar a área, salve “Área total pública” em Dados da terra e ative “Mostrar no site”. Busca e filtros continuam em faixas.</p>
+            <label className="linha" style={{ fontWeight: 400 }}><input type="checkbox" style={{ width: "auto" }} checked={v.mostrar_area_exata} onChange={set("mostrar_area_exata")} />Autorizar área exata na ficha pública e no PDF</label>
+            <p className="suave pequeno">Desmarcado mantém a faixa. Esta autorização não revela a área interna: usa somente o atributo “Área total pública” marcado para divulgação.</p></div>
           {T("preco_exibicao", "Valor exibido (texto livre, opcional)")}{T("whatsapp_proprio", "WhatsApp desta fazenda (vazio = padrão)")}
         </div>
         <label htmlFor="desc">Descrição pública</label><textarea id="desc" rows={6} value={v.descricao_publica} onChange={set("descricao_publica")} />

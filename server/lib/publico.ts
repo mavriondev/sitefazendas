@@ -13,6 +13,7 @@ export interface FazendaRow {
   id: number; slug: string; titulo: string; status: string; destaque: boolean; destaque_ordem: number;
   descricao_publica: string | null; regiao_publica: string | null; culturas: string[];
   area_ha: string | number | null; area_exibicao: "exata" | "faixa"; preco_exibicao: string | null;
+  mostrar_area_exata?: boolean;
   mostrar_mapa: boolean; mostrar_regiao: boolean; regiao_ang: number; regiao_dist: number; whatsapp_proprio: string | null;
   car_codigo: string | null; municipio: string | null; uf: string | null;
   latitude: number | null; longitude: number | null; geojson: any; notas_internas: string | null;
@@ -90,14 +91,17 @@ export function atributoParaPublico(a: AtributoRow): AtributoPublico | null {
   return base;
 }
 
-export function projetarFazendaPublica(f: FazendaRow, atributos: AtributoRow[], fotos: FotoRow[], whatsappPadrao = ""): FazendaPublica {
+export function projetarFazendaPublica(f: FazendaRow, atributos: AtributoRow[], fotos: FotoRow[], whatsappPadrao = "", permitirAreaExata = false): FazendaPublica {
   // Defesa também na leitura: dados legados ou edições concorrentes nunca liberam texto privado.
   const seguro = (texto: string | null) => vazaDadoSensivel(texto, f).length ? null : texto;
   const fotosOrd = [...fotos].sort((a, b) => Number(b.capa) - Number(a.capa) || a.ordem - b.ordem || a.id - b.id);
   // O cadastro privado não autoriza divulgação: a área precisa do mesmo opt-in
   // dos demais atributos. Mesmo registros legados "exata" só saem como faixa.
   const area = atributos.find(a => a.chave === "area_total_ha");
-  const areaPublica = area ? atributoParaPublico(area)?.texto ?? null : null;
+  let areaPublica = area ? atributoParaPublico(area)?.texto ?? null : null;
+  const areaExata = area ? numeroDoValor(area.valor_json) : null;
+  const exibirExata = permitirAreaExata && f.mostrar_area_exata === true && areaPublica !== null && areaExata !== null && areaExata > 0;
+  if (exibirExata) areaPublica = `${areaExata.toLocaleString("pt-BR", { maximumFractionDigits: 4 })} ha`;
   return {
     slug: f.slug,
     titulo: f.titulo,
@@ -110,7 +114,7 @@ export function projetarFazendaPublica(f: FazendaRow, atributos: AtributoRow[], 
     capa: fotosOrd[0] ? `/uploads/${fotosOrd[0].arquivo}` : null,
     fotos: fotosOrd.map((x) => ({ url: `/uploads/${x.arquivo}`, legenda: seguro(x.legenda) })),
     videos: [],
-    atributos: atributos.map(atributoParaPublico).filter((x): x is AtributoPublico => x !== null && seguro(x.texto) !== null),
+    atributos: atributos.map(atributoParaPublico).filter((x): x is AtributoPublico => x !== null && seguro(x.texto) !== null).map(a => exibirExata && a.chave === "area_total_ha" ? { ...a, texto: areaPublica! } : a),
     forma: f.mostrar_mapa && f.geojson ? formaSvgAnonima(f.geojson) : null,
     regiao_mapa: f.mostrar_regiao ? regiaoAproximada(f.latitude, f.longitude, f.regiao_ang, f.regiao_dist) : null,
     whatsapp: f.whatsapp_proprio || whatsappPadrao || null,
@@ -246,7 +250,7 @@ export async function obterPublicaPorSlug(db: Db, slug: string, whatsappPadrao: 
   const f = r.rows[0];
   if (!f) return null;
   const { attrs, fotos } = await carregarRelacionados(db, [f.id]);
-  const publica = projetarFazendaPublica(f, attrs.get(f.id) ?? [], fotos.get(f.id) ?? [], whatsappPadrao);
+  const publica = projetarFazendaPublica(f, attrs.get(f.id) ?? [], fotos.get(f.id) ?? [], whatsappPadrao, true);
   publica.videos = (await db.query<VideoPublico>("SELECT id,youtube_id,titulo FROM fazenda_videos WHERE fazenda_id=$1 AND publico ORDER BY ordem,id", [f.id])).rows;
   return publica;
 }

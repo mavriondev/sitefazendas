@@ -55,6 +55,10 @@ export function aplicarCamposFazenda(f: FazendaRow, b: Record<string, any>): { e
   if ("preco_exibicao" in b) n.preco_exibicao = txt(b.preco_exibicao, 80);
   if ("mostrar_mapa" in b) n.mostrar_mapa = b.mostrar_mapa === true;
   if ("mostrar_regiao" in b) n.mostrar_regiao = b.mostrar_regiao === true;
+  if ("mostrar_area_exata" in b) {
+    if (typeof b.mostrar_area_exata !== "boolean") return e("A autorização da área exata deve ser verdadeira ou falsa.");
+    n.mostrar_area_exata = b.mostrar_area_exata;
+  }
   if ("destaque" in b) n.destaque = b.destaque === true;
   if ("destaque_ordem" in b) { if (!Number.isInteger(b.destaque_ordem)) return e("Ordem inválida."); n.destaque_ordem = b.destaque_ordem; }
   if ("whatsapp_proprio" in b) {
@@ -86,7 +90,7 @@ export function aplicarCamposFazenda(f: FazendaRow, b: Record<string, any>): { e
 }
 
 const COLUNAS_EDITAVEIS = [
-  "titulo", "descricao_publica", "regiao_publica", "culturas", "area_ha", "area_exibicao", "preco_exibicao", "mostrar_mapa", "mostrar_regiao",
+  "titulo", "descricao_publica", "regiao_publica", "culturas", "area_ha", "area_exibicao", "preco_exibicao", "mostrar_mapa", "mostrar_regiao", "mostrar_area_exata",
   "destaque", "destaque_ordem", "whatsapp_proprio", "car_codigo", "municipio", "uf", "latitude", "longitude", "geojson", "notas_internas",
 ] as const;
 
@@ -137,10 +141,10 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
     await db.query(
       `UPDATE fazendas SET titulo=$2, descricao_publica=$3, regiao_publica=$4, culturas=$5, area_ha=$6, area_exibicao=$7, preco_exibicao=$8,
          mostrar_mapa=$9, destaque=$10, destaque_ordem=$11, whatsapp_proprio=$12, car_codigo=$13, municipio=$14, uf=$15,
-         latitude=$16, longitude=$17, geojson=$18::jsonb, notas_internas=$19, mostrar_regiao=$20, slug=$21, atualizado_em=now() WHERE id=$1`,
+         latitude=$16, longitude=$17, geojson=$18::jsonb, notas_internas=$19, mostrar_regiao=$20, slug=$21, mostrar_area_exata=$22, atualizado_em=now() WHERE id=$1`,
       [id, n.titulo, n.descricao_publica, n.regiao_publica, n.culturas, n.area_ha, n.area_exibicao, n.preco_exibicao,
         n.mostrar_mapa, n.destaque, n.destaque_ordem, n.whatsapp_proprio, n.car_codigo, n.municipio, n.uf,
-        n.latitude, n.longitude, n.geojson ? JSON.stringify(n.geojson) : null, n.notas_internas, n.mostrar_regiao, n.slug],
+        n.latitude, n.longitude, n.geojson ? JSON.stringify(n.geojson) : null, n.notas_internas, n.mostrar_regiao, n.slug, n.mostrar_area_exata ?? false],
     );
   }
 
