@@ -34,11 +34,11 @@ export default function Home() {
   const slide=quantidade?dados!.slides[indice%quantidade]:null;
   const zap=linkWhatsapp(config?.whatsapp_padrao,"Olá! Gostaria de conversar sobre fazendas à venda.");
   return <Secoes pagina="home" blocos={{
-    hero:<section className="ga-hero" data-cms-secao="hero" aria-label="Fazendas em apresentação" aria-roledescription={quantidade>1?"carrossel":undefined} onMouseEnter={()=>setPausa(true)} onMouseLeave={()=>setPausa(false)} onFocus={()=>setPausa(true)} onBlur={()=>setPausa(false)}>
+    hero:<section className="ga-hero" data-cms-secao="hero" aria-label="Fazendas à venda" aria-roledescription={quantidade>1?"carrossel":undefined} onMouseEnter={()=>setPausa(true)} onMouseLeave={()=>setPausa(false)} onFocus={()=>setPausa(true)} onBlur={()=>setPausa(false)}>
       {(slide?.imagem || t("hero.imagem")) && <img className="ga-hero-photo" src={slide?.imagem || t("hero.imagem")} alt=""/>}
       <div className="ga-wrap ga-hero-content"><div className="ga-hero-copy">
-        <Eyebrow>{t("hero.rotulo")} · {config?.nome_site || "Gramogol"}</Eyebrow>
-        <h1 className="ga-title">{slide?.titulo || config?.hero_titulo || <>Terra boa.<br/>Negócios de confiança.</>}</h1>
+        <Eyebrow>{[t("hero.rotulo"), config?.nome_site || "Gramogol"].filter(Boolean).join(" · ")}</Eyebrow>
+        <h1 className="ga-title">{slide?.titulo || config?.hero_titulo || "Fazendas à venda"}</h1>
         <p>{slide?.subtitulo || config?.hero_subtitulo || "Consulte fotos e informações das fazendas. Atendimento pelo WhatsApp."}</p>
         <div className="ga-hero-actions"><LinkConteudo className="ga-btn" href={slide?.link || t("hero.link")}>{slide?.link?(slide.link.startsWith("/")?t("hero.botao_slide"):t("hero.botao_externo")):t("hero.botao")} <ArrowUpRight/></LinkConteudo>
           <LinkConteudo className="ga-btn ga-btn--glass" href={t("hero.link_sobre")}>{t("hero.botao_sobre")} <ArrowUpRight/></LinkConteudo>
