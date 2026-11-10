@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useSearchParams, Link } from "react-router-dom";
 import { api, soDigitos, type FazendaPublica } from "../api";
 import { useSite } from "../contexto";
+import { useConteudo } from "../components/Conteudo";
 import { ICONES } from "../components/Caracteristicas";
 import { Info } from "lucide-react";
 import { paginarFotos } from "../lib/ficha";
@@ -22,6 +23,7 @@ export default function FazendaFicha() {
   const { slug } = useParams();
   const [busca] = useSearchParams();
   const { config } = useSite();
+  const { texto } = useConteudo("global");
   const [f, setF] = useState<FazendaPublica | null>(null);
   const [erro, setErro] = useState(false);
   useEffect(() => {
@@ -47,8 +49,8 @@ export default function FazendaFicha() {
   if (erro) return <div className="ficha-erro">Fazenda não encontrada. <Link to="/fazendas">Voltar às fazendas</Link></div>;
   if (!f) return <div className="ficha-erro" role="status">Preparando a ficha…</div>;
 
-  // Contato temporário exclusivo da ficha; não altera o WhatsApp do site.
-  const fone = telefoneBonito("5533999205599");
+  const logo = texto("marca.logo");
+  const fone = telefoneBonito(f.whatsapp || config?.whatsapp_padrao);
   const contatos = [fone && `Telefone ${fone}`, config?.instagram_url?.replace(/^https?:\/\/(www\.)?/, "")].filter(Boolean) as string[];
   const corretor = f.atributos.filter((a) => a.origem !== "oficial");
   const governo = f.atributos.filter((a) => a.origem === "oficial");
@@ -73,6 +75,7 @@ export default function FazendaFicha() {
       <section className="ficha-pagina ficha-capa">
         {f.capa && <img className="ficha-capa-foto" src={f.capa} alt="" />}
         <div className="ficha-capa-faixa">
+          {logo && <img className="ficha-logo" src={logo} alt={nome} />}
           <p className="ficha-rotulo">Apresentação do imóvel</p>
           <h1>{f.titulo}</h1>
           <p className="ficha-sub">{[f.regiao, f.area].filter(Boolean).join(" · ")}</p>
