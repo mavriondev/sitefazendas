@@ -76,7 +76,7 @@ export default function FazendaFicha() {
         {f.capa && <img className="ficha-capa-foto" src={f.capa} alt="" />}
         <div className="ficha-capa-faixa">
           {logo && <img className="ficha-logo" src={logo} alt={nome} />}
-          <p className="ficha-rotulo">Apresentação do imóvel</p>
+          <p className="ficha-rotulo">Dados do imóvel</p>
           <h1>{f.titulo}</h1>
           <p className="ficha-sub">{[f.regiao, f.area].filter(Boolean).join(" · ")}</p>
           {f.preco && <p className="ficha-preco">{f.preco}</p>}

@@ -39,7 +39,7 @@ export default function Home() {
       <div className="ga-wrap ga-hero-content"><div className="ga-hero-copy">
         <Eyebrow>{t("hero.rotulo")} · {config?.nome_site || "Gramogol"}</Eyebrow>
         <h1 className="ga-title">{slide?.titulo || config?.hero_titulo || <>Terra boa.<br/>Negócios de confiança.</>}</h1>
-        <p>{slide?.subtitulo || config?.hero_subtitulo || "Propriedades rurais selecionadas e uma conversa direta com o corretor — com discrição desde o primeiro contato."}</p>
+        <p>{slide?.subtitulo || config?.hero_subtitulo || "Consulte fotos e informações das fazendas. Atendimento pelo WhatsApp."}</p>
         <div className="ga-hero-actions"><LinkConteudo className="ga-btn" href={slide?.link || t("hero.link")}>{slide?.link?(slide.link.startsWith("/")?t("hero.botao_slide"):t("hero.botao_externo")):t("hero.botao")} <ArrowUpRight/></LinkConteudo>
           <LinkConteudo className="ga-btn ga-btn--glass" href={t("hero.link_sobre")}>{t("hero.botao_sobre")} <ArrowUpRight/></LinkConteudo>
         </div></div><Seals/>

@@ -5,6 +5,7 @@ import { useConteudo, fundoConteudo } from "./Conteudo";
 
 export const IMAGENS = "/images/gramogol/";
 export function Eyebrow({children}: {children: ReactNode}) {
+  if (!children) return null;
   return <span className="ga-kicker"><Leaf size={16} aria-hidden="true"/>{children}</span>;
 }
 export function Botanical() {
@@ -15,11 +16,13 @@ export function Botanical() {
 }
 export function Seals() {
   const {texto:t}=useConteudo("home");
-  return <div className="ga-hero-seals">{[
+  const itens = [
     {Icon:Wheat,text:t("hero.selo1")},
     {Icon:Leaf,text:t("hero.selo2")},
     {Icon:MapPin,text:t("hero.selo3")}
-  ].map(({Icon,text},i)=><div className="ga-seal" key={i}><span className="ga-seal-icon"><Icon aria-hidden="true"/></span><span>{text}</span></div>)}</div>;
+  ].filter(({text}) => text.trim());
+  if (!itens.length) return null;
+  return <div className="ga-hero-seals">{itens.map(({Icon,text},i)=><div className="ga-seal" key={i}><span className="ga-seal-icon"><Icon aria-hidden="true"/></span><span>{text}</span></div>)}</div>;
 }
 export function Banner({titulo}: {titulo: string}) {
   const {texto:t}=useConteudo("fazenda");
