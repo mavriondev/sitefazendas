@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { api, key, ETAPAS, ROTULOS, type Contact, type Deal, type Etapa } from "./api";
-import { ErrorBox, Modal, useAction, useAuth, useDirty, useLoad, digits } from "./ui";
+import { isClosedStage } from "../shared";
+import { ErrorBox, Modal, useAction, useAuth, useDirty, useLoad, digits, reloadCurrentRecord } from "./ui";
 
 /* ---------- Deal ---------- */
 const toLocal = (iso: string | null) => {
@@ -22,7 +23,7 @@ export function DealForm({ deal, presetContato, presetFazenda, onClose, onSaved 
   const [obs, setObs] = useState(deal?.observacoes ?? "");
   const initial = useRef(JSON.stringify([contato, fazenda, etapa, retorno, obs]));
   const dirty = JSON.stringify([contato, fazenda, etapa, retorno, obs]) !== initial.current;
-  useDirty(dirty);
+  const clearDirty = useDirty(dirty);
   const reqKey = useRef<string | null>(null);
   const act = useAction();
 
@@ -35,13 +36,14 @@ export function DealForm({ deal, presetContato, presetFazenda, onClose, onSaved 
       proximo_retorno: retorno ? new Date(retorno).toISOString() : null, observacoes: obs,
       ...(editing ? { versao: deal!.versao } : { request_key: reqKey.current! }),
     }));
-    if (saved) { reqKey.current = null; initial.current = JSON.stringify([contato, fazenda, etapa, retorno, obs]); onSaved(saved); }
+    if (saved) { reqKey.current = null; initial.current = JSON.stringify([contato, fazenda, etapa, retorno, obs]); clearDirty(); onSaved(saved); }
   };
-  const close = () => { if (!dirty || window.confirm("Descartar alterações nesta negociação?")) onClose(); };
+  const close = () => { if (!act.busy && (!dirty || window.confirm("Descartar alterações nesta negociação?"))) onClose(); };
 
   return (
     <Modal title={editing ? "Editar negociação" : "Nova negociação"} onClose={close}>
       <form className="form" onSubmit={submit}>
+        <fieldset className="form form-fields" disabled={act.busy}>
         {editing ? (
           <div className="small muted">{deal!.contato_nome} · {deal!.fazenda_titulo}</div>
         ) : (
@@ -56,19 +58,19 @@ export function DealForm({ deal, presetContato, presetFazenda, onClose, onSaved 
             <label className="f">Fazenda
               <select value={fazenda} onChange={(e) => setFazenda(e.target.value)} required data-testid="select-deal-farm" disabled={!!presetFazenda}>
                 <option value="">{opts.loading ? "Carregando…" : "Selecione"}</option>
-                {opts.data?.[1].fazendas.map((f) => <option key={f.id} value={f.id}>{f.titulo}</option>)}
+                {opts.data?.[1].fazendas.filter(f => f.disponivel).map((f) => <option key={f.id} value={f.id}>{f.titulo}</option>)}
               </select>
             </label>
           </>
         )}
         <div className="form-2">
           <label className="f">Etapa
-            <select value={etapa} onChange={(e) => setEtapa(e.target.value as Etapa)} data-testid="select-deal-stage">
+            <select value={etapa} onChange={(e) => { setEtapa(e.target.value as Etapa); if (isClosedStage(e.target.value)) setRetorno(""); }} data-testid="select-deal-stage">
               {ETAPAS.map((s) => <option key={s} value={s}>{ROTULOS[s]}</option>)}
             </select>
           </label>
           <label className="f">Próximo retorno
-            <input type="datetime-local" value={retorno} onChange={(e) => setRetorno(e.target.value)} data-testid="input-deal-return" />
+            <input type="datetime-local" value={retorno} onChange={(e) => setRetorno(e.target.value)} disabled={isClosedStage(etapa)} data-testid="input-deal-return" />
           </label>
         </div>
         {retorno && <button type="button" className="btn ghost sm" style={{ justifySelf: "start" }} onClick={() => setRetorno("")} data-testid="button-clear-return">Limpar retorno</button>}
@@ -76,10 +78,12 @@ export function DealForm({ deal, presetContato, presetFazenda, onClose, onSaved 
           <textarea value={obs} onChange={(e) => setObs(e.target.value)} maxLength={4000} data-testid="input-deal-notes" />
         </label>
         <ErrorBox error={act.error} />
+        {act.error?.status === 409 && <button type="button" className="btn" onClick={reloadCurrentRecord}>Recarregar versão atual</button>}
         <div className="modal-foot">
           <button type="button" className="btn" onClick={close}>Cancelar</button>
           <button className="btn primary" disabled={act.busy} data-testid="button-save-deal">{act.busy ? "Salvando…" : "Salvar"}</button>
         </div>
+        </fieldset>
       </form>
     </Modal>
   );
@@ -97,18 +101,20 @@ export function ContactForm({ contact, onClose, onSaved }: { contact?: Contact |
   const [v, setV] = useState(start);
   const initial = useRef(JSON.stringify(start));
   const dirty = JSON.stringify(v) !== initial.current;
-  useDirty(dirty);
+  const clearDirty = useDirty(dirty);
   const [dups, setDups] = useState<Array<{ id: number; nome: string }>>([]);
   const [confirmDup, setConfirmDup] = useState(false);
   const [farmQ, setFarmQ] = useState("");
   const reqKey = useRef<string | null>(null);
+  const dupSequence = useRef(0);
   const act = useAction();
   const set = <K extends keyof typeof v>(k: K, val: (typeof v)[K]) => setV((p) => ({ ...p, [k]: val }));
 
   const checkDup = async () => {
-    if (digits(v.telefone).length < 8) { setDups([]); return; }
-    try { const r = await api.duplicates(v.telefone, contact?.id); setDups(r.contatos); if (!r.contatos.length) setConfirmDup(false); }
-    catch (e) { act.setError(e as Error); }
+    const seq = ++dupSequence.current;
+    if (digits(v.telefone).length < 10) { setDups([]); return; }
+    try { const r = await api.duplicates(v.telefone, contact?.id); if (seq !== dupSequence.current) return; setDups(r.contatos); if (!r.contatos.length) setConfirmDup(false); }
+    catch (e) { if (seq === dupSequence.current) act.setError(e as Error); }
   };
   const farms = useMemo(() => {
     const list = opts.data?.[0].fazendas ?? [];
@@ -125,21 +131,22 @@ export function ContactForm({ contact, onClose, onSaved }: { contact?: Contact |
       ...(contact ? { versao: contact.versao } : { request_key: reqKey.current! }),
       ...(confirmDup ? { confirmar_duplicado: true } : {}),
     }));
-    if (saved) { reqKey.current = null; initial.current = JSON.stringify(v); onSaved(saved); }
+    if (saved) { reqKey.current = null; initial.current = JSON.stringify(v); clearDirty(); onSaved(saved); }
   };
   const err = act.error;
   // 409 de telefone traz a propriedade duplicates (mesmo vazia); 409 sem ela é conflito de versão.
   const conflict = err?.status === 409 && Array.isArray(err.duplicates) ? err.duplicates : null;
   const shownDups = conflict ?? dups;
   const showDupBox = conflict !== null || dups.length > 0;
-  const close = () => { if (!dirty || window.confirm("Descartar alterações neste contato?")) onClose(); };
+  const close = () => { if (!act.busy && (!dirty || window.confirm("Descartar alterações neste contato?"))) onClose(); };
 
   return (
     <Modal title={contact ? "Editar contato" : "Novo contato"} onClose={close}>
       <form className="form" onSubmit={submit}>
+        <fieldset className="form form-fields" disabled={act.busy}>
         <label className="f">Nome<input value={v.nome} onChange={(e) => set("nome", e.target.value)} required maxLength={150} data-testid="input-contact-name" /></label>
         <div className="form-2">
-          <label className="f">Telefone<input type="tel" inputMode="tel" value={v.telefone} onChange={(e) => { set("telefone", e.target.value); setConfirmDup(false); }} onBlur={checkDup} required maxLength={40} data-testid="input-contact-phone" /></label>
+          <label className="f">Telefone<input type="tel" inputMode="tel" value={v.telefone} onChange={(e) => { ++dupSequence.current; set("telefone", e.target.value); setConfirmDup(false); setDups([]); if (act.error?.duplicates) act.setError(null); }} onBlur={checkDup} required={!contact || !!contact.telefone} maxLength={40} data-testid="input-contact-phone" /></label>
           <label className="f">E-mail (opcional)<input type="email" value={v.email} onChange={(e) => set("email", e.target.value)} maxLength={200} data-testid="input-contact-email" /></label>
         </div>
         {showDupBox && (
@@ -160,7 +167,7 @@ export function ContactForm({ contact, onClose, onSaved }: { contact?: Contact |
             {isAdmin ? (
               <select value={v.responsavel_id} onChange={(e) => set("responsavel_id", Number(e.target.value))} data-testid="select-contact-owner">
                 {!opts.data && <option value={v.responsavel_id}>{contact?.responsavel_nome ?? user.nome}</option>}
-                {opts.data?.[1].usuarios.map((u) => <option key={u.id} value={u.id}>{u.nome}{u.bloqueado ? " (bloqueado)" : ""}</option>)}
+                {opts.data?.[1].usuarios.map((u) => <option key={u.id} value={u.id} disabled={u.bloqueado && u.id !== v.responsavel_id}>{u.nome}{u.bloqueado ? " (bloqueado)" : ""}</option>)}
               </select>
             ) : <input value={contact?.responsavel_nome ?? user.nome} disabled />}
           </label>
@@ -182,10 +189,12 @@ export function ContactForm({ contact, onClose, onSaved }: { contact?: Contact |
           </div>
         </div>
         <ErrorBox error={conflict ? null : err} />
+        {err?.status === 409 && conflict === null && <button type="button" className="btn" onClick={reloadCurrentRecord}>Recarregar versão atual</button>}
         <div className="modal-foot">
           <button type="button" className="btn" onClick={close}>Cancelar</button>
           <button className="btn primary" disabled={act.busy || (conflict !== null && !confirmDup)} data-testid="button-save-contact">{act.busy ? "Salvando…" : "Salvar contato"}</button>
         </div>
+        </fieldset>
       </form>
     </Modal>
   );

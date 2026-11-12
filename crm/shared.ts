@@ -1,3 +1,9 @@
+// O CRM brasileiro aceita o mesmo telefone com ou sem o código do país.
+export function normalizePhone(value: string) {
+  const digits = value.replace(/\D/g, "");
+  return digits.length === 10 || digits.length === 11 ? "55" + digits : digits;
+}
+export function isClosedStage(stage: string) { return stage === "concluida" || stage === "nao_avancou"; }
 export const ETAPAS = ["novo", "em_atendimento", "visita_agendada", "proposta", "concluida", "nao_avancou"] as const;
 export type Etapa = typeof ETAPAS[number];
 export const ROTULOS: Record<Etapa, string> = { novo: "Novo", em_atendimento: "Em atendimento", visita_agendada: "Visita agendada", proposta: "Proposta", concluida: "Concluída", nao_avancou: "Não avançou" };

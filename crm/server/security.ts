@@ -1,3 +1,4 @@
+import { normalizePhone } from "../shared";
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import type { Request, Response, NextFunction } from "express";
@@ -14,7 +15,7 @@ export function ids(v: unknown): number[] { check(Array.isArray(v) && v.length <
 export function uuid(v: unknown) { check(typeof v === "string" && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(v)); return v; }
 export function email(v: unknown) { const e = text(v, 200, true).toLowerCase(); check(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e), 400, "E-mail inválido."); return e; }
 export function phone(v: unknown, optional = false) {
-  const t = text(v, 40).replace(/\D/g, ""); check((optional && !t) || (t.length >= 10 && t.length <= 15), 400, "Informe o telefone com DDD."); return t;
+  const t = text(v, 40).replace(/\D/g, ""); check((optional && !t) || (t.length >= 10 && t.length <= 15), 400, "Informe o telefone com DDD."); return normalizePhone(t);
 }
 export function password(v: unknown) { check(typeof v === "string" && v.length >= 12 && Buffer.byteLength(v) <= 72, 400, "A senha precisa ter ao menos 12 caracteres e até 72 bytes."); return v; }
 export const hashPassword = (s: string) => bcrypt.hash(s, 12);

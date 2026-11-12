@@ -127,7 +127,7 @@ export function ContactDetail() {
   const [{ contato: c, negociacoes, historico }, { fazendas }] = q.data;
   const linked = fazendas.filter((f) => c.fazenda_ids.includes(f.id));
   const remove = async () => {
-    if (!window.confirm(`Remover o contato ${c.nome}? Esta ação não pode ser desfeita.`)) return;
+    if (!window.confirm(`Remover o contato ${c.nome} e suas negociações no CRM? Esta ação não pode ser desfeita. O cadastro no site não será alterado.`)) return;
     const ok = await del.run(async () => { await api.deleteContact(c.id, c.versao); return true; });
     if (ok) nav("/contatos");
   };

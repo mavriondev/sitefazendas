@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { AlertTriangle, CalendarClock, Handshake, KeyRound, LogOut, Map, Menu, RefreshCw, Upload, UserRound, UsersRound } from "lucide-react";
 import { api, type User } from "./api";
-import { AuthCtx, confirmLeave, resetDirty, useAction, useAuth } from "./ui";
+import { AuthCtx, confirmLeave, resetDirty, useAction, useAuth, useNavigationGuard } from "./ui";
 import { ContactDetail, Contacts, Deals, Home } from "./pages-atendimento";
 import { Account, FarmDetail, Farms, Import, Team } from "./pages-gestao";
 
@@ -39,7 +39,6 @@ function Shell({ children, onLogout }: { children: ReactNode; onLogout: () => vo
   const [open, setOpen] = useState(false);
   const loc = useLocation();
   useEffect(() => setOpen(false), [loc.pathname]);
-  const guard = (e: React.MouseEvent) => { if (!confirmLeave()) e.preventDefault(); else resetDirty(); };
   const links = [
     { to: "/", label: "Retornos", short: "Retornos", icon: CalendarClock, end: true },
     { to: "/contatos", label: "Contatos", short: "Contatos", icon: UserRound },
@@ -53,7 +52,7 @@ function Shell({ children, onLogout }: { children: ReactNode; onLogout: () => vo
     <aside className="side">
       <div className="brand">Gramogol</div>
       <div className="brand-sub">CRM da equipe</div>
-      <nav className="nav">{links.map((l) => <NavLink key={l.to} to={l.to} end={l.end} onClick={guard} data-testid={`nav-${l.to.slice(1) || "home"}`}><l.icon size={17} />{l.label}</NavLink>)}</nav>
+      <nav className="nav">{links.map((l) => <NavLink key={l.to} to={l.to} end={l.end} data-testid={`nav-${l.to.slice(1) || "home"}`}><l.icon size={17} />{l.label}</NavLink>)}</nav>
       <div className="side-foot">
         <div style={{ fontWeight: 600 }}>{user.nome}</div>
         <div style={{ opacity: .6 }}>{admin ? "Administrador" : "Membro"}</div>
@@ -65,12 +64,12 @@ function Shell({ children, onLogout }: { children: ReactNode; onLogout: () => vo
     <div className="shell">
       {side}
       <header className="topbar">
-        <Link to="/" className="brand" style={{ color: "inherit", textDecoration: "none" }} onClick={guard}>Gramogol</Link>
+        <Link to="/" className="brand" style={{ color: "inherit", textDecoration: "none" }}>Gramogol</Link>
         <button onClick={() => setOpen(true)} aria-label="Menu" data-testid="button-menu"><Menu size={22} /></button>
       </header>
       {open && <div className="drawer" onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>{side}</div>}
       <main className="main">{children}</main>
-      <nav className="tabbar">{links.slice(0, 5).map((l) => <NavLink key={l.to} to={l.to} end={l.end} onClick={guard}><l.icon size={19} />{l.short}</NavLink>)}</nav>
+      <nav className="tabbar">{links.slice(0, 5).map((l) => <NavLink key={l.to} to={l.to} end={l.end}><l.icon size={19} />{l.short}</NavLink>)}</nav>
     </div>
   );
 }
@@ -80,6 +79,7 @@ function NotFound() {
 }
 
 function App() {
+  useNavigationGuard();
   const [user, setUser] = useState<User | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [expired, setExpired] = useState(false);
@@ -99,25 +99,13 @@ function App() {
     window.addEventListener("crm-expired", h);
     return () => window.removeEventListener("crm-expired", h);
   }, []);
-  useEffect(() => {
-    const guard = (e: MouseEvent) => {
-      const a = (e.target as Element)?.closest?.("a");
-      if (!a || a.hasAttribute("download") || a.target === "_blank") return;
-      const url = new URL(a.href, window.location.href);
-      if (url.origin !== window.location.origin || !url.pathname.startsWith("/crm") || url.href === window.location.href) return;
-      if (!confirmLeave()) { e.preventDefault(); e.stopImmediatePropagation(); }
-      else resetDirty();
-    };
-    document.addEventListener("click", guard, true);
-    return () => document.removeEventListener("click", guard, true);
-  }, []);
 
   const logout = async () => {
     if (!confirmLeave()) return;
-    resetDirty();
     try { await api.logout(); } catch (e) {
       if ((e as { status?: number }).status !== 401) { window.alert("Não foi possível encerrar a sessão. Tente novamente."); return; }
     }
+    resetDirty();
     setUser(null); setExpired(false); setEpoch((n) => n + 1); nav("/login", { replace: true });
   };
 

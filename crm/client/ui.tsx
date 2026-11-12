@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { AlertTriangle, RefreshCw, X } from "lucide-react";
+import { useBlocker } from "react-router-dom";
 import { ROTULOS, type Event as Ev, type User, type Etapa } from "./api";
 
 /* ---------- auth ---------- */
@@ -19,12 +20,27 @@ export function useDirty(dirty: boolean) {
   useEffect(() => {
     if (!dirty) return;
     dirtyForms.add(token.current);
-    const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    const h = (e: BeforeUnloadEvent) => { if (!dirtyForms.has(token.current)) return; e.preventDefault(); e.returnValue = ""; };
     window.addEventListener("beforeunload", h);
     return () => { dirtyForms.delete(token.current); window.removeEventListener("beforeunload", h); };
   }, [dirty]);
+  return useCallback(() => { dirtyForms.delete(token.current); }, []);
 }
 export function resetDirty() { dirtyForms.clear(); }
+export function useNavigationGuard() {
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => isDirty() &&
+    (currentLocation.pathname !== nextLocation.pathname || currentLocation.search !== nextLocation.search || currentLocation.hash !== nextLocation.hash));
+  const prompted = useRef(false);
+  useEffect(() => {
+    if (blocker.state !== "blocked") { prompted.current = false; return; }
+    if (prompted.current) return;
+    prompted.current = true;
+    if (confirmLeave()) { resetDirty(); blocker.proceed(); } else blocker.reset();
+  }, [blocker]);
+}
+export function reloadCurrentRecord() {
+  if (window.confirm("Descartar as alterações locais e carregar a versão atual?")) { resetDirty(); window.location.reload(); }
+}
 
 /* ---------- data loading ---------- */
 export type ApiError = Error & { status?: number; duplicates?: Array<{ id: number; nome: string }> };
@@ -41,7 +57,7 @@ export function useLoad<T>(fn: () => Promise<T>, deps: unknown[]) {
     catch (e) { if (s === seq.current) { const err = e as ApiError; setError(err); if ([401, 403, 404].includes(err.status ?? 0)) setData(null); } }
     finally { if (s === seq.current) setLoading(false); }
   }, []);
-  useEffect(() => { setData(null); reload(); }, deps); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setData(null); setError(null); reload(); return () => { seq.current++; }; }, deps); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const f = () => { if (document.visibilityState === "visible" && !isDirty()) reload(); };
     window.addEventListener("focus", f);
@@ -123,7 +139,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
     const box = boxRef.current!;
-    const items = () => Array.from(box.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => el.offsetParent !== null || el === document.activeElement);
+    const items = () => Array.from(box.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => !el.matches(":disabled") && (el.offsetParent !== null || el === document.activeElement));
     const first = items().find((el) => !el.matches("[data-modal-close]")) ?? box;
     first.focus();
     const h = (e: KeyboardEvent) => {
