@@ -23,7 +23,7 @@ export default function FazendaFicha() {
   const { slug } = useParams();
   const [busca] = useSearchParams();
   const { config } = useSite();
-  const { texto: t } = useConteudo("global");
+  const { texto } = useConteudo("global");
   const [f, setF] = useState<FazendaPublica | null>(null);
   const [erro, setErro] = useState(false);
   useEffect(() => {
@@ -49,9 +49,9 @@ export default function FazendaFicha() {
   if (erro) return <div className="ficha-erro">Fazenda não encontrada. <Link to="/fazendas">Voltar às fazendas</Link></div>;
   if (!f) return <div className="ficha-erro" role="status">Preparando a ficha…</div>;
 
-  const logo = t("marca.logo_rodape") || "/images/gramogol/logo-gramogol-claro.png";
+  const logo = texto("marca.logo");
   const fone = telefoneBonito(f.whatsapp || config?.whatsapp_padrao);
-  const contatos = [fone && `WhatsApp ${fone}`, config?.contato_email, config?.instagram_url?.replace(/^https?:\/\/(www\.)?/, "")].filter(Boolean) as string[];
+  const contatos = [fone && `Telefone ${fone}`, config?.instagram_url?.replace(/^https?:\/\/(www\.)?/, "")].filter(Boolean) as string[];
   const corretor = f.atributos.filter((a) => a.origem !== "oficial");
   const governo = f.atributos.filter((a) => a.origem === "oficial");
   const ultima = dataBr(governo.map((a) => a.atualizado_em || "").sort().pop());
@@ -75,12 +75,12 @@ export default function FazendaFicha() {
       <section className="ficha-pagina ficha-capa">
         {f.capa && <img className="ficha-capa-foto" src={f.capa} alt="" />}
         <div className="ficha-capa-faixa">
-          <img className="ficha-logo" src={logo} alt={nome} />
-          <p className="ficha-rotulo">Apresentação do imóvel</p>
+          {logo && <img className="ficha-logo" src={logo} alt={nome} />}
+          <p className="ficha-rotulo">Dados do imóvel</p>
           <h1>{f.titulo}</h1>
           <p className="ficha-sub">{[f.regiao, f.area].filter(Boolean).join(" · ")}</p>
           {f.preco && <p className="ficha-preco">{f.preco}</p>}
-          <div className="ficha-contato">{contatos.map((c) => <span key={c}>{c}</span>)}{config?.texto_creci && <span>{config.texto_creci}</span>}</div>
+          <div className="ficha-contato">{contatos.map((c) => <span key={c}>{c}</span>)}</div>
         </div>
       </section>
 
@@ -94,7 +94,7 @@ export default function FazendaFicha() {
         {governo.length > 0 && <><h2>Dados do governo sobre o ativo</h2><ul className="ficha-lista">{governo.map((a) => <Item key={a.chave} a={a} gov />)}</ul>
           <p className="ficha-nota">Dados de bases públicas do governo ({fontes}){ultima ? `; última atualização em ${ultima}` : ""}. São indicativos, não substituem documentos nem medição em campo e podem estar defasados.</p></>}
         <footer className="ficha-rodape">
-          <div className="ficha-fale"><strong>Fale com o corretor</strong>{contatos.map((c) => <span key={c}>{c}</span>)}{config?.contato_horario && <span>{config.contato_horario}</span>}{config?.texto_creci && <span>{config.texto_creci}</span>}</div>
+          <div className="ficha-fale"><strong>Fale com o corretor</strong>{contatos.map((c) => <span key={c}>{c}</span>)}</div>
           <p>{config?.aviso_intermediacao || "As informações são indicativas e não substituem a verificação documental. Localização detalhada e documentação são tratadas em atendimento direto."}</p>
           <p>Ficha gerada em {hoje} · {nome}</p>
         </footer>
