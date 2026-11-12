@@ -2,14 +2,11 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { subirApp, jpegComExif } from "./helpers";
 import { linkWhatsapp } from "../../client/src/api";
-import { normalizarImovelHub } from "../lib/hub";
 
 export async function rodar() {
   for (const n of ["(55) 99999-1234", "+55 55 99999-1234"]) assert.equal(new URL(linkWhatsapp(n, "Teste")!).pathname, "/5555999991234");
   assert.equal(new URL(linkWhatsapp("(11) 3333-1234", "Teste")!).pathname, "/551133331234");
   for (const n of ["", "123", "1234567890123456", "+44 123456789012"]) assert.equal(linkWhatsapp(n, ""), null);
-  const empty = normalizarImovelHub({ num_area: "", alt_media: " ", argila_media: "" });
-  assert.equal(empty.area_ha, null); assert.equal(empty.alt_media, null); assert.equal(empty.argila_media, null);
   const t = await subirApp();
   const { admin, db } = t, anon = t.cliente();
   try {

@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useSite } from "../contexto";
 import { Erro, Ok, Aviso } from "../components/Avisos";
-import { Campo, difere, useAcaoUnica, useAvisoAlteracao, useConfirmar } from "./comuns";
+import { Campo, difere, useAcaoUnica, useAvisoAlteracao } from "./comuns";
 
-const GRUPO_PESQUISA = ["pesquisa_limite_hora"] as const;
 const GRUPO_SITE = ["nome_site", "whatsapp_padrao", "hero_titulo", "hero_subtitulo", "texto_creci", "aviso_intermediacao"] as const;
 const GRUPO_SOBRE = ["sobre_titulo", "sobre_texto", "contato_email", "contato_endereco", "contato_horario", "instagram_url"] as const;
 const pegar = (o: any, chaves: readonly string[]) => Object.fromEntries(chaves.map((k) => [k, o?.[k]]));
@@ -15,13 +14,11 @@ export default function ConfigAdmin() {
   const [c, setC] = useState<any>(null);       // rascunho
   const [erro, setErro] = useState<unknown>(null);
   const [ok, setOk] = useState("");
-  const [confirmar, dialogo] = useConfirmar();
   useEffect(() => { void api.get("/api/admin/config").then((r) => { setSrv(r); setC(r); }).catch(setErro); }, []);
 
-  const sujoPesquisa = difere(pegar(c, GRUPO_PESQUISA), pegar(srv, GRUPO_PESQUISA));
   const sujoSite = difere(pegar(c, GRUPO_SITE), pegar(srv, GRUPO_SITE));
   const sujoSobre = difere(pegar(c, GRUPO_SOBRE), pegar(srv, GRUPO_SOBRE));
-  useAvisoAlteracao(!!c && (sujoPesquisa || sujoSite || sujoSobre));
+  useAvisoAlteracao(!!c && (sujoSite || sujoSobre));
 
   // Salva só os campos do grupo; os demais rascunhos continuam intactos.
   const [salvar, ocupado] = useAcaoUnica(async (parcial: Record<string, unknown>, mensagem: string = "Salvo.") => {
@@ -36,10 +33,6 @@ export default function ConfigAdmin() {
   if (!c) return <Erro erro={erro} />;
   const set = (k: string) => (e: any) => setC({ ...c, [k]: e.target.value });
 
-  const alternarPesquisa = async (ligar: boolean) => {
-    if (ligar && !(await confirmar({ titulo: "Ligar a pesquisa de terras?", texto: "O módulo passa a aparecer no site e a consultar a Hub. Confirme só se o acesso e a chave da Hub já estiverem prontos.", confirmar: "Ligar pesquisa" }))) return;
-    void salvar({ modulo_pesquisa_ativo: ligar }, ligar ? "Pesquisa ligada." : "Pesquisa desligada.");
-  };
   const barra = (sujo: boolean, onSalvar: () => void) => (
     <div className="salvar-barra">
       <button className="btn" disabled={!sujo} onClick={onSalvar}>Salvar alterações</button>
@@ -50,16 +43,6 @@ export default function ConfigAdmin() {
     <div aria-busy={ocupado} className={ocupado ? "ocupado" : ""}>
       <h1>Configurações</h1>
       <Erro erro={erro} />{ok && <Ok>{ok}</Ok>}
-      <div className="painel painel-form">
-        <h3>Pesquisa de terras (módulo B)</h3>
-        <label className="interruptor">
-          <input type="checkbox" checked={!!srv.modulo_pesquisa_ativo} onChange={(e) => void alternarPesquisa(e.target.checked)} />
-          <span className="chave" /> {srv.modulo_pesquisa_ativo ? "Ligada" : "Desligada"}
-        </label>
-        <p className="suave pequeno">Este interruptor age na hora. Desligada: a pesquisa some do site e o servidor recusa as consultas. O enriquecimento das fazendas do cadastro continua funcionando.</p>
-        <div style={{ maxWidth: 260 }}><Campo rotulo="Pesquisas por usuário por hora"><input inputMode="numeric" value={c.pesquisa_limite_hora} onChange={set("pesquisa_limite_hora")} /></Campo></div>
-        {barra(sujoPesquisa, () => salvar({ pesquisa_limite_hora: Number(c.pesquisa_limite_hora) }))}
-      </div>
       <div className="painel painel-form">
         <h3>Site</h3>
         <Campo rotulo="Nome do site"><input value={c.nome_site} onChange={set("nome_site")} /></Campo>
@@ -81,7 +64,6 @@ export default function ConfigAdmin() {
         <Campo rotulo="Instagram" dica="Endereço completo, começando com https://"><input value={c.instagram_url} onChange={set("instagram_url")} /></Campo>
         {barra(sujoSobre, () => salvar(pegar(c, GRUPO_SOBRE)))}
       </div>
-      {dialogo}
     </div>
   );
 }

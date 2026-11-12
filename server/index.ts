@@ -10,7 +10,7 @@ import { garantirAdmin } from "./auth";
 async function main() {
   const producao = process.env.NODE_ENV === "production";
   const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("Defina DATABASE_URL (PostgreSQL deste site — um banco NOVO, separado do Mavrion Connect).");
+  if (!url) throw new Error("Defina DATABASE_URL (PostgreSQL exclusivo deste site).");
   if (producao && !process.env.UPLOADS_DIR) {
     throw new Error("Defina UPLOADS_DIR: pasta em disco PERSISTENTE para as fotos (e faça backup dela).");
   }

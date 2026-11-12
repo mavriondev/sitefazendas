@@ -48,7 +48,7 @@ export const api = {
 export interface Usuario { nome: string; email: string; papel: "comprador" | "admin"; nivel_acesso: "aberto" | "desbloqueado" | "completo" }
 export interface ConfigPublica {
   nome_site: string; whatsapp_padrao: string; texto_creci: string; aviso_intermediacao: string;
-  hero_titulo: string; hero_subtitulo: string; modulo_pesquisa_ativo: boolean;
+  hero_titulo: string; hero_subtitulo: string;
   sobre_titulo: string; sobre_texto: string; contato_email: string; contato_endereco: string; contato_horario: string; instagram_url: string;
 }
 export interface AtributoPublico { chave: string; rotulo: string; texto: string; confianca: "confirmado" | "indicado"; origem: "oficial" | "corretor"; fonte?: string; atualizado_em?: string }

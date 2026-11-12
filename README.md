@@ -6,7 +6,7 @@ gerenciar textos, imagens, menus e a ordem/visibilidade das seções.
 **SEO:** consulte [SEO pelo painel](SEO-DO-SITE.md) para gerenciar metadados,
 indexação, compartilhamento, verificações e sitemap.
 
-Vitrine pública de fazendas + painel do corretor + (opcional) pesquisa de terras sobre a Hub API do Mavrion Connect.
+Vitrine pública de fazendas e painel do corretor, com cadastro manual e independente. Não consulta a Hub nem o Mavrion Connect.
 Banco, chaves e domínio **próprios** — este projeto não compartilha banco com o Mavrion Connect.
 
 ## Páginas
@@ -27,8 +27,6 @@ Os filtros do catálogo só enxergam dados públicos e agem sobre as mesmas faix
 | `DATABASE_URL` | sim | PostgreSQL NOVO deste site |
 | `SESSION_SECRET` | sim (produção) | texto aleatório longo |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | 1ª execução | cria o admin (senha mín. 12 caracteres e máx. 72 bytes; troque depois) |
-| `HUB_API_URL`, `HUB_API_KEY` | para enriquecer/pesquisar | Hub: usar somente a chave já existente. Não alterar Hub ou Connect, nem suas configurações/chaves/serviços, sem autorização prévia |
-| `ANTHROPIC_API_KEY` | para texto por IA | opcional (`ANTHROPIC_MODEL` ajusta o modelo) |
 | `UPLOADS_DIR` | sim (produção) | pasta em disco PERSISTENTE das fotos |
 | `SITE_URL` | recomendado | endereço público (links de compartilhamento) |
 | `PORT` | não | padrão 5000 |
@@ -41,7 +39,7 @@ Ficam em disco (`UPLOADS_DIR`), sem dependência de nenhum provedor: faça backu
 - Excluir usuário (LGPD) apaga a conta e anonimiza os contatos feitos por ela; registros de apresentação são mantidos.
 
 ## Apresentação pública e sigilo
-O design baseado no Agrezen usa fotografias, cartões de portfólio e ícones específicos dos atributos. A página da fazenda não exibe formulário de contato, mapa ou polígono: o contato é direto pelo WhatsApp configurado no anúncio ou pelo padrão do site. Coordenadas, CAR e geometria continuam disponíveis apenas para o trabalho interno e as regras existentes de enriquecimento.
+O design baseado no Agrezen usa fotografias, cartões de portfólio e ícones específicos dos atributos. A página da fazenda não exibe formulário de contato, mapa ou polígono: o contato é direto pelo WhatsApp configurado no anúncio ou pelo padrão do site. Coordenadas, CAR e geometria são opcionais, privados e não disparam consultas.
 
 A home respeita slides, destaques, parceiros e textos configurados no painel. As fotos decorativas fornecidas com o design são ilustrativas; os cartões e galerias dos anúncios usam exclusivamente as fotos cadastradas para cada fazenda. As fontes abertas Instrument Sans e Nunito Sans são servidas localmente, com suas licenças OFL.
 
@@ -66,5 +64,7 @@ Tabelas são criadas sozinhas no início. Testes: `npm test` (usam banco em mem�
 ## Antes de divulgar
 1. Preencher CRECI e WhatsApp em Painel → Configurações.
 2. Revisar a política de privacidade (`client/src/pages/Privacidade.tsx`) com advogado.
-3. Testar com uma fazenda real: cadastrar com CAR, "Buscar dados da Hub", conferir a prévia pública, publicar.
-4. Só ligar a pesquisa de terras depois de testar a Hub com os dados corrigidos.
+3. Preencher manualmente o imóvel e revisar a prévia pública antes de publicar. CAR não é obrigatório.
+4. Conferir os atributos autorizados em “Mostrar no site”. A busca usa somente o cadastro local.
+
+Veja [Cadastro independente](docs/site-independente.md). Notícias e dólar continuam automáticos; dados de imóveis não são consultados em outros sistemas.

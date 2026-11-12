@@ -101,8 +101,8 @@ export const PAGINAS_CONTEUDO: PaginaRegistro[] = [
   ] },
   { id: "privacidade", titulo: "Política de privacidade", rota: "/privacidade", nota: "Revise os textos com assessoria jurídica antes da publicação. Ocultar conteúdo não substitui as obrigações da LGPD.", secoes: [
     s("topo", "Título e aviso", [t("titulo", "Título", "Política de privacidade"), p("aviso", "Aviso editorial (deixe vazio para remover)", "Texto provisório: deve ser revisado por um advogado antes da publicação.")]),
-    s("dados", "Dados coletados", [t("titulo", "Título", "Dados que coletamos"), p("texto", "Texto", "Nome, e-mail, WhatsApp e as mensagens que você enviar, quando você cria conta ou pede contato. Também registramos o histórico de pesquisas feitas na conta, para controle de uso.")]),
-    s("finalidade", "Finalidade", [t("titulo", "Título", "Para que usamos"), p("texto", "Texto", "Para responder ao seu contato, liberar o acesso à pesquisa de terras e apresentar imóveis compatíveis com o seu interesse. Não vendemos seus dados.")]),
+    s("dados", "Dados coletados", [t("titulo", "Título", "Dados que coletamos"), p("texto", "Texto", "Nome, e-mail, WhatsApp e as mensagens que você enviar, quando você cria conta ou pede contato.")]),
+    s("finalidade", "Finalidade", [t("titulo", "Título", "Para que usamos"), p("texto", "Texto", "Para responder ao seu contato e apresentar imóveis compatíveis com o seu interesse. Não vendemos seus dados.")]),
     s("direitos", "Direitos LGPD", [t("titulo", "Título", "Seus direitos (LGPD)"), p("texto", "Texto", "Você pode pedir acesso, correção ou exclusão dos seus dados a qualquer momento, pelo contato informado no site.")]),
     s("imoveis", "Dados dos imóveis", [t("titulo", "Título", "Imóveis"), p("texto", "Texto", "Não exibimos localização exata, código do CAR ou limites dos imóveis. Esses dados são fornecidos somente em atendimento, quando cabível.")]),
   ] },

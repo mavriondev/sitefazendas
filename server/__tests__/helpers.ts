@@ -1,4 +1,3 @@
-process.env.ANTHROPIC_API_KEY = "chave-de-teste";
 import { PGlite } from "@electric-sql/pglite";
 import fs from "node:fs";
 import os from "node:os";
@@ -8,8 +7,6 @@ import type { Db } from "../db";
 import { migrar } from "../schema";
 import { criarApp } from "../app";
 import { garantirAdmin } from "../auth";
-import type { Hub, HubImovel, SobreposicaoHub, HubResultado } from "../lib/hub";
-import type { FontesMalha } from "../lib/ibge-malha";
 
 export async function criarDbTeste(): Promise<Db> {
   const pg = new PGlite();
@@ -23,27 +20,11 @@ export async function criarDbTeste(): Promise<Db> {
   return db;
 }
 
-export interface HubFalso extends Hub { chamadas: number; imoveis: HubImovel[]; porCodigo: Record<string, HubImovel>; ti: HubResultado<SobreposicaoHub>; uc: HubResultado<SobreposicaoHub> }
-/** Fontes do IBGE que nunca saem para a internet nos testes: tudo "não respondeu". */
-export const malhaOffline: FontesMalha = { wfs: async () => ({ ok: false, features: [], truncado: false }), extensao: async () => null };
-export function criarHubFalso(): HubFalso {
-  const h: HubFalso = {
-    chamadas: 0, imoveis: [], porCodigo: {},
-    ti: { ok: true, data: { sobrepoe: false, itens: [] } }, uc: { ok: true, data: { sobrepoe: false, itens: [] } },
-    async sobreposicaoTerraIndigena() { return h.ti; },
-    async sobreposicaoUnidadeConservacao() { return h.uc; },
-    configurado: () => true,
-    async buscarPorCodigo(cod) { h.chamadas++; return { ok: true, data: h.porCodigo[cod] ?? null }; },
-    async buscar() { h.chamadas++; return { ok: true, data: { total: h.imoveis.length, imoveis: h.imoveis } }; },
-  };
-  return h;
-}
-
-export async function subirApp(opts: { hub?: Hub; fetchIA?: typeof fetch; fetchAgro?: typeof fetch; limitar?: boolean; clientDir?: string; fontesMalha?: FontesMalha } = {}) {
+export async function subirApp(opts: { fetchAgro?: typeof fetch; limitar?: boolean; clientDir?: string } = {}) {
   const db = await criarDbTeste();
   await garantirAdmin(db, "admin@teste.com", "senha-forte-1");
   const uploadsDir = fs.mkdtempSync(path.join(os.tmpdir(), "sf-up-"));
-  const app = criarApp({ db, uploadsDir, segredo: "segredo-de-teste", producao: false, limitar: opts.limitar ?? false, hub: opts.hub, fetchIA: opts.fetchIA, fetchAgro: opts.fetchAgro, fontesMalha: opts.fontesMalha ?? malhaOffline, clientDir:opts.clientDir,siteUrl:"https://portal.teste.example" });
+  const app = criarApp({ db, uploadsDir, segredo: "segredo-de-teste", producao: false, limitar: opts.limitar ?? false, fetchAgro: opts.fetchAgro, clientDir:opts.clientDir,siteUrl:"https://portal.teste.example" });
   const server = await new Promise<import("node:http").Server>((ok) => { const s = app.listen(0, "127.0.0.1", () => ok(s)); });
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 

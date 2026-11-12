@@ -13,10 +13,6 @@ export interface ConfigSite {
   contato_endereco: string;
   contato_horario: string;
   instagram_url: string;
-  /** Interruptor do módulo B (pesquisa de terras). Desligado por padrão. */
-  modulo_pesquisa_ativo: boolean;
-  /** Limite de consultas por usuário por hora no módulo B. */
-  pesquisa_limite_hora: number;
 }
 
 export const CONFIG_PADRAO: ConfigSite = {
@@ -34,8 +30,6 @@ export const CONFIG_PADRAO: ConfigSite = {
   contato_endereco: "",
   contato_horario: "",
   instagram_url: "",
-  modulo_pesquisa_ativo: false,
-  pesquisa_limite_hora: 30,
 };
 
 const CHAVES = Object.keys(CONFIG_PADRAO) as Array<keyof ConfigSite>;
@@ -55,7 +49,6 @@ export async function gravarConfig(db: Db, parcial: Record<string, unknown>): Pr
     if (typeof v !== tipoEsperado) return `${k} deve ser ${tipoEsperado}`;
     if (typeof v === "string" && v.length > 8000) return `${k} muito longo`;
     if (k === "instagram_url" && v && !/^https:\/\//i.test(v as string)) return "instagram_url deve começar com https://";
-    if (k === "pesquisa_limite_hora" && (!Number.isInteger(v) || (v as number) < 1 || (v as number) > 1000)) return "pesquisa_limite_hora deve ser inteiro de 1 a 1000";
   }
   for (const [k, v] of Object.entries(parcial)) {
     await db.query(

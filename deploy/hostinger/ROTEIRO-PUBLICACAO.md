@@ -20,8 +20,10 @@ parar e obter autorização prévia.
 - Obrigatórias: `DATABASE_URL`, `SESSION_SECRET`, `UPLOADS_DIR`.
 - Somente no bootstrap de administrador novo: `ADMIN_EMAIL`, `ADMIN_PASSWORD`.
   Não recriar o administrador existente nem manter senha de bootstrap sem necessidade.
-- Integração opcional, reaproveitando o acesso existente: `HUB_API_URL`, `HUB_API_KEY`.
-- Texto por IA opcional: `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`.
+- Cadastro manual: não requer chaves da Hub, do Connect ou de IA.
+- Na atualização para o cadastro independente, remover somente as entradas legadas
+  `HUB_API_URL`, `HUB_API_KEY`, `ANTHROPIC_API_KEY` e `ANTHROPIC_MODEL` da configuração
+  privada do site, após backup. Não revogar chaves nem alterar outros serviços.
 
 Usar `/etc/gramogol/runtime.json` com permissões restritas e o carregador
 `deploy/hostinger/start.cjs`. Nunca versionar configuração, segredos, dumps ou uploads.

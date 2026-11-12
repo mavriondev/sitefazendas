@@ -8,20 +8,16 @@ import { gerarSlug } from "../lib/slug";
 import { sanitizarImagem } from "../lib/foto";
 import { validarGeoJsonPoligono, centroAproximado } from "../lib/geojson";
 import { validarPublicacao, atributoParaPublico, type AtributoRow, type FazendaRow, type FotoRow } from "../lib/publico";
-import { atributoManual, gravarManual, gravarAutomatico, validarEntradaManual } from "../lib/atributos-db";
+import { atributoManual, gravarManual, validarEntradaManual } from "../lib/atributos-db";
 import { vazaDadoSensivel } from "../lib/sigilo";
 import { ATRIBUTOS, chaveValida } from "../../shared/atributos";
 import { ESTADOS } from "../../shared/confianca";
-import { criarHub, type Hub } from "../lib/hub";
-import { atualizarDadosOficiais } from "../lib/dados-oficiais";
-import type { FontesMalha } from "../lib/ibge-malha";
-import { gerarTexto } from "../lib/ia";
 import { apagarArquivo as apagarArquivoUpload, salvarArquivo } from "../lib/arquivos";
 import { registrarRotasVideos } from "./videos";
 
 const STATUS = ["rascunho", "revisao", "publicada", "vendida", "arquivada"];
 
-export interface OpcoesAdmin { uploadsDir: string; hub?: Hub; fetchIA?: typeof fetch; fontesMalha?: FontesMalha }
+export interface OpcoesAdmin { uploadsDir: string }
 
 const txt = (v: unknown, max: number): string | null => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 const idDe = (req: Request, nome = "id"): number => Number(req.params[nome]);
@@ -96,7 +92,6 @@ const COLUNAS_EDITAVEIS = [
 
 export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: OpcoesAdmin) {
   registrarRotasVideos(app, db, exigirAdmin);
-  const hub = op.hub ?? criarHub();
   const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 12 * 1024 * 1024, files: 1, fields: 8, fieldSize: 4096, parts: 10, fieldNameSize: 100 },
@@ -242,61 +237,6 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
   app.delete("/api/admin/fazendas/:id/atributos/:chave", exigirAdmin, async (req, res) => {
     await db.query("DELETE FROM fazenda_atributos WHERE fazenda_id=$1 AND chave=$2", [idDe(req), String(req.params.chave)]);
     res.json({ ok: true });
-  });
-
-  // ---------- enriquecimento pela Hub API (a partir do CAR) ----------
-  app.post("/api/admin/fazendas/:id/enriquecer", exigirAdmin, async (req, res) => {
-    const id = idDe(req);
-    const c = await carregar(db, id);
-    if (!c) return res.status(404).json({ message: "Fazenda não encontrada." });
-    if (!c.f.car_codigo) return res.status(400).json({ message: "Cadastre o código do CAR para enriquecer. Sem CAR, preencha os dados manualmente." });
-    const r = await hub.buscarPorCodigo(c.f.car_codigo);
-    if (!r.ok) return res.status(502).json({ message: r.motivo });
-    if (!r.data) return res.status(404).json({ message: "CAR não encontrado na base. Confira o código ou preencha manualmente." });
-    const im = r.data;
-    const fonte = "Base SICAR espelhada (Hub Mavrion): altitude SRTM 90 m e argila OpenGeoHub 250 m (modelos, não medição em campo)";
-    const resultado: Record<string, string> = {};
-    const reg = async (chave: string, valor: number | null, obs?: string) => {
-      resultado[chave] = valor === null
-        ? await gravarAutomatico(db, id, chave, { achado: "indeterminado", fonte, observacao: "A base não tem este dado para o imóvel." })
-        : await gravarAutomatico(db, id, chave, { achado: "detectado", valor: Math.round(valor * 10) / 10, fonte, observacao: obs });
-    };
-    await reg("altitude_media", im.alt_media, im.alt_min !== null && im.alt_max !== null ? `Variação entre ${Math.round(im.alt_min)} e ${Math.round(im.alt_max)} m nas amostras.` : undefined);
-    await reg("argila_media", im.argila_media, "Média ponderada das camadas até 1 m; estimativa de modelo.");
-    // Dados privados / cadastrais: só preenche o que está vazio (não sobrescreve o que o corretor digitou).
-    const sets: string[] = []; const params: unknown[] = [id];
-    const preencher = (col: string, val: unknown, vazio: boolean) => { if (vazio && val !== null && val !== undefined) { params.push(val); sets.push(`${col} = $${params.length}`); } };
-    preencher("area_ha", im.area_ha, c.f.area_ha == null);
-    preencher("municipio", im.municipio, !c.f.municipio);
-    preencher("uf", im.uf, !c.f.uf);
-    const geo = im.geojson ? validarGeoJsonPoligono(im.geojson) : null;
-    if (geo && !c.f.geojson) { params.push(JSON.stringify(geo)); sets.push(`geojson = $${params.length}::jsonb`); }
-    const cen = geo ? centroAproximado(geo) : null;
-    if (cen && c.f.latitude == null) { params.push(cen.lat, cen.lon); sets.push(`latitude = $${params.length - 1}`, `longitude = $${params.length}`); }
-    if (sets.length) await db.query(`UPDATE fazendas SET ${sets.join(", ")}, atualizado_em = now() WHERE id = $1`, params);
-    // Sobreposições (Hub) e rodovia/ferrovia (IBGE) precisam do polígono: o da fazenda, ou o que acabou de vir da Hub.
-    const poligono = c.f.geojson || geo;
-    if (poligono) Object.assign(resultado, await atualizarDadosOficiais(db, hub, id, poligono, { fontesMalha: op.fontesMalha }));
-    else resultado.aviso_poligono = "sem polígono: sobreposições e logística não foram consultadas";
-    res.json({ ok: true, resultado, preenchido: sets.length > 0 });
-  });
-
-  // ---------- texto por IA (sugestão; nunca salva sozinho) ----------
-  app.post("/api/admin/fazendas/:id/texto-ia", exigirAdmin, async (req, res) => {
-    const c = await carregar(db, idDe(req));
-    if (!c) return res.status(404).json({ message: "Fazenda não encontrada." });
-    const f = c.f;
-    // Para a IA, só atributos que PODERIAM ser públicos (sem dado e privados ficam de fora).
-    const atributos = c.atributos.map((a) => atributoParaPublico({ ...a, publico: true })).filter((x): x is NonNullable<typeof x> => !!x)
-      .map((a) => ({ rotulo: a.rotulo, texto: a.texto, confianca: a.confianca }));
-    const area = f.area_ha != null ? (f.area_exibicao === "faixa" ? null : `${Number(f.area_ha).toLocaleString("pt-BR")} ha`) : null;
-    const r = await gerarTexto(
-      { titulo: f.titulo, regiao_publica: f.regiao_publica, area, culturas: f.culturas ?? [], atributos, observacoes_do_corretor: txt(req.body?.observacoes, 800) ?? undefined },
-      { municipio: f.municipio, uf: f.uf, car_codigo: f.car_codigo, latitude: f.latitude, longitude: f.longitude },
-      { fetchFn: op.fetchIA },
-    );
-    if (!r.ok) return res.status(502).json({ message: r.motivo });
-    res.json({ sugestao: r.texto });
   });
 
   // ---------- fotos ----------

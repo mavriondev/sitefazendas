@@ -9,13 +9,10 @@ import { registrarRotasAuth } from "./routes/auth";
 import { registrarRotasAgro } from "./routes/agro";
 import { registrarRotasPublicas } from "./routes/public";
 import { registrarRotasAdmin } from "./routes/admin";
-import { registrarRotasPesquisa } from "./routes/pesquisa";
 import { lerSeo, origemSeo, resolverSeo, tagsSeo } from "./lib/seo";
 import { PAGINAS_SEO } from "../shared/seo";
 import { registrarRotasSeo } from "./routes/seo";
 import { caminhoRastreavel } from "../shared/rastreamento";
-import type { Hub } from "./lib/hub";
-import type { FontesMalha } from "./lib/ibge-malha";
 import { caminhoDoArquivo } from "./lib/arquivos";
 import rateLimit from "express-rate-limit";
 import { instalarCsrf, rotasSeguras, validarCorpo, validarParametros } from "./lib/seguranca";
@@ -29,11 +26,8 @@ export interface OpcoesApp {
   /** Limites de tentativas (login/cadastro/contato). Desligue só em testes. */
   limitar: boolean;
   sessionStore?: session.Store;
-  hub?: Hub;
-  fetchIA?: typeof fetch;
   fetchAgro?: typeof fetch;
   agroAutomatico?: boolean;
-  fontesMalha?: FontesMalha;
   /** Pasta do front-end compilado (dist/public). */
   clientDir?: string;
   siteUrl?: string;
@@ -77,7 +71,7 @@ export function criarApp(o: OpcoesApp): Express {
     cookie: { httpOnly: true, sameSite: "lax", secure: o.producao, maxAge: 1000 * 60 * 60 * 8 },
   }));
   instalarCsrf(app);
-  const { anexar, exigirLogin, exigirAdmin } = middlewaresDeAuth(o.db);
+  const { anexar, exigirAdmin } = middlewaresDeAuth(o.db);
   app.use(anexar);
   // Autenticar antes de ler corpos grandes ou receber uploads em memória.
   app.use("/api/admin", exigirAdmin);
@@ -93,8 +87,7 @@ export function criarApp(o: OpcoesApp): Express {
   registrarRotasAgro(rotas, o.db, { automatico: o.agroAutomatico ?? process.env.NODE_ENV !== "test", buscar: o.fetchAgro });
   registrarRotasPublicas(rotas, o.db, { limitar: o.limitar });
   registrarRotasConteudo(rotas, o.db, o.uploadsDir);
-  registrarRotasAdmin(rotas, o.db, exigirAdmin, { uploadsDir: o.uploadsDir, hub: o.hub, fetchIA: o.fetchIA, fontesMalha: o.fontesMalha });
-  registrarRotasPesquisa(rotas, o.db, exigirLogin, { hub: o.hub, segredo: o.segredo });
+  registrarRotasAdmin(rotas, o.db, exigirAdmin, { uploadsDir: o.uploadsDir });
   registrarRotasSeo(rotas, o.db, o.uploadsDir, o.siteUrl);
 
 

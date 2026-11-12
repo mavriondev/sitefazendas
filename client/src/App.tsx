@@ -5,7 +5,6 @@ import Fazendas from "./pages/Fazendas";
 import FazendaDetalhe from "./pages/FazendaDetalhe";
 import FazendaFicha from "./pages/FazendaFicha";
 import { Contato, Parceiros, Sobre, VendaSuaFazenda } from "./pages/Institucional";
-import Pesquisa from "./pages/Pesquisa";
 import Privacidade from "./pages/Privacidade";
 import { Cadastro, Entrar, MinhaConta, RedefinirSenha } from "./pages/Conta";
 import AdminLayout from "./admin/AdminLayout";
@@ -35,7 +34,6 @@ export default function App() {
         <Route path="parceiros" element={<Parceiros />} />
         <Route path="contato" element={<Contato />} />
         <Route path="venda-sua-fazenda" element={<VendaSuaFazenda />} />
-        <Route path="pesquisa" element={<Pesquisa />} />
         <Route path="entrar" element={<Entrar />} />
         <Route path="cadastro" element={<Cadastro />} />
         <Route path="conta" element={<MinhaConta />} />

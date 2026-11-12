@@ -25,16 +25,15 @@ export default function UsuariosAdmin() {
     <>
     <div aria-busy={ocupado} className={ocupado ? "travado" : ""}>
       <h1>Usuários</h1>
-      <p className="suave">O nível define o detalhe que o usuário vê na pesquisa de terras: aberto (faixas amplas), desbloqueado (faixas finas) e completo (valores exatos, nunca a localização).</p>
+      <p className="suave">Gerencie as contas e o acesso ao site.</p>
       <Erro erro={erro} />{ok && <Ok>{ok}</Ok>}
       <AvisoLimite total={total} mostrados={l.length} />
       <div className="tabela-rolagem" role="region" aria-label="Lista de usuários" tabIndex={0}>
       <table className="tabela tabela-responsiva tabela-usuarios">
-        <thead><tr><th>Nome</th><th>Contato</th><th>Papel</th><th>Nível</th><th>Bloqueado</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Nome</th><th>Contato</th><th>Papel</th><th>Bloqueado</th><th>Ações</th></tr></thead>
         <tbody>{l.map((u) => (
           <tr key={u.id}>
             <td data-rotulo="Nome">{u.nome}</td><td data-rotulo="Contato">{u.email}<br />{u.whatsapp}</td><td data-rotulo="Papel">{u.papel}</td>
-            <td data-rotulo="Nível"><select aria-label={`Nível de acesso de ${u.nome}`} value={u.nivel_acesso} onChange={(e) => mudar(u.id, { nivel_acesso: e.target.value })}><option value="aberto">Aberto</option><option value="desbloqueado">Desbloqueado</option><option value="completo">Completo</option></select></td>
             <td data-rotulo="Bloqueado"><input aria-label={`Bloquear ${u.nome}`} type="checkbox" style={{ width: "auto" }} checked={u.bloqueado} onChange={(e) => mudar(u.id, { bloqueado: e.target.checked })} /></td>
             <td data-rotulo="Ações">
               <div className="acoes-linha">
