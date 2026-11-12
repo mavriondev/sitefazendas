@@ -1,0 +1,25 @@
+# Template: instalar somente com autorização específica.
+[Unit]
+Description=Gramogol CRM privado
+After=network.target
+
+[Service]
+Type=simple
+User=gramogol-crm
+Group=gramogol-crm
+WorkingDirectory=/opt/gramogol-crm
+ExecStart=/usr/bin/node /opt/gramogol-crm/crm/deploy/start.cjs
+Environment=NODE_ENV=production
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/gramogol-crm
+BindReadOnlyPaths=/var/lib/gramogol/uploads:/var/lib/gramogol-crm/site-photos
+InaccessiblePaths=/etc/gramogol
+
+[Install]
+WantedBy=multi-user.target
