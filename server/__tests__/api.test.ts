@@ -1,20 +1,12 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { subirApp, criarHubFalso, jpegComExif } from "./helpers";
+import { subirApp, jpegComExif } from "./helpers";
 
 const POLI = { type: "Polygon", coordinates: [[[-43.1, -16.9], [-43.0, -16.9], [-43.0, -16.8], [-43.1, -16.8], [-43.1, -16.9]]] };
 
 export async function rodar() {
-  const hub = criarHubFalso();
-  hub.porCodigo["MG-3108107-AAAA"] = { cod_imovel: "MG-3108107-AAAA", uf: "MG", municipio: "Botumirim", area_ha: 1454.4, alt_media: 847.6, alt_min: 800, alt_max: 900, argila_media: 37.46, geojson: POLI };
-  hub.imoveis = [
-    { cod_imovel: "MG-3108107-AAAA", uf: "MG", municipio: "Botumirim", area_ha: 1454.4, alt_media: 847.6, alt_min: 800, alt_max: 900, argila_media: 37.46, geojson: null },
-    { cod_imovel: "MG-3108107-BBBB", uf: "MG", municipio: "Grão Mogol", area_ha: 800, alt_media: null, alt_min: null, alt_max: null, argila_media: 22, geojson: null },
-  ];
-  let chamadasIA = 0;
-  const fetchIA = (async () => { chamadasIA++; return new Response(JSON.stringify({ content: [{ type: "text", text: "Fazenda no Norte de Minas Gerais, com altitude indicada entre 800 e 900 m." }] }), { status: 200 }); }) as unknown as typeof fetch;
-  const t = await subirApp({ hub, fetchIA });
+  const t = await subirApp();
   const { admin, cliente } = t;
   try {
     // ---------- permissões ----------
@@ -37,7 +29,7 @@ export async function rodar() {
     assert.equal((await cliente().post("/api/auth/entrar", { email: "nao@existe.com", senha: "qualquer-coisa" })).status, 401);
     const senhaVaza = await ana.get("/api/auth/eu"); assert.ok(!JSON.stringify(senhaVaza.json).includes("hash"));
 
-    // ---------- fazenda: criação, enriquecimento, atributos ----------
+    // ---------- fazenda: criação e preenchimento manual ----------
     const novo = await admin.post("/api/admin/fazendas", { titulo: "Fazenda Santa Fé", car_codigo: "MG-3108107-AAAA", regiao_publica: "Norte de Minas Gerais", culturas: ["soja", "milho"] });
     assert.equal(novo.status, 201);
     const id = novo.json.id;
@@ -45,18 +37,19 @@ export async function rodar() {
     assert.ok(det.json.problemas_publicacao.length > 0);                   // ainda não publicável
     assert.equal((await admin.post(`/api/admin/fazendas/${id}/status`, { status: "publicada" })).status, 409);
 
-    const enr = await admin.post(`/api/admin/fazendas/${id}/enriquecer`);
-    assert.equal(enr.status, 200, enr.texto);
+    assert.equal((await admin.post(`/api/admin/fazendas/${id}/enriquecer`)).status, 404);
+    assert.equal((await admin.put(`/api/admin/fazendas/${id}`, { municipio: "Botumirim", area_ha: 1454.4, geojson: POLI })).status, 200);
+    assert.equal((await admin.put(`/api/admin/fazendas/${id}/atributos/altitude_media`, { achado: "detectado", valor: 847.6 })).status, 200);
+    assert.equal((await admin.put(`/api/admin/fazendas/${id}/atributos/argila_media`, { achado: "detectado", valor: 37.5 })).status, 200);
     det = await admin.get(`/api/admin/fazendas/${id}`);
     const alt = det.json.atributos.find((a: any) => a.chave === "altitude_media");
     assert.equal(alt.estado, "indicado"); assert.equal(alt.valor_json, 847.6); assert.equal(alt.publico, false);
     assert.equal(det.json.fazenda.municipio, "Botumirim"); assert.equal(Number(det.json.fazenda.area_ha), 1454.4);
     assert.ok(det.json.fazenda.geojson && det.json.fazenda.latitude != null);
 
-    // confirmação humana não é sobrescrita por nova leitura automática
+    // confirmação humana permanece após tentativa de usar a rota removida
     assert.equal((await admin.put(`/api/admin/fazendas/${id}/atributos/altitude_media`, { achado: "detectado", valor: 850, confirmado_por: "documento" })).status, 200);
-    hub.porCodigo["MG-3108107-AAAA"].alt_media = 999;
-    await admin.post(`/api/admin/fazendas/${id}/enriquecer`);
+    assert.equal((await admin.post(`/api/admin/fazendas/${id}/enriquecer`)).status, 404);
     det = await admin.get(`/api/admin/fazendas/${id}`);
     const alt2 = det.json.atributos.find((a: any) => a.chave === "altitude_media");
     assert.equal(alt2.estado, "confirmado"); assert.equal(alt2.valor_json, 850);
@@ -71,15 +64,8 @@ export async function rodar() {
     await admin.put(`/api/admin/fazendas/${id}/atributos/energia`, { achado: "detectado", valor: "Rede elétrica até 1 km", confirmado_por: "vendedor", publico: true });
     assert.equal((await admin.put(`/api/admin/fazendas/${id}/atributos/sobreposicoes/publico`, { publico: true })).status, 400);
 
-    // ---------- texto por IA: sugestão, sem salvar ----------
-    const ia = await admin.post(`/api/admin/fazendas/${id}/texto-ia`, {});
-    assert.equal(ia.status, 200); assert.match(ia.json.sugestao, /Norte de Minas/); assert.equal(chamadasIA, 1);
-    assert.ok(!(await admin.get(`/api/admin/fazendas/${id}`)).json.fazenda.descricao_publica);   // não salvou
-    const iaVaza = await subirApp({ fetchIA: (async () => new Response(JSON.stringify({ content: [{ type: "text", text: "Linda fazenda em Botumirim." }] }))) as any, hub });
-    const nid = (await iaVaza.admin.post("/api/admin/fazendas", { titulo: "Teste", municipio: "Botumirim" })).json.id;
-    const iaV = await iaVaza.admin.post(`/api/admin/fazendas/${nid}/texto-ia`, {});
-    assert.equal(iaV.status, 502); assert.match(iaV.json.message, /município/);                   // IA que vaza é barrada
-    await iaVaza.fechar();
+    // Descrição é manual e a rota antiga não pode enviar dados a terceiros.
+    assert.equal((await admin.post(`/api/admin/fazendas/${id}/texto-ia`, {})).status, 404);
 
     // ---------- fotos: EXIF/GPS removido do arquivo gravado ----------
     assert.equal((await admin.upload(`/api/admin/fazendas/${id}/fotos`, Buffer.from("<script>alert(1)</script>"), "x.jpg")).status, 415);
@@ -183,56 +169,24 @@ export async function rodar() {
     const home = (await anon.get("/api/public/home")).json;
     assert.equal(home.slides.length, 1); assert.equal(home.slides[0].link, `/fazenda/${d.slug}`);
 
-    // ---------- módulo B: interruptor no servidor ----------
+    // ---------- consultas removidas, inclusive com configuração antiga ----------
+    await t.db.query("INSERT INTO configuracoes (chave,valor) VALUES ('modulo_pesquisa_ativo','true'::jsonb) ON CONFLICT (chave) DO UPDATE SET valor='true'::jsonb");
     const cfgPublica = await anon.get("/api/public/config");
-    assert.equal(cfgPublica.json.modulo_pesquisa_ativo, false);
-    const chamadasAntes = hub.chamadas;
+    assert.equal(cfgPublica.json.modulo_pesquisa_ativo, undefined);
     const busca = { uf: "MG", area_min: 700, area_max: 1600 };
-    assert.equal((await ana.post("/api/pesquisa/buscar", busca)).status, 404);          // desligado: some
-    assert.equal((await admin.post("/api/pesquisa/buscar", busca)).status, 404);        // até para admin
-    assert.equal(hub.chamadas, chamadasAntes);                                          // e NÃO chamou a Hub
+    assert.equal((await ana.post("/api/pesquisa/buscar", busca)).status, 404);
+    assert.equal((await admin.post("/api/pesquisa/buscar", busca)).status, 404);
     assert.equal((await anon.post("/api/pesquisa/buscar", busca)).status, 404);
-
-    assert.equal((await admin.put("/api/admin/config", { modulo_pesquisa_ativo: "sim" })).status, 400);
-    assert.equal((await admin.put("/api/admin/config", { modulo_pesquisa_ativo: true })).status, 200);
-    assert.equal((await anon.post("/api/pesquisa/buscar", busca)).status, 401);          // exige login
-    assert.equal((await ana.post("/api/pesquisa/buscar", { uf: "MG" })).status, 400);    // exige critério
-    const r1 = await ana.post("/api/pesquisa/buscar", busca);
-    assert.equal(r1.status, 200, r1.texto);
-    assert.equal(r1.json.resultados.length, 2); assert.equal(r1.json.nivel, "aberto");
-    for (const proibido of ["Botumirim", "Grão Mogol", "3108107", "AAAA", "BBBB", "geojson", "cod_imovel", "municipio", "1454", "847", "37.4"]) assert.ok(!r1.texto.includes(proibido), `pesquisa vaza "${proibido}"`);
-    assert.equal(r1.json.resultados[0].area, "1.000 a 2.500 ha");
-    assert.equal(r1.json.resultados[0].altitude, "800 a 900 m");
-    assert.equal(r1.json.resultados[1].altitude, null);                                  // sem dado ≠ valor inventado
-    // níveis
+    assert.equal((await anon.get("/api/pesquisa/status")).status, 404);
+    assert.equal((await ana.post("/api/pesquisa/interesse", { token: "antigo" })).status, 404);
+    assert.equal((await admin.put("/api/admin/config", { modulo_pesquisa_ativo: true })).status, 400);
+    assert.equal((await admin.put("/api/admin/config", { pesquisa_limite_hora: 2 })).status, 400);
     const usuarios = (await admin.get("/api/admin/usuarios")).json.usuarios;
     const idAna = usuarios.find((u: any) => u.email === "ana@x.com").id;
-    await admin.put(`/api/admin/usuarios/${idAna}`, { nivel_acesso: "completo" });
-    const r2 = await ana.post("/api/pesquisa/buscar", busca);
-    assert.match(r2.json.resultados[0].area, /1\.454/); assert.match(r2.json.resultados[0].argila, /37,5/);
-    for (const proibido of ["Botumirim", "3108107", "AAAA", "geojson", "cod_imovel"]) assert.ok(!r2.texto.includes(proibido), `nível completo vaza "${proibido}"`);
-    // interesse vira contato para o corretor, que vê o CAR real
-    const token = r2.json.resultados[0].token;
-    assert.equal((await ana.post("/api/pesquisa/interesse", { token: "inventado" })).status, 404);
-    assert.equal((await ana.post("/api/pesquisa/interesse", { token, mensagem: "Quero saber mais" })).status, 201);
-    assert.equal((await ana.post("/api/pesquisa/interesse", { token })).json.repetido, true);
-    const ct = (await admin.get("/api/admin/contatos")).json.contatos.find((c: any) => c.origem === "pesquisa");
-    assert.equal(ct.pesquisa_cod_imovel, "MG-3108107-AAAA"); assert.equal(ct.nome, "Ana");
-    // registro de apresentação (proteção da comissão)
-    const ap = await admin.post("/api/admin/apresentacoes", { comprador_nome: "Ana", pesquisa_token: token, canal: "WhatsApp" });
+    // Apresentações continuam funcionando com fazendas do próprio site.
+    const ap = await admin.post("/api/admin/apresentacoes", { comprador_nome: "Ana", fazenda_id: id, canal: "WhatsApp" });
     assert.equal(ap.status, 201); assert.ok(ap.json.apresentado_em);
     assert.equal((await admin.post("/api/admin/apresentacoes", { comprador_nome: "Ana" })).status, 400);
-    // limite por hora
-    await admin.put("/api/admin/config", { pesquisa_limite_hora: 2 });
-    await ana.post("/api/pesquisa/buscar", busca);
-    assert.equal((await ana.post("/api/pesquisa/buscar", busca)).status, 429);
-    // desligar de novo: some na hora, mas o enriquecimento da vitrine (módulo A) continua funcionando
-    await admin.put("/api/admin/config", { modulo_pesquisa_ativo: false });
-    assert.equal((await ana.post("/api/pesquisa/buscar", busca)).status, 404);
-    assert.equal((await ana.post("/api/pesquisa/interesse", { token })).status, 404);
-    const antes = hub.chamadas;
-    assert.equal((await admin.post(`/api/admin/fazendas/${id}/enriquecer`)).status, 200);
-    assert.equal(hub.chamadas, antes + 1);
 
     // ---------- usuário bloqueado perde acesso na hora ----------
     await admin.put(`/api/admin/usuarios/${idAna}`, { bloqueado: true });

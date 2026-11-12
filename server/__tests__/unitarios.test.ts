@@ -7,8 +7,6 @@ import { estadoAutomatico, estaVencida, validarConfirmacao } from "../../shared/
 import { gerarSlug } from "../lib/slug";
 import { regiaoAproximada, RAIO_REGIAO_KM } from "../lib/regiao";
 import { validarGeoJsonPoligono } from "../lib/geojson";
-import { criarHub, normalizarImovelHub } from "../lib/hub";
-import { anonimizarImovel, ajustarFiltros, filtroSuficiente, tokenDoImovel } from "../lib/pesquisa";
 import { atributoParaPublico, projetarFazendaPublica, validarPublicacao, type FazendaRow, type AtributoRow } from "../lib/publico";
 import { jpegComExif } from "./helpers";
 
@@ -82,56 +80,6 @@ export async function rodar() {
   assert.equal(validarGeoJsonPoligono({ type: "Polygon", coordinates: [[[200, 0], [1, 1], [2, 2], [200, 0]]] }), null);
   assert.equal(validarGeoJsonPoligono("{lixo"), null);
   assert.equal(validarGeoJsonPoligono({ type: "Point", coordinates: [0, 0] }), null);
-
-  // ---- Hub: sentinelas viram null
-  const h = normalizarImovelHub({ cod_imovel: "MG-1", uf: "mg", num_area: "1454.5", alt_media: -9999, alt_min: -9999, alt_max: -9999, argila_media: -1, argila_pct: null });
-  assert.equal(h.alt_media, null); assert.equal(h.argila_media, null); assert.equal(h.area_ha, 1454.5); assert.equal(h.uf, "MG");
-  assert.equal(normalizarImovelHub({ cod_imovel: "x", argila_media: null, argila_pct: 31.2 }).argila_media, 31.2);
-
-  // ---- consulta por CAR: usa a UF existente no código, sem mudar o contrato da Hub
-  const chamadasHub: URL[] = [];
-  const codigoTeste = "MG-3108107-AAAA";
-  const hubConsulta = criarHub({
-    apiKey: "chave-ficticia-de-teste",
-    baseUrl: "https://hub.teste.invalid",
-    fetchFn: (async (url) => {
-      chamadasHub.push(new URL(String(url)));
-      return new Response(JSON.stringify({ data: [{ cod_imovel: codigoTeste }] }), { status: 200 });
-    }) as typeof fetch,
-  });
-  const consultaCar = await hubConsulta.buscarPorCodigo(codigoTeste);
-  assert.ok(consultaCar.ok && consultaCar.data?.cod_imovel === codigoTeste);
-  assert.equal(chamadasHub[0].pathname, "/api/sicar/imoveis");
-  assert.equal(chamadasHub[0].searchParams.get("uf"), "MG");
-  assert.equal(chamadasHub[0].searchParams.get("cod_imovel"), codigoTeste);
-  assert.equal(chamadasHub[0].searchParams.get("include_geometry"), "true");
-  await hubConsulta.buscarPorCodigo("mg3108107aaaa");
-  assert.equal(chamadasHub[1].searchParams.get("uf"), "MG");
-  await hubConsulta.buscarPorCodigo("codigo-incompleto");
-  assert.equal(chamadasHub[2].searchParams.has("uf"), false);
-
-  // ---- pesquisa: níveis, grade de filtros e token
-  const im = { cod_imovel: "MG-3108107-AAAA", uf: "MG", municipio: "Botumirim", area_ha: 1454.4, alt_media: 847.6, alt_min: 800, alt_max: 900, argila_media: 37.46, geojson: { x: 1 } };
-  const tk = tokenDoImovel(im.cod_imovel, "seg");
-  assert.equal(tk, tokenDoImovel(" mg-3108107-aaaa ", "seg"));
-  assert.notEqual(tk, tokenDoImovel(im.cod_imovel, "outro"));
-  for (const nivel of ["aberto", "desbloqueado", "completo"] as const) {
-    const out = JSON.stringify(anonimizarImovel(im, tk, nivel));
-    for (const proibido of ["Botumirim", "3108107", "AAAA", "geojson", "cod_imovel", "municipio"]) assert.ok(!out.includes(proibido), `${nivel} vaza ${proibido}`);
-  }
-  assert.equal(anonimizarImovel(im, tk, "aberto").area, "1.000 a 2.500 ha");
-  assert.equal(anonimizarImovel(im, tk, "aberto").altitude, "800 a 900 m");
-  assert.equal(anonimizarImovel(im, tk, "aberto").argila, "30 a 40%");
-  assert.equal(anonimizarImovel(im, tk, "desbloqueado").altitude, "800 a 850 m");
-  assert.match(anonimizarImovel(im, tk, "completo").area!, /1\.454/);
-  const fAberto = ajustarFiltros({ uf: "mg", alt_media_min: 812, alt_media_max: 818, argila_media_min: 33, argila_media_max: 34, area_min: 1400, area_max: 1500 }, "aberto");
-  assert.equal(fAberto.alt_media_min, 800); assert.equal(fAberto.alt_media_max, 900);  // filtro estreito é alargado
-  assert.equal(fAberto.argila_media_min, 30); assert.equal(fAberto.argila_media_max, 40);
-  assert.equal(fAberto.area_min, 1250); assert.equal(fAberto.area_max, 1500);
-  assert.equal(ajustarFiltros({ uf: "mg", deslocamento: 99999 }, "aberto").deslocamento, 100);
-  assert.equal(filtroSuficiente(ajustarFiltros({ uf: "MG" }, "aberto")), false);
-  assert.equal(filtroSuficiente(ajustarFiltros({ area_min: 100 }, "aberto")), false);
-  assert.equal(filtroSuficiente(ajustarFiltros({ uf: "MG", area_min: 100 }, "aberto")), true);
 
   // ---- projeção pública: allowlist
   const fz: FazendaRow = {

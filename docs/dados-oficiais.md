@@ -1,3 +1,9 @@
+# Documento histórico — funcionalidade removida
+
+As consultas descritas abaixo não existem mais no site. O cadastro agora é manual
+e independente. Não configurar chaves nem seguir estas instruções para reativar
+consultas. Consulte [Cadastro independente](site-independente.md).
+
 # Dados do governo sobre o ativo (aba pública e seção do painel)
 
 ## Como funciona

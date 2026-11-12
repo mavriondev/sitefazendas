@@ -62,10 +62,6 @@ function Dados({ f, acao, id, confirmar }: { f: any; acao: any; id: string; conf
     car_codigo: f.car_codigo ?? "", municipio: f.municipio ?? "", uf: f.uf ?? "", latitude: f.latitude ?? "", longitude: f.longitude ?? "", notas_internas: f.notas_internas ?? "",
   };
   const { v, setV, sujo, recuperado, descartar, confirmarSalvo } = useFormularioComRascunho(`rascunho-fazenda-${id}`, inicial);
-  const [sug, setSug] = useState("");
-  const [obs, setObs] = useState("");
-  const [erroIA, setErroIA] = useState<unknown>(null);
-  const [iaBusy, setIaBusy] = useState(false);
   const num = (s: any) => (s === "" || s == null ? null : Number(String(s).replace(",", ".")));
   const set = (k: string) => (e: any) => setV({ ...v, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value });
   const salvar = (e: React.FormEvent) => {
@@ -75,10 +71,6 @@ function Dados({ f, acao, id, confirmar }: { f: any; acao: any; id: string; conf
       latitude: num(v.latitude), longitude: num(v.longitude), destaque_ordem: Number(v.destaque_ordem) || 0,
       geojson_novo: undefined, ...(v.geojson_novo.trim() ? { geojson: v.geojson_novo.trim() } : {}),
     }); confirmarSalvo(); });
-  };
-  const sugerir = async () => {
-    setErroIA(null); setIaBusy(true);
-    try { setSug((await api.post(`/api/admin/fazendas/${id}/texto-ia`, { observacoes: obs })).sugestao); } catch (x) { setErroIA(x); } finally { setIaBusy(false); }
   };
   const T = (k: string, r: string, extra: any = {}) => <div><label htmlFor={k}>{r}</label><input id={k} value={(v as any)[k]} onChange={set(k)} {...extra} /></div>;
   return (
@@ -102,7 +94,7 @@ function Dados({ f, acao, id, confirmar }: { f: any; acao: any; id: string; conf
         <div className="filtros">{T("car_codigo", "Código do CAR")}{T("municipio", "Município")}{T("uf", "UF", { maxLength: 2 })}{T("latitude", "Latitude")}{T("longitude", "Longitude")}</div>
         <label htmlFor="gj">Polígono (GeoJSON) — {f.geojson ? "já cadastrado; cole outro para substituir" : "não cadastrado"}</label>
         <textarea id="gj" rows={3} placeholder='{"type":"Polygon","coordinates":[[[-43.1,-16.9],...]]}' value={v.geojson_novo} onChange={set("geojson_novo")} />
-        <p className="suave pequeno">Use quando a fazenda não tem CAR. Só Polygon/MultiPolygon. Nunca aparece no site; a silhueta, se ligada, é redesenhada sem escala nem localização.</p>
+        <p className="suave pequeno">Opcional. Aceita Polygon/MultiPolygon. O desenho original fica privado; a silhueta, se ligada, é redesenhada sem escala nem localização. Nenhum dado é consultado a partir do CAR ou do polígono.</p>
         {f.geojson && <button type="button" className="btn sec perigo" onClick={async () => { if (await confirmar({ titulo: "Remover o polígono?", texto: "A silhueta deixa de aparecer no site. Você poderá colar outro polígono depois.", confirmar: "Remover polígono", perigo: true })) void acao(() => api.put(`/api/admin/fazendas/${id}`, { geojson: null, mostrar_mapa: false }), "Polígono removido."); }}>Remover polígono</button>}
         <label htmlFor="nt">Notas internas</label><textarea id="nt" rows={3} value={v.notas_internas} onChange={set("notas_internas")} />
         <div className="salvar-barra">
@@ -111,14 +103,6 @@ function Dados({ f, acao, id, confirmar }: { f: any; acao: any; id: string; conf
           <span className="suave pequeno" role="status">{sujo ? "Há alterações não salvas." : "Tudo salvo."}</span>
         </div>
       </form>
-      <div className="painel">
-        <h3>Texto por IA</h3>
-        <p className="suave pequeno">Gera uma sugestão a partir dos dados já públicos. Nada é salvo sozinho: revise e copie para a descrição.</p>
-        <label htmlFor="obs">Observações para a IA (opcional)</label><textarea id="obs" rows={2} value={obs} onChange={(e) => setObs(e.target.value)} />
-        <button className="btn sec" disabled={iaBusy} onClick={sugerir}>{iaBusy ? "Gerando…" : "Sugerir texto"}</button>
-        <Erro erro={erroIA} />
-        {sug && <><textarea rows={8} readOnly value={sug} /><button className="btn sec" onClick={() => setV({ ...v, descricao_publica: sug })}>Usar como descrição (revise e salve)</button></>}
-      </div>
     </>
   );
 }
@@ -126,32 +110,15 @@ function Dados({ f, acao, id, confirmar }: { f: any; acao: any; id: string; conf
 const dataHora = (iso?: string) => { const t = iso ? new Date(iso) : null; return t && !Number.isNaN(t.getTime()) ? t.toLocaleDateString("pt-BR") : null; };
 
 function Atributos({ d, acao, id, confirmar }: { d: any; acao: any; id: string; confirmar: Confirmar }) {
-  const [res, setRes] = useState<any>(null);
   const porChave: Record<string, any> = Object.fromEntries(d.atributos.map((a: any) => [a.chave, a]));
-  const oficiais = d.atributos_catalogo.filter((x: any) => x.grupo === "oficial");
-  const doCorretor = d.atributos_catalogo.filter((x: any) => x.grupo !== "oficial");
-  const ultima = d.atributos.filter((a: any) => a.origem === "oficial").map((a: any) => a.consultado_em).sort().pop();
-  const resumo = res?.resultado ? Object.entries(res.resultado).filter(([k]) => k !== "aviso_poligono").length : 0;
   return (
     <>
       <div className="painel">
-        <h3>Dados do governo sobre o ativo</h3>
-        <p className="suave pequeno">Vêm de bases públicas (SICAR, IBGE, FUNAI, ICMBio) e aparecem no site na aba “Dados do governo sobre o ativo”, com a fonte e a data. Nada é publicado sozinho: cada item tem a sua chave “Mostrar no site”. Dados de proprietário nunca são buscados nem exibidos. Leitura automática nunca vira “confirmado”; só você confirma, com vendedor, documento ou visita.</p>
-        {!d.fazenda.car_codigo && <Aviso>Informe o CAR na aba Dados para poder atualizar.</Aviso>}
-        <div className="linha">
-          <button className="btn" disabled={!d.fazenda.car_codigo} onClick={() => acao(async () => setRes(await api.post(`/api/admin/fazendas/${id}/enriquecer`)), "Dados do governo atualizados.")}>Atualizar dados do governo</button>
-          <span className="suave pequeno">{dataHora(ultima) ? `Última atualização: ${dataHora(ultima)}` : "Ainda não atualizado."}</span>
-        </div>
-        {res?.resultado?.aviso_poligono && <Aviso>Esta fazenda ainda não tem o desenho do imóvel: sobreposições e logística não foram consultadas.</Aviso>}
-        {res && resumo > 0 && <p className="suave pequeno">{resumo} itens consultados. Itens sem resposta da fonte ficam como “sem dado” (isso não significa que não existam).</p>}
-      </div>
-      {oficiais.map((def: any) => <LinhaAtributo key={def.chave} def={def} a={porChave[def.chave]} acao={acao} id={id} confirmar={confirmar} />)}
-      <div className="painel">
-        <h3>Informado por você (corretor)</h3>
-        <p className="suave pequeno">Dados que não estão em bases do governo, como poço artesiano, benfeitorias e documentação. Aparecem no site na aba “Informações do imóvel”.</p>
+        <h3>Características do imóvel</h3>
+        <p className="suave pequeno">Preencha os dados manualmente e escolha quais mostrar no site. Informe se foram confirmados com o vendedor, por documento ou em visita. Nenhuma consulta externa é feita. Informações antigas mantêm a fonte e a data registradas até serem editadas.</p>
       </div>
       <p className="suave pequeno">Estado público: escolha explicitamente o estado e ative “Mostrar no site” para permitir busca por estado ou região do Brasil. O CAR e a UF privados nunca são usados nesses filtros.</p>
-      {doCorretor.map((def: any) => <LinhaAtributo key={def.chave} def={def} a={porChave[def.chave]} acao={acao} id={id} confirmar={confirmar} valorPadrao={def.chave==="area_total_ha" ? d.fazenda.area_ha : undefined} />)}
+      {d.atributos_catalogo.map((def: any) => <LinhaAtributo key={def.chave} def={def} a={porChave[def.chave]} acao={acao} id={id} confirmar={confirmar} valorPadrao={def.chave==="area_total_ha" ? d.fazenda.area_ha : undefined} />)}
     </>
   );
 }

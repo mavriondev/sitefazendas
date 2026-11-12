@@ -5,7 +5,7 @@ import { AvisoLimite, Campo, useAcaoUnica } from "./comuns";
 
 const ORIGEM: Record<string, string> = { vitrine: "Fazenda", pesquisa: "Pesquisa", contato: "Contato", anuncio: "Quer vender" };
 const semAcento = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-const VAZIA = { comprador_nome: "", comprador_contato: "", fazenda_texto: "", pesquisa_token: "", canal: "whatsapp", observacao: "" };
+const VAZIA = { comprador_nome: "", comprador_contato: "", fazenda_texto: "", canal: "whatsapp", observacao: "" };
 
 export default function ContatosAdmin() {
   const [l, setL] = useState<any[]>([]);
@@ -43,7 +43,7 @@ export default function ContatosAdmin() {
     if (nova.fazenda_texto.trim() && !fazendaEscolhida) { setErro(new Error("Escolha uma fazenda da lista (ou digite o número do ID).")); return; }
     void executar(async () => {
       await api.post("/api/admin/apresentacoes", { comprador_nome: nova.comprador_nome, comprador_contato: nova.comprador_contato, canal: nova.canal, observacao: nova.observacao,
-        fazenda_id: fazendaEscolhida?.id, pesquisa_token: nova.pesquisa_token || undefined });
+        fazenda_id: fazendaEscolhida?.id });
       setNova({ ...VAZIA, canal: nova.canal });
     }, "Apresentação registrada.");
   };
@@ -92,7 +92,6 @@ export default function ContatosAdmin() {
           <input list="lista-fazendas" value={nova.fazenda_texto} onChange={(e) => setNova({ ...nova, fazenda_texto: e.target.value })} autoComplete="off" />
         </Campo>
         <datalist id="lista-fazendas">{fazendas.map((f) => <option key={f.id} value={`${f.titulo} (#${f.id})`} />)}</datalist>
-        <Campo rotulo="ou código da pesquisa"><input value={nova.pesquisa_token} onChange={(e) => setNova({ ...nova, pesquisa_token: e.target.value })} /></Campo>
         <Campo rotulo="Canal"><select value={nova.canal} onChange={(e) => setNova({ ...nova, canal: e.target.value })}>
           <option value="whatsapp">WhatsApp</option><option value="email">E-mail</option><option value="telefone">Telefone</option><option value="presencial">Presencial</option>
         </select></Campo>

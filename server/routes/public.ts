@@ -24,7 +24,6 @@ export function registrarRotasPublicas(app: Express, db: Db, opts: { limitar: bo
     res.json({
       nome_site: c.nome_site, whatsapp_padrao: c.whatsapp_padrao, texto_creci: c.texto_creci,
       aviso_intermediacao: c.aviso_intermediacao, hero_titulo: c.hero_titulo, hero_subtitulo: c.hero_subtitulo,
-      modulo_pesquisa_ativo: c.modulo_pesquisa_ativo,
       sobre_titulo: c.sobre_titulo, sobre_texto: c.sobre_texto, contato_email: c.contato_email,
       contato_endereco: c.contato_endereco, contato_horario: c.contato_horario, instagram_url: c.instagram_url,
     });

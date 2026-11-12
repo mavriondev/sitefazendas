@@ -91,8 +91,8 @@ export default function FazendaFicha() {
         </div>
         {f.descricao && <><h2>Sobre a propriedade</h2>{f.descricao.split(/\n+/).filter(Boolean).map((p, i) => <p key={i}>{p}</p>)}</>}
         {corretor.length > 0 && <><h2>Informações do imóvel</h2><ul className="ficha-lista">{corretor.map((a) => <Item key={a.chave} a={a} gov={false} />)}</ul></>}
-        {governo.length > 0 && <><h2>Dados do governo sobre o ativo</h2><ul className="ficha-lista">{governo.map((a) => <Item key={a.chave} a={a} gov />)}</ul>
-          <p className="ficha-nota">Dados de bases públicas do governo ({fontes}){ultima ? `; última atualização em ${ultima}` : ""}. São indicativos, não substituem documentos nem medição em campo e podem estar defasados.</p></>}
+        {governo.length > 0 && <><h2>Informações complementares</h2><ul className="ficha-lista">{governo.map((a) => <Item key={a.chave} a={a} gov />)}</ul>
+          <p className="ficha-nota">Registros anteriores de {fontes}{ultima ? `; consulta registrada em ${ultima}` : ""}. Não são atualizados automaticamente e não substituem documentos nem medição em campo.</p></>}
         <footer className="ficha-rodape">
           <div className="ficha-fale"><strong>Fale com o corretor</strong>{contatos.map((c) => <span key={c}>{c}</span>)}</div>
           <p>{config?.aviso_intermediacao || "As informações são indicativas e não substituem a verificação documental. Localização detalhada e documentação são tratadas em atendimento direto."}</p>

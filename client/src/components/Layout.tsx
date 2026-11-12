@@ -32,7 +32,6 @@ export function Layout() {
       <div>{visivel("marca")&&<Link to="/" aria-label={`${nome} — Início`}>{t("marca.logo")?<img className="ga-logo" src={t("marca.logo")} alt={nome}/>:nome}</Link>}</div>
       <nav className="ga-nav" aria-label="Principal">
         {menu.map(id=>t(`${id}.link`).startsWith("/")?<NavLink key={id} to={t(`${id}.link`)} end={t(`${id}.link`)==="/"}>{t(`${id}.texto`)}</NavLink>:<LinkConteudo key={id} href={t(`${id}.link`)}>{t(`${id}.texto`)}</LinkConteudo>)}
-        {config?.modulo_pesquisa_ativo && <NavLink to="/pesquisa">Pesquisa de terras</NavLink>}
         {usuario?.papel === "admin" && <NavLink to="/admin">Painel</NavLink>}
       </nav>
       <div className="ga-head-actions">
@@ -46,7 +45,7 @@ export function Layout() {
       <div className="ga-footer-grid">
         <Secoes pagina="global" blocos={{
         rodape_marca:<div><Link to="/">{t("marca.logo_rodape")?<img className="ga-footer-logo" src={t("marca.logo_rodape")} alt={nome}/>:nome}</Link><p>{config?.aviso_intermediacao || "Intermediação rural com atendimento pessoal e respeito à confidencialidade de cada negociação."}</p>{config?.texto_creci && <p>{config.texto_creci}</p>}</div>,
-        rodape_links:<div><h3>{t("rodape_links.titulo")}</h3><div className="ga-footer-links">{menu.map(id=><LinkConteudo key={id} href={t(`${id}.link`)}>{t(`${id}.texto`)}</LinkConteudo>)}<Link to="/fazendas">{t("rodape_links.catalogo")}</Link>{config?.modulo_pesquisa_ativo && <Link to="/pesquisa">Pesquisa de terras</Link>}<Link to="/privacidade">{t("rodape_links.privacidade")}</Link></div></div>,
+        rodape_links:<div><h3>{t("rodape_links.titulo")}</h3><div className="ga-footer-links">{menu.map(id=><LinkConteudo key={id} href={t(`${id}.link`)}>{t(`${id}.texto`)}</LinkConteudo>)}<Link to="/fazendas">{t("rodape_links.catalogo")}</Link><Link to="/privacidade">{t("rodape_links.privacidade")}</Link></div></div>,
         rodape_contatos:<div><h3>{t("rodape_contatos.titulo")}</h3>{zap && <a className="ga-footer-contact" href={zap} target="_blank" rel="noopener noreferrer"><MessageCircle/>{t("marca.whatsapp")}</a>}
           {config?.contato_email && <a className="ga-footer-contact" href={`mailto:${config.contato_email}`}><Mail/>{config.contato_email}</a>}
           {config?.contato_endereco && <div className="ga-footer-contact"><MapPin/>{config.contato_endereco}</div>}
