@@ -18,7 +18,8 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=/var/lib/gramogol-crm
-ReadOnlyPaths=/var/lib/gramogol/uploads
+BindReadOnlyPaths=/var/lib/gramogol/uploads:/var/lib/gramogol-crm/site-photos
+InaccessiblePaths=/etc/gramogol
 
 [Install]
 WantedBy=multi-user.target
