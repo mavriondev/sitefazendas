@@ -59,7 +59,7 @@ function UploadForm({ farmId, onDone }: { farmId: number; onDone: () => void }) 
   const inputRef = useRef<HTMLInputElement>(null);
   const reqKey = useRef<string | null>(null);
   const act = useAction();
-  useDirty(!!file || !!descricao);
+  const clearDirty = useDirty(!!file || !!descricao || !!categoria);
   const pick = (f: File | null) => {
     reqKey.current = null; setLocal("");
     if (f && !TIPOS.includes(f.type)) { setLocal("Envie apenas PDF, JPEG ou PNG."); f = null; }
@@ -71,10 +71,11 @@ function UploadForm({ farmId, onDone }: { farmId: number; onDone: () => void }) 
     if (!file) { setLocal("Escolha um arquivo."); return; }
     if (!reqKey.current) reqKey.current = key();
     const r = await act.run(() => api.upload(farmId, file, categoria.trim(), descricao.trim(), reqKey.current!));
-    if (r) { reqKey.current = null; setFile(null); setDescricao(""); setCategoria(""); if (inputRef.current) inputRef.current.value = ""; onDone(); }
+    if (r) { reqKey.current = null; clearDirty(); setFile(null); setDescricao(""); setCategoria(""); if (inputRef.current) inputRef.current.value = ""; onDone(); }
   };
   return (
     <form className="form" onSubmit={submit} style={{ borderTop: "1px solid hsl(var(--line))", paddingTop: 14, marginTop: 14 }}>
+      <fieldset className="form form-fields" disabled={act.busy}>
       <label className="f">Arquivo (PDF, JPEG ou PNG até 12 MB)<input ref={inputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" onChange={(e) => pick(e.target.files?.[0] ?? null)} data-testid="input-doc-file" /></label>
       <div className="form-2">
         <label className="f">Categoria<input list="doc-cats" value={categoria} onChange={(e) => setCategoria(e.target.value)} required maxLength={80} data-testid="input-doc-category" />
@@ -85,6 +86,7 @@ function UploadForm({ farmId, onDone }: { farmId: number; onDone: () => void }) 
       {local && <div className="alert bad"><AlertTriangle size={17} />{local}</div>}
       <ErrorBox error={act.error} />
       <button className="btn primary" style={{ justifySelf: "start" }} disabled={act.busy || !file} data-testid="button-upload-doc"><Upload size={15} />{act.busy ? "Enviando…" : "Enviar documento"}</button>
+      </fieldset>
     </form>
   );
 }
@@ -137,7 +139,7 @@ export function FarmDetail() {
             </>)}
           </section>
           <section className="card">
-            <div className="card-h"><h2>Negociações</h2><button className="btn sm primary" onClick={() => setDeal("new")} data-testid="button-new-deal"><Plus size={14} />Nova</button></div>
+            <div className="card-h"><h2>Negociações</h2><button className="btn sm primary" onClick={() => setDeal("new")} disabled={!f.disponivel} data-testid="button-new-deal"><Plus size={14} />Nova</button></div>
             {negociacoes.length ? <div className="list">{negociacoes.map((d) => <DealRow key={d.id} d={d} hide="fazenda" onEdit={setDeal} />)}</div> : <Empty title="Sem negociações">Ninguém em negociação por esta fazenda ainda.</Empty>}
           </section>
         </div>
@@ -167,21 +169,24 @@ function NewUser({ onClose, onSaved }: { onClose: () => void; onSaved: () => voi
   const [v, setV] = useState({ nome: "", email: "", senha: "" });
   const reqKey = useRef<string | null>(null);
   const act = useAction();
-  useDirty(!!(v.nome || v.email || v.senha));
+  const clearDirty = useDirty(!!(v.nome || v.email || v.senha));
+  const close = () => { if (!act.busy && (!(v.nome || v.email || v.senha) || window.confirm("Descartar os dados da nova conta?"))) onClose(); };
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reqKey.current) reqKey.current = key();
     const r = await act.run(() => api.createUser({ ...v, nome: v.nome.trim(), email: v.email.trim(), request_key: reqKey.current! }));
-    if (r) { reqKey.current = null; onSaved(); }
+    if (r) { reqKey.current = null; clearDirty(); onSaved(); }
   };
   return (
-    <Modal title="Nova conta de membro" onClose={onClose}>
+    <Modal title="Nova conta de membro" onClose={close}>
       <form className="form" onSubmit={submit}>
+        <fieldset className="form form-fields" disabled={act.busy}>
         <label className="f">Nome<input value={v.nome} onChange={(e) => setV({ ...v, nome: e.target.value })} required data-testid="input-user-name" /></label>
         <label className="f">E-mail<input type="email" value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} required data-testid="input-user-email" /></label>
         <label className="f">Senha inicial (mínimo 12 caracteres)<input type="password" autoComplete="new-password" value={v.senha} onChange={(e) => setV({ ...v, senha: e.target.value })} required minLength={12} data-testid="input-user-password" /></label>
         <ErrorBox error={act.error} />
-        <div className="modal-foot"><button type="button" className="btn" onClick={onClose}>Cancelar</button><button className="btn primary" disabled={act.busy} data-testid="button-create-user">{act.busy ? "Criando…" : "Criar conta"}</button></div>
+        <div className="modal-foot"><button type="button" className="btn" onClick={close}>Cancelar</button><button className="btn primary" disabled={act.busy} data-testid="button-create-user">{act.busy ? "Criando…" : "Criar conta"}</button></div>
+        </fieldset>
       </form>
     </Modal>
   );
@@ -189,13 +194,16 @@ function NewUser({ onClose, onSaved }: { onClose: () => void; onSaved: () => voi
 function ResetPwd({ u, onClose, onSaved }: { u: User; onClose: () => void; onSaved: () => void }) {
   const [senha, setSenha] = useState("");
   const act = useAction();
-  useDirty(!!senha);
+  const clearDirty = useDirty(!!senha);
+  const close = () => { if (!act.busy && (!senha || window.confirm("Descartar a nova senha digitada?"))) onClose(); };
   return (
-    <Modal title={`Nova senha para ${u.nome}`} onClose={onClose}>
-      <form className="form" onSubmit={async (e) => { e.preventDefault(); const r = await act.run(() => api.updateUser(u.id, { senha, versao: u.versao })); if (r) onSaved(); }}>
+    <Modal title={`Nova senha para ${u.nome}`} onClose={close}>
+      <form className="form" onSubmit={async (e) => { e.preventDefault(); const r = await act.run(() => api.updateUser(u.id, { senha, versao: u.versao })); if (r) { clearDirty(); onSaved(); } }}>
+        <fieldset className="form form-fields" disabled={act.busy}>
         <label className="f">Nova senha (mínimo 12 caracteres)<input type="password" autoComplete="new-password" value={senha} onChange={(e) => setSenha(e.target.value)} required minLength={12} data-testid="input-reset-password" /></label>
         <ErrorBox error={act.error} />
-        <div className="modal-foot"><button type="button" className="btn" onClick={onClose}>Cancelar</button><button className="btn primary" disabled={act.busy} data-testid="button-save-reset">{act.busy ? "Salvando…" : "Redefinir"}</button></div>
+        <div className="modal-foot"><button type="button" className="btn" onClick={close}>Cancelar</button><button className="btn primary" disabled={act.busy} data-testid="button-save-reset">{act.busy ? "Salvando…" : "Redefinir"}</button></div>
+        </fieldset>
       </form>
     </Modal>
   );
@@ -209,7 +217,7 @@ function AccessEditor({ u, onClose }: { u: User; onClose: () => void }) {
   useDirty(sel !== null);
   const toggle = (k: keyof Access, id: number, on: boolean) => { if (!cur) return; setSel({ ...cur, [k]: on ? [...cur[k], id] : cur[k].filter((x) => x !== id) }); };
   const save = async () => { if (!sel) return; const r = await act.run(async () => { await api.saveAccess(u.id, { fazenda_ids: sel.fazenda_ids.map(Number), contato_ids: sel.contato_ids.map(Number) }); return true; }); if (r) { setSel(null); onClose(); } };
-  const close = () => { if (!sel || window.confirm("Descartar alterações de acesso?")) onClose(); };
+  const close = () => { if (!act.busy && (!sel || window.confirm("Descartar alterações de acesso?"))) onClose(); };
   const match = (s: string, t: string) => s.toLowerCase().includes(t.trim().toLowerCase());
   return (
     <Modal title={`Acessos de ${u.nome}`} onClose={close}>

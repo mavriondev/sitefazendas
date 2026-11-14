@@ -1,15 +1,16 @@
 import type { Express } from "express";
 import type { Database, Query } from "./db";
 import type { User } from "../shared";
-import { ETAPAS } from "../shared";
+import { ETAPAS, normalizePhone, isClosedStage } from "../shared";
 import { asyncRoute as route, who, check, text, id, ids, uuid, email, phone, canContact, canFarm, contactScope, farmScope, event, Fault } from "./security";
 export async function contacts(db: Query, u: User, contactId?: number, q = "") {
+  const phoneQuery = /^[+\d\s().-]+$/.test(q) ? q.replace(/\D/g, "") : "";
   return (await db.query(`SELECT c.id,c.nome,c.telefone,c.email,c.origem,c.observacoes,c.responsavel_id,c.versao,c.criado_em,
     r.nome AS responsavel_nome,COALESCE((SELECT json_agg(cf.fazenda_id) FROM crm_contact_farms cf JOIN crm_farms f ON f.id=cf.fazenda_id
     WHERE cf.contato_id=c.id AND ${farmScope(u)}),'[]') AS fazenda_ids
     FROM crm_contacts c JOIN crm_users r ON r.id=c.responsavel_id
-    WHERE ${contactScope(u)} AND ($1::int IS NULL OR c.id=$1) AND ($2='' OR c.nome ILIKE '%'||$2||'%' OR c.telefone LIKE '%'||$2||'%' OR c.email ILIKE '%'||$2||'%')
-    ORDER BY c.criado_em DESC,c.id DESC`, [contactId ?? null, q])).rows;
+    WHERE ${contactScope(u)} AND ($1::int IS NULL OR c.id=$1) AND ($2='' OR c.nome ILIKE '%'||$2||'%' OR c.telefone LIKE '%'||$2||'%' OR c.email ILIKE '%'||$2||'%' OR ($3<>'' AND c.telefone LIKE '%'||$3||'%'))
+    ORDER BY c.criado_em DESC,c.id DESC`, [contactId ?? null, q, phoneQuery])).rows;
 }
 export async function deals(db: Query, u: User, filter?: { contact?: number; farm?: number; deal?: number }) {
   return (await db.query(`SELECT d.*,c.nome AS contato_nome,f.snapshot->>'titulo' AS fazenda_titulo FROM crm_deals d
@@ -31,7 +32,7 @@ export function registerContacts(app: Express, db: Database) {
   }));
   app.get("/crm/api/contacts/duplicates", route(async (req, res) => {
     const tel = phone(req.query.telefone); const exclude = req.query.exclude ? id(req.query.exclude) : null;
-    res.json({ contatos: (await db.query(`SELECT c.id,c.nome FROM crm_contacts c WHERE telefone=$1 AND ($2::int IS NULL OR id<>$2) AND ${contactScope(who(req))}`, [tel, exclude])).rows });
+    res.json({ contatos: (await db.query(`SELECT c.id,c.nome FROM crm_contacts c WHERE (CASE WHEN length(telefone) IN (10,11) THEN '55'||telefone ELSE telefone END)=$1 AND ($2::int IS NULL OR id<>$2) AND ${contactScope(who(req))}`, [tel, exclude])).rows });
   }));
   app.get("/crm/api/contacts/:id", route(async (req, res) => {
     const cid = id(req.params.id), u = who(req); await canContact(db, u, cid);
@@ -39,7 +40,7 @@ export function registerContacts(app: Express, db: Database) {
   }));
   const save = (editing: boolean) => route(async (req, res) => {
     const u = who(req), b = req.body ?? {}, cid = editing ? id(req.params.id) : null, requestKey = editing ? null : uuid(b.request_key);
-    const v = { nome: text(b.nome, 150, true), telefone: phone(b.telefone), email: b.email ? email(b.email) : null,
+    const v = { nome: text(b.nome, 150, true), telefone: phone(b.telefone, true), email: b.email ? email(b.email) : null,
       origem: text(b.origem, 100, true), observacoes: text(b.observacoes ?? "", 4000), responsavel: id(b.responsavel_id), farms: ids(b.fazenda_ids) };
     const result = await db.transaction(async tx => {
       if (cid) await canContact(tx, u, cid);
@@ -48,13 +49,14 @@ export function registerContacts(app: Express, db: Database) {
         if (existing.rowCount) return (await contacts(tx, u, existing.rows[0].id))[0];
       }
       const old = cid ? (await tx.query("SELECT * FROM crm_contacts WHERE id=$1 FOR UPDATE", [cid])).rows[0] : null;
+      check(v.telefone || (old && !old.telefone), 400, "Informe o telefone com DDD.");
       check(u.papel === "admin" || v.responsavel === (old?.responsavel_id ?? u.id), 403, "Somente o administrador pode mudar o responsável.");
-      check((await tx.query("SELECT 1 FROM crm_users WHERE id=$1 AND NOT bloqueado", [v.responsavel])).rowCount, 400, "Responsável indisponível.");
+      check((await tx.query("SELECT 1 FROM crm_users WHERE id=$1 AND (NOT bloqueado OR id=$2)", [v.responsavel, old?.responsavel_id ?? null])).rowCount, 400, "Responsável indisponível.");
       for (const fid of v.farms) await canFarm(tx, u, fid);
-      const dup = await tx.query("SELECT id,nome FROM crm_contacts WHERE telefone=$1 AND ($2::int IS NULL OR id<>$2)", [v.telefone, cid]);
-      if (dup.rowCount && (!old || old.telefone !== v.telefone) && b.confirmar_duplicado !== true) {
+      const dup = v.telefone ? await tx.query("SELECT id,nome FROM crm_contacts WHERE (CASE WHEN length(telefone) IN (10,11) THEN '55'||telefone ELSE telefone END)=$1 AND ($2::int IS NULL OR id<>$2)", [v.telefone, cid]) : { rowCount: 0 };
+      if (dup.rowCount && (!old || normalizePhone(old.telefone) !== v.telefone) && b.confirmar_duplicado !== true) {
         // Não revela identidade de contatos que o membro não pode acessar.
-        const visible = await tx.query(`SELECT c.id,c.nome FROM crm_contacts c WHERE telefone=$1 AND ($2::int IS NULL OR id<>$2) AND ${contactScope(u)}`, [v.telefone, cid]);
+        const visible = await tx.query(`SELECT c.id,c.nome FROM crm_contacts c WHERE (CASE WHEN length(telefone) IN (10,11) THEN '55'||telefone ELSE telefone END)=$1 AND ($2::int IS NULL OR id<>$2) AND ${contactScope(u)}`, [v.telefone, cid]);
         throw new Fault(409, "Já existe um contato com este telefone. Confirme se deseja manter um cadastro separado.", { duplicates: visible.rows });
       }
       let contactId: number;
@@ -85,6 +87,12 @@ export function registerContacts(app: Express, db: Database) {
     const cid = id(req.params.id), u = who(req);
     await db.transaction(async tx => {
       await canContact(tx, u, cid);
+      if (u.papel !== "admin") {
+        const hidden = await tx.query(`SELECT 1 FROM crm_farms f WHERE NOT (${farmScope(u)}) AND
+          (EXISTS(SELECT 1 FROM crm_contact_farms cf WHERE cf.contato_id=$1 AND cf.fazenda_id=f.id)
+           OR EXISTS(SELECT 1 FROM crm_deals d WHERE d.contato_id=$1 AND d.fazenda_id=f.id)) LIMIT 1`, [cid]);
+        check(!hidden.rowCount, 403, "Este contato tem vínculos fora do seu acesso. Peça ao administrador para revisar a exclusão.");
+      }
       const r = await tx.query("DELETE FROM crm_contacts WHERE id=$1 AND versao=$2 RETURNING id", [cid, id(req.body?.versao)]);
       check(r.rowCount, 409, "Contato alterado. Recarregue a página.");
       // Histórico mínimo sem dados pessoais permanece para auditoria.
@@ -99,9 +107,11 @@ export function registerContacts(app: Express, db: Database) {
     check(ETAPAS.includes(b.etapa), 400, "Etapa inválida.");
     const obs = text(b.observacoes ?? "", 4000);
     let when: string | null = null;
-    if (b.proximo_retorno) { check(typeof b.proximo_retorno === "string" && !Number.isNaN(Date.parse(b.proximo_retorno)), 400, "Data inválida."); when = new Date(b.proximo_retorno).toISOString(); }
+    if (b.proximo_retorno != null && b.proximo_retorno !== "") { check(typeof b.proximo_retorno === "string" && !Number.isNaN(Date.parse(b.proximo_retorno)), 400, "Data inválida."); when = new Date(b.proximo_retorno).toISOString(); }
+    if (isClosedStage(b.etapa)) when = null;
     const result = await db.transaction(async tx => {
       await canContact(tx, u, cid); await canFarm(tx, u, fid);
+      if (!did) check((await tx.query("SELECT disponivel FROM crm_farms WHERE id=$1 FOR SHARE", [fid])).rows[0]?.disponivel, 409, "Esta fazenda saiu do site. Você pode consultar o histórico, mas não iniciar uma nova negociação.");
       let dealId: number;
       if (did) {
         const old = (await tx.query("SELECT * FROM crm_deals WHERE id=$1 FOR UPDATE", [did])).rows[0];

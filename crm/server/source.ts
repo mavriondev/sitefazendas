@@ -1,7 +1,7 @@
 import type pg from "pg";
 import type { Query, Database } from "./db";
 import { check, event } from "./security";
-import type { User } from "../shared";
+import { normalizePhone, type User } from "../shared";
 import crypto from "node:crypto";
 export interface SourceSnapshot { farms: any[]; contacts: any[]; presentations: any[] }
 export interface Source { read(): Promise<SourceSnapshot> }
@@ -67,7 +67,7 @@ export async function importContacts(db: Database, source: Source | undefined, u
       const tel = String(r.telefone ?? "").replace(/\D/g, "");
       const inserted = await tx.query(`INSERT INTO crm_contacts(nome,telefone,email,origem,observacoes,responsavel_id,criado_por,request_key,source_kind,source_id)
         VALUES($1,$2,$3,$4,$5,$6,$6,$7,$8,$9) ON CONFLICT(source_kind,source_id) DO NOTHING RETURNING id`,
-      [String(r.nome).slice(0, 150), tel.length >= 10 && tel.length <= 15 ? tel : "", r.email || null, String(r.origem || "Site").slice(0, 100), String(r.obs || "").slice(0, 4000), user.id, crypto.randomUUID(), r.kind, r.id]);
+      [String(r.nome).slice(0, 150), tel.length >= 10 && tel.length <= 15 ? normalizePhone(tel) : "", r.email || null, String(r.origem || "Site").slice(0, 100), String(r.obs || "").slice(0, 4000), user.id, crypto.randomUUID(), r.kind, r.id]);
       if (!inserted.rowCount) { existentes++; continue; }
       const cid = inserted.rows[0].id; importados++;
       if (r.fazenda && (await tx.query("SELECT 1 FROM crm_farms WHERE id=$1", [r.fazenda])).rowCount)
