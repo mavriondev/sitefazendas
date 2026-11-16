@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, ArrowUpRight, Copy, FileDown, Droplets, MapPin, MessageCircle, Ruler, Share2, Sprout } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpRight, Copy, FileDown, MessageCircle, Share2 } from "lucide-react";
 import { api, linkWhatsapp, type FazendaPublica } from "../api";
 import { useSite } from "../contexto";
 import { Erro } from "../components/Avisos";
 import { Banner, Eyebrow } from "../components/Agrezen";
+import { CardsFazenda } from "../components/CardsFazenda";
 import { Caracteristicas } from "../components/Caracteristicas";
 import { GaleriaFotos } from "../components/GaleriaFotos";
 import { GaleriaVideos } from "../components/GaleriaVideos";
@@ -41,7 +42,6 @@ export default function FazendaDetalhe() {
   const selecionadas=outras.filter(p=>p.slug!==f.slug).sort((a,b)=>score(b)-score(a));
   const similares=selecionadas.filter(p=>score(p)>0).slice(0,3);
   const recomendadas=similares.length?similares:selecionadas.slice(0,3);
-  const agua=f.atributos.find(a=>a.chave==="agua");
   const medirWhatsapp = (e: React.MouseEvent<HTMLAnchorElement>) => registrarInteracaoFazenda("whatsapp_click", f.slug, "tenho_interesse", e.nativeEvent);
   const medirPdf = (e: React.MouseEvent<HTMLAnchorElement>) => registrarInteracaoFazenda("pdf_open", f.slug, "ficha_pdf", e.nativeEvent);
   return <><WhatsappFlutuante key={f.slug} fazendaSlug={f.slug} href={wa} rotulo={`Falar no WhatsApp sobre ${f.titulo}`}/><Secoes pagina="fazenda" blocos={{
@@ -49,9 +49,7 @@ export default function FazendaDetalhe() {
     imovel:<section className="ga-detail" data-cms-secao="imovel"><div className="ga-wrap">
       <div className="ga-detail-heading"><div><Eyebrow>{t(f.destaque?"imovel.destaque":"imovel.rotulo")}</Eyebrow><h2 className="ga-title">{f.titulo}</h2><p>{[f.regiao,f.area].filter(Boolean).join(" · ")}</p></div><div className="ga-detail-actions"><button className="ga-icon-button" onClick={()=>void compartilhar()}><Share2/>{t("imovel.compartilhar")}</button><Link className="ga-icon-button" to="/fazendas"><ArrowLeft/>{t("imovel.voltar")}</Link></div></div>
       <GaleriaFotos key={f.slug} fotos={f.fotos} titulo={f.titulo}/>
-      <div className="ga-property-facts">
-        {[{Icon:Ruler,label:t("imovel.area"),value:f.area || "Consultar"},{Icon:MapPin,label:t("imovel.regiao"),value:f.regiao},{Icon:Sprout,label:t("imovel.vocacao"),value:f.culturas.join(" · ") || "Uso rural"},{Icon:Droplets,label:t("imovel.agua"),value:agua?.texto || "Consultar o corretor"}].map(({Icon,label,value},n)=><div className="ga-fact" key={n}><span className="ga-fact-icon"><Icon/></span><div><span className="ga-fact-label">{label}</span><strong>{value}</strong></div></div>)}
-      </div>
+      <CardsFazenda cards={f.cards}/>
       <div className="ga-detail-grid"><div className="ga-detail-main"><h3>{t("imovel.sobre")}</h3>{f.descricao.split(/\n+/).filter(Boolean).map((p,i)=><p key={i}>{p}</p>)}
         <Caracteristicas atributos={f.atributos}/><GaleriaVideos key={f.slug} videos={f.videos || []}/>
       </div><aside className="ga-sidebar"><span className="ga-price-label">{t("imovel.valor")}</span><strong className="ga-price">{f.preco || t("imovel.consulta")}</strong>

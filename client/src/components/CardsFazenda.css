@@ -1,0 +1,19 @@
+/* Cards de informação da fazenda: autocontido, usado no site e na prévia do painel. */
+.gcf{--gcf-verde:#496d23;--gcf-esc:#173c25;--gcf-lima:#dce25a;--gcf-linha:#e3e4d6;margin:24px 0 38px;font-family:"Nunito Sans",sans-serif;color:#1d2a17}
+.gcf-grade{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr));gap:12px}
+.gcf[data-quantidade="1"] .gcf-grade{grid-template-columns:minmax(0,560px)}
+.gcf-card{position:relative;display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;align-items:start;min-width:0;padding:18px 18px 16px;background:#f4f6ea;border:1px solid var(--gcf-linha);border-radius:16px;overflow:hidden;animation:gcf-entra .42s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--gcf-i,0) * 40ms)}
+.gcf-card::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--gcf-verde);opacity:.55}
+.gcf-icone{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:#fff;color:var(--gcf-verde);box-shadow:inset 0 0 0 1px #dfe3cc}
+.gcf-icone svg{width:21px;height:21px}
+.gcf-corpo{min-width:0;display:flex;flex-direction:column;gap:4px}
+.gcf-titulo{margin:0;font:800 11px/1.4 "Instrument Sans",sans-serif;text-transform:uppercase;letter-spacing:.07em;color:#4f5a40;overflow-wrap:anywhere}
+.gcf-info{margin:0;font:700 16px/1.4 "Instrument Sans",sans-serif;color:var(--gcf-esc);overflow-wrap:anywhere;white-space:pre-line}
+.gcf-compl{margin:2px 0 0;font-size:13.5px;line-height:1.55;color:#56604a;overflow-wrap:anywhere;white-space:pre-line}
+.gcf-origem{display:flex;align-items:flex-start;gap:6px;margin-top:8px;padding-top:8px;border-top:1px dashed #d6d9c4;font-size:11.5px;line-height:1.5;color:#626b54}
+.gcf-origem svg{flex:none;width:14px;height:14px;margin-top:2px}
+.gcf-origem.oficial,.gcf-origem.indicado{color:#795a14}
+.gcf-origem.confirmado{color:#356121}
+@keyframes gcf-entra{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.gcf-card{animation:none}}
+@media (max-width:480px){.gcf-grade{grid-template-columns:minmax(0,1fr);gap:10px}.gcf-card{padding:15px 14px;grid-template-columns:38px minmax(0,1fr);gap:12px}.gcf-icone{width:38px;height:38px}.gcf-info{font-size:15px}}
