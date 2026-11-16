@@ -19,13 +19,16 @@ export interface Contact {
   fazenda_ids: number[]; criado_em: string;
 }
 export interface Deal {
-  id: number; contato_id: number; fazenda_id: number; contato_nome: string; fazenda_titulo: string;
+  id: number; contato_id: number; fazenda_id: number; contato_nome: string; contato_telefone: string | null; fazenda_titulo: string;
   etapa: Etapa; proximo_retorno: string | null; observacoes: string; versao: number; atualizado_em: string;
 }
 export interface Event { id: number; acao: string; autor_nome: string; criado_em: string; detalhes: Record<string, unknown> }
 export interface Document {
   id: number; fazenda_id: number; nome: string; categoria: string; descricao: string;
-  tamanho: number; criado_em: string; autor_nome: string;
+  tamanho: number; criado_em: string;
 }
 export interface Access { fazenda_ids: number[]; contato_ids: number[] }
 export interface SourceStatus { atualizado_em: string | null; erro: boolean; site_url: string }
+// Contato = só demonstrou interesse. Cliente = já aprofundou: alguma negociação passou de "Novo"
+// (em atendimento, visita, proposta ou concluída). "Não avançou" sozinho não torna cliente.
+export function isCliente(etapas: string[]) { return etapas.some((e) => e === "em_atendimento" || e === "visita_agendada" || e === "proposta" || e === "concluida"); }

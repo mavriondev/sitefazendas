@@ -1,14 +1,16 @@
 import { Fragment, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, Download, ExternalLink, FileText, KeyRound, Lock, Plus, RefreshCw, Search, ShieldCheck, Trash2, Unlock, Upload, UsersRound } from "lucide-react";
+import { AlertTriangle, ArrowLeft, FolderDown, Download, ExternalLink, FileText, KeyRound, Lock, Plus, RefreshCw, Search, ShieldCheck, Trash2, Unlock, Upload, UsersRound } from "lucide-react";
 import { api, key, type Access, type Deal, type User } from "./api";
 import { DealForm } from "./forms";
 import { DealRow } from "./pages-atendimento";
+import { Personalizar } from "./personalizar";
+import { DocsDownloadAll, DocsReadOnly, PhotosCard, ShareLinkButton } from "./share";
 import { Empty, ErrorBox, History, Modal, Skeleton, fmtDate, fmtDateTime, fmtSize, initials, pdfUrl, publicUrl, useAction, useAuth, useDirty, useLoad } from "./ui";
 
 const LABELS: Record<string, string> = { car: "CAR", uf: "UF", preco: "Preço", notas_internas: "Notas internas", municipio: "Município", observacao: "Observação", publico: "Mostrar no site", valor_json: "Informação", agua: "Água", energia: "Energia", argila: "Argila", altitude: "Altitude", confirmado: "Confirmado", nao_informado: "Não informado", nao_detectado: "Não detectado", detectado: "Detectado", corretor: "Cadastro manual" };
-const humanKey = (k: string) => LABELS[k] ?? (k.charAt(0).toUpperCase() + k.slice(1)).replace(/_/g, " ");
-const fmtVal = (v: unknown): string => {
+export const humanKey = (k: string) => LABELS[k] ?? (k.charAt(0).toUpperCase() + k.slice(1)).replace(/_/g, " ");
+export const fmtVal = (v: unknown): string => {
   if (v === null || v === undefined || v === "") return "—";
   if (typeof v === "boolean") return v ? "Sim" : "Não";
   if (Array.isArray(v)) return v.length ? v.map(fmtVal).join(", ") : "—";
@@ -49,62 +51,14 @@ export function Farms() {
   );
 }
 
-const MAX = 12 * 1024 * 1024;
-const TIPOS = ["application/pdf", "image/jpeg", "image/png"];
-function UploadForm({ farmId, onDone }: { farmId: number; onDone: () => void }) {
-  const [file, setFile] = useState<File | null>(null);
-  const [categoria, setCategoria] = useState("");
-  const [descricao, setDescricao] = useState("");
-  const [local, setLocal] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const reqKey = useRef<string | null>(null);
-  const act = useAction();
-  const clearDirty = useDirty(!!file || !!descricao || !!categoria);
-  const pick = (f: File | null) => {
-    reqKey.current = null; setLocal("");
-    if (f && !TIPOS.includes(f.type)) { setLocal("Envie apenas PDF, JPEG ou PNG."); f = null; }
-    else if (f && f.size > MAX) { setLocal("O arquivo passa de 12 MB."); f = null; }
-    setFile(f); if (!f && inputRef.current) inputRef.current.value = "";
-  };
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file) { setLocal("Escolha um arquivo."); return; }
-    if (!reqKey.current) reqKey.current = key();
-    const r = await act.run(() => api.upload(farmId, file, categoria.trim(), descricao.trim(), reqKey.current!));
-    if (r) { reqKey.current = null; clearDirty(); setFile(null); setDescricao(""); setCategoria(""); if (inputRef.current) inputRef.current.value = ""; onDone(); }
-  };
-  return (
-    <form className="form" onSubmit={submit} style={{ borderTop: "1px solid hsl(var(--line))", paddingTop: 14, marginTop: 14 }}>
-      <fieldset className="form form-fields" disabled={act.busy}>
-      <label className="f">Arquivo (PDF, JPEG ou PNG até 12 MB)<input ref={inputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" onChange={(e) => pick(e.target.files?.[0] ?? null)} data-testid="input-doc-file" /></label>
-      <div className="form-2">
-        <label className="f">Categoria<input list="doc-cats" value={categoria} onChange={(e) => setCategoria(e.target.value)} required maxLength={80} data-testid="input-doc-category" />
-          <datalist id="doc-cats"><option value="Matrícula" /><option value="CAR" /><option value="CCIR" /><option value="ITR" /><option value="Georreferenciamento" /><option value="Mapa" /><option value="Outros" /></datalist>
-        </label>
-        <label className="f">Descrição<input value={descricao} maxLength={300} onChange={(e) => setDescricao(e.target.value)} data-testid="input-doc-description" /></label>
-      </div>
-      {local && <div className="alert bad"><AlertTriangle size={17} />{local}</div>}
-      <ErrorBox error={act.error} />
-      <button className="btn primary" style={{ justifySelf: "start" }} disabled={act.busy || !file} data-testid="button-upload-doc"><Upload size={15} />{act.busy ? "Enviando…" : "Enviar documento"}</button>
-      </fieldset>
-    </form>
-  );
-}
-
 export function FarmDetail() {
   const id = Number(useParams().id);
   const q = useLoad(() => api.farm(id), [id]);
-  const [deal, setDeal] = useState<Deal | "new" | null>(null);
-  const del = useAction();
+  const [deal, setDeal] = useState(false);
   if (q.loading && !q.data) return <div className="page"><Skeleton rows={5} /></div>;
   if (!q.data) return <div className="page"><Link className="back" to="/fazendas"><ArrowLeft size={14} />Fazendas</Link><ErrorBox error={q.error} retry={q.reload} /></div>;
   const { fazenda: f, documentos, negociacoes, historico, site_url } = q.data;
   const pub = f.disponivel && f.status === "publicada";
-  const removeDoc = async (docId: number, nome: string) => {
-    if (!window.confirm(`Remover o documento "${nome}"?`)) return;
-    const ok = await del.run(async () => { await api.deleteDocument(docId); return true; });
-    if (ok) q.reload();
-  };
   const dados = Object.entries(f.dados ?? {});
   return (
     <div className="page">
@@ -113,9 +67,11 @@ export function FarmDetail() {
         <div className="head">
           <div style={{ minWidth: 0 }}><div className="eyebrow">{[f.regiao, areaLabel(f.area)].filter(Boolean).join(" · ") || "Fazenda"}</div><h1 data-testid="text-farm-title">{f.titulo}</h1></div>
           <div className="row">
+            <Link className="btn" to={`/materiais/${f.id}`} data-testid="link-farm-materiais"><FolderDown size={15} />Materiais</Link>
             {pub ? (<>
               <a className="btn accent" href={pdfUrl(site_url, f.slug)} target="_blank" rel="noopener noreferrer" data-testid="link-farm-pdf"><FileText size={15} />PDF</a>
               <a className="btn" href={publicUrl(site_url, f.slug)} target="_blank" rel="noopener noreferrer" data-testid="link-farm-public"><ExternalLink size={15} />Página pública</a>
+              <ShareLinkButton f={f} url={publicUrl(site_url, f.slug)} />
             </>) : <span className="tag warn">Status: {f.status} — sem link público</span>}
           </div>
         </div>
@@ -124,7 +80,7 @@ export function FarmDetail() {
       <ErrorBox error={q.error} retry={q.reload} />
       <div className="grid2">
         <div className="stack">
-          {f.fotos.length > 0 && <section className="card"><div className="photos">{f.fotos.map((p) => <figure key={p.arquivo}><img src={api.photoUrl(f.id, p.arquivo)} alt={p.legenda ?? f.titulo} loading="lazy" />{p.legenda && <figcaption>{p.legenda}</figcaption>}</figure>)}</div></section>}
+          <PhotosCard f={f} />
           <section className="card">
             <div className="card-h"><h2>Dados</h2><span className="small muted">Somente leitura · {fmtDate(f.atualizado_em)}</span></div>
             {f.descricao && <p style={{ whiteSpace: "pre-wrap", marginTop: 0 }}>{f.descricao}</p>}
@@ -139,27 +95,21 @@ export function FarmDetail() {
             </>)}
           </section>
           <section className="card">
-            <div className="card-h"><h2>Negociações</h2><button className="btn sm primary" onClick={() => setDeal("new")} disabled={!f.disponivel} data-testid="button-new-deal"><Plus size={14} />Nova</button></div>
-            {negociacoes.length ? <div className="list">{negociacoes.map((d) => <DealRow key={d.id} d={d} hide="fazenda" onEdit={setDeal} />)}</div> : <Empty title="Sem negociações">Ninguém em negociação por esta fazenda ainda.</Empty>}
+            <div className="card-h"><h2>Negociações</h2><button className="btn sm primary" onClick={() => setDeal(true)} disabled={!f.disponivel} data-testid="button-new-deal"><Plus size={14} />Nova</button></div>
+            {negociacoes.length ? <div className="list">{negociacoes.map((d) => <DealRow key={d.id} d={d} hide="fazenda" onChanged={q.reload} />)}</div> : <Empty title="Sem negociações">Ninguém em negociação por esta fazenda ainda.</Empty>}
           </section>
         </div>
         <div className="stack">
           <section className="card">
-            <div className="card-h"><h2>Documentos</h2><span className="tag">{documentos.length}</span></div>
-            <ErrorBox error={del.error} />
-            {documentos.length ? <div className="list">{documentos.map((d) => (
-              <div className="item" key={d.id} data-testid={`row-doc-${d.id}`}>
-                <FileText size={18} className="muted" style={{ flex: "none" }} />
-                <div className="item-main"><div className="item-title">{d.nome}</div><div className="item-sub">{d.categoria}{d.descricao ? ` · ${d.descricao}` : ""} · {fmtSize(d.tamanho)} · {d.autor_nome}, {fmtDate(d.criado_em)}</div></div>
-                <a className="btn sm" href={api.downloadUrl(d.id)} download={d.nome} aria-label="Baixar" data-testid={`link-download-${d.id}`}><Download size={14} /></a>
-                <button className="btn sm danger" onClick={() => removeDoc(d.id, d.nome)} disabled={del.busy} aria-label="Remover" data-testid={`button-delete-doc-${d.id}`}><Trash2 size={14} /></button>
-              </div>))}</div> : <Empty title="Nenhum documento">Matrícula, CAR, mapas: envie abaixo para a equipe achar rápido.</Empty>}
-            <UploadForm farmId={f.id} onDone={q.reload} />
+            <div className="card-h"><h2>Documentos <span className="tag">{documentos.length}</span></h2><DocsDownloadAll docs={documentos} /></div>
+            {q.data.documentos_erro && <div className="alert warn"><AlertTriangle size={17} />Não foi possível ler os documentos do site agora. Tente de novo em instantes.</div>}
+            <DocsReadOnly docs={documentos} />
+            <p className="small muted" style={{ marginBottom: 0 }}>Os documentos são enviados no painel do site; aqui só dá para baixar.</p>
           </section>
           <section className="card"><div className="card-h"><h2>Histórico</h2></div><History events={historico} /></section>
         </div>
       </div>
-      {deal && <DealForm deal={deal === "new" ? null : deal} presetFazenda={f.id} onClose={() => setDeal(null)} onSaved={() => { setDeal(null); q.reload(); }} />}
+      {deal && <DealForm deal={null} presetFazenda={f.id} onClose={() => setDeal(false)} onSaved={() => { setDeal(false); q.reload(); }} />}
     </div>
   );
 }
@@ -302,6 +252,7 @@ export function Account() {
   return (
     <div className="page" style={{ maxWidth: 520 }}>
       <div><div className="eyebrow">{user.papel === "admin" ? "Administrador" : "Membro"}</div><h1>{user.nome}</h1><div className="muted">{user.email}</div></div>
+      <Personalizar />
       <form className="card form" onSubmit={submit}>
         <h2>Trocar senha</h2>
         <label className="f">Senha atual<input type="password" autoComplete="current-password" value={v.atual} onChange={(e) => setV({ ...v, atual: e.target.value })} required data-testid="input-current-password" /></label>

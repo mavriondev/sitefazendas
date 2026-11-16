@@ -8,6 +8,8 @@ import { formaSvgAnonima } from "./forma";
 import { regiaoAproximada } from "./regiao";
 import { vazaDadoSensivel, type DadosPrivados } from "./sigilo";
 import { ESTADOS_BRASIL, REGIOES_BRASIL, FAIXAS_AREA, estadoBrasileiro, classeArea, type OpcoesFiltrosPublicos } from "../../shared/filtros-publicos";
+import { type CardFazenda, type CardPublico } from "../../shared/cards";
+import { cardsParaPublico, problemasCards } from "./cards";
 
 export interface FazendaRow {
   id: number; slug: string; titulo: string; status: string; destaque: boolean; destaque_ordem: number;
@@ -18,6 +20,7 @@ export interface FazendaRow {
   car_codigo: string | null; municipio: string | null; uf: string | null;
   latitude: number | null; longitude: number | null; geojson: any; notas_internas: string | null;
   publicado_em: string | null;
+  cards?: CardFazenda[] | null;
 }
 export interface AtributoRow {
   chave: string; estado: "confirmado" | "indicado" | "sem_dado"; achado: "detectado" | "nao_detectado" | "indeterminado";
@@ -38,6 +41,7 @@ export interface FazendaPublica {
   area: string | null; preco: string | null; destaque: boolean;
   capa: string | null; fotos: Array<{ url: string; legenda: string | null }>;
   videos: VideoPublico[];
+  cards?: CardPublico[];
   atributos: AtributoPublico[]; forma: { d: string; viewBox: string } | null; regiao_mapa: { lat: number; lon: number; raio_km: number } | null; whatsapp: string | null;
 }
 
@@ -130,6 +134,7 @@ export function validarPublicacao(f: FazendaRow, fotos: FotoRow[], atributos: At
   if (!(f.area_ha != null && Number(f.area_ha) > 0)) p.push("Falta a área (ha).");
   if (fotos.length === 0) p.push("Adicione ao menos uma foto.");
   const priv: DadosPrivados = { municipio: f.municipio, uf: f.uf, car_codigo: f.car_codigo, latitude: f.latitude, longitude: f.longitude };
+  p.push(...problemasCards(f.cards, priv));
   const campos: Array<[string, string | null | undefined]> = [
     ["título", f.titulo], ["endereço da página", f.slug], ["descrição", f.descricao_publica], ["região", f.regiao_publica], ["preço", f.preco_exibicao],
     ...fotos.map((x, i) => [`legenda da foto ${i + 1}`, x.legenda] as [string, string | null]),
@@ -251,6 +256,7 @@ export async function obterPublicaPorSlug(db: Db, slug: string, whatsappPadrao: 
   if (!f) return null;
   const { attrs, fotos } = await carregarRelacionados(db, [f.id]);
   const publica = projetarFazendaPublica(f, attrs.get(f.id) ?? [], fotos.get(f.id) ?? [], whatsappPadrao, true);
+  publica.cards = cardsParaPublico(f.cards, publica, f);
   publica.videos = (await db.query<VideoPublico>("SELECT id,youtube_id,titulo FROM fazenda_videos WHERE fazenda_id=$1 AND publico ORDER BY ordem,id", [f.id])).rows;
   return publica;
 }

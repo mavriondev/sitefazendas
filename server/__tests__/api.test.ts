@@ -146,7 +146,10 @@ export async function rodar() {
     // ---------- mapa (forma anonimizada) opcional ----------
     await admin.put(`/api/admin/fazendas/${id}`, { mostrar_mapa: true });
     const comMapa = (await anon.get(`/api/public/fazendas/${lista.json.fazendas[0].slug}`)).json;
-    assert.ok(comMapa.forma?.d && !/-16|-43/.test(JSON.stringify(comMapa)));
+    assert.ok(comMapa.forma?.d);
+    // Examine o contorno: uma data legítima AAAA-MM-16 também contém "-16".
+    // A checagem da resposta completa acima já cobre as coordenadas privadas.
+    assert.ok(!/-16|-43/.test(JSON.stringify(comMapa.forma)));
 
     // ---------- contato / destaque / slides ----------
     assert.equal((await anon.post("/api/public/contato", { nome: "João", whatsapp: "11", fazenda_slug: d.slug })).status, 400);

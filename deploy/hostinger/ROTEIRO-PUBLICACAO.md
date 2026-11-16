@@ -17,7 +17,7 @@ parar e obter autorização prévia.
 
 ## 2. Configuração do site — nomes de variáveis, sem valores
 - Execução: `NODE_ENV`, `PORT`, `BIND_HOST`, `SITE_URL`.
-- Obrigatórias: `DATABASE_URL`, `SESSION_SECRET`, `UPLOADS_DIR`.
+- Obrigatórias: `DATABASE_URL`, `SESSION_SECRET`, `UPLOADS_DIR`, `DOCUMENTOS_DIR` (pasta privada, diferente de `UPLOADS_DIR`).
 - Somente no bootstrap de administrador novo: `ADMIN_EMAIL`, `ADMIN_PASSWORD`.
   Não recriar o administrador existente nem manter senha de bootstrap sem necessidade.
 - Cadastro manual: não requer chaves da Hub, do Connect ou de IA.
@@ -29,6 +29,12 @@ Usar `/etc/gramogol/runtime.json` com permissões restritas e o carregador
 `deploy/hostinger/start.cjs`. Nunca versionar configuração, segredos, dumps ou uploads.
 O banco e o usuário PostgreSQL são exclusivos da Gramogol; não são os da Hub/Connect.
 Uploads persistem em `/var/lib/gramogol/uploads`, fora do código e de `dist`.
+
+Para documentos compartilhados com o CRM, criar a pasta privada com dono do site,
+grupo exclusivo do CRM e modo `2750` (setgid). Os arquivos novos usam `0640`:
+somente o site grava. Expor ao CRM por bind mount somente leitura, apontado por
+`CRM_SITE_DOCUMENTS_DIR`, sem liberar travessia da pasta privada do site. Conceder
+apenas `SELECT` em `fazenda_documentos` à credencial de origem já usada pelo CRM.
 
 ## 3. Instalar a versão aprovada
 - Em diretório de release separado, obter o commit aprovado do repositório

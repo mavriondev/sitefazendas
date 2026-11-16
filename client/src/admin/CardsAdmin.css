@@ -1,0 +1,57 @@
+.admin-layout .cda{display:grid;gap:0}
+.admin-layout .cda-intro p{margin:6px 0 0;max-width:78ch}
+.admin-layout .cda-lista{list-style:none;margin:0 0 var(--ad-gap);padding:0;display:grid;gap:12px}
+.admin-layout .cda-card{background:var(--papel,#fff);border:1px solid var(--linha);border-left:4px solid var(--verde);border-radius:12px;padding:14px 18px 16px;animation:cda-entra .28s ease-out both;transition:opacity .2s}
+.admin-layout .cda-card.oculto{border-left-color:#b3b09b;background:#fafaf4}
+.admin-layout .cda-card.oculto .cda-campos{opacity:.82}
+.admin-layout .cda-topo{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.admin-layout .cda-num{font:700 .78rem/1 ui-monospace,monospace;color:var(--suave);letter-spacing:.04em}
+.admin-layout .cda-ico{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#eef3e0;color:var(--verde-esc);flex:none}
+.admin-layout .cda-ico svg{width:17px;height:17px}
+.admin-layout .cda-nome{flex:1 1 160px;min-width:0;overflow-wrap:anywhere}
+.admin-layout .cda-estado{font-size:.76rem;font-weight:700;padding:3px 10px;border-radius:999px;background:#eef1e3;color:#5a5e4d}
+.admin-layout .cda-estado.sim{background:#e4edcf;color:var(--verde-esc)}
+.admin-layout .cda-card.oculto .cda-estado{background:#ecebe2;color:#6c6a5a}
+.admin-layout .cda-acoes{display:flex;gap:6px;flex-wrap:wrap}
+.admin-layout .cda-acoes .btn{min-width:36px;padding:4px 10px}
+.admin-layout .cda-acoes svg{width:16px;height:16px}
+.admin-layout .cda-campos{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:0 16px;transition:opacity .2s}
+.admin-layout .cda-cheio{grid-column:1/-1}
+.admin-layout .cda-cont{float:right;font-weight:400;font-size:.76rem;color:var(--suave)}
+.admin-layout .cda-campos textarea{min-height:64px}
+.admin-layout .cda-tipo{border:0;margin:12px 0 0;padding:0;min-width:0}
+.admin-layout .cda-tipo legend{font-size:.88rem;font-weight:700;margin-bottom:6px;padding:0}
+.admin-layout .cda-seg{display:inline-flex;flex-wrap:wrap;gap:4px;padding:3px;border:1px solid var(--linha);border-radius:10px;background:#f4f5ea}
+.admin-layout .cda-seg label{display:inline-flex;align-items:center;gap:6px;margin:0;padding:6px 12px;border-radius:7px;cursor:pointer;font-weight:500;transition:background .15s}
+.admin-layout .cda-seg label.ativo{background:#fff;color:var(--verde-esc);font-weight:700;box-shadow:0 1px 2px #173c251f}
+.admin-layout .cda-seg label:has(input:focus-visible){outline:2px solid var(--verde);outline-offset:1px}
+.admin-layout .cda-seg input{position:absolute;opacity:0;width:1px;height:1px}
+.admin-layout .cda-seg svg{width:15px;height:15px}
+.admin-layout .cda-nota{margin:10px 0 0;padding:8px 12px;border-radius:8px;background:#fbf4dc;color:#6b4f10;font-size:.84rem;line-height:1.45}
+.admin-layout .cda-erros{margin:10px 0 0;padding:8px 12px 8px 28px;border-radius:8px;background:#fbeaea;color:var(--erro);font-size:.84rem}
+.admin-layout .cda-vazio strong{display:block;margin-bottom:4px}
+.admin-layout .cda-novo .btn svg{width:16px;height:16px}
+.admin-layout .cda-sug-legenda{margin:14px 0 8px}
+.admin-layout .cda-sug{display:flex;flex-wrap:wrap;gap:6px}
+.admin-layout .cda-chip{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:4px 14px;border:1px dashed #b9b9a3;border-radius:999px;background:#fff;color:var(--verde-esc);font-size:.86rem;cursor:pointer;transition:background .15s,border-color .15s}
+.admin-layout .cda-chip:hover:not(:disabled){background:#eef3e0;border-color:var(--verde)}
+.admin-layout .cda-chip:disabled{opacity:.45;cursor:not-allowed}
+.admin-layout .cda-chip svg{width:14px;height:14px}
+.admin-layout .cda-barra{margin:0 0 var(--ad-gap);padding:14px 0;position:sticky;bottom:0;background:var(--areia,#faf7f0);z-index:2}
+.admin-layout .cda-previa-topo{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.admin-layout .cda-previa-topo h3{margin:0}
+.admin-layout .cda-previa-palco{padding:4px 0}
+.admin-layout .cda-previa-palco .gcf{margin:8px 0 0}
+.admin-layout .cda-previa-palco .gcf-titulo,.admin-layout .cda-previa-palco .gcf-info{font-size:revert;margin:0}
+.admin-layout .cda-previa-palco .gcf-titulo{font-size:11px}
+.admin-layout .cda-previa-palco .gcf-info{font-size:16px}
+.admin-layout .cda-previa-vazia{margin:10px 0 0;padding:18px;border:1px dashed var(--linha);border-radius:12px;text-align:center;color:var(--suave)}
+@keyframes cda-entra{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.admin-layout .cda-card{animation:none}}
+@media (max-width:640px){
+  .admin-layout .cda-card{padding:12px 14px 14px}
+  .admin-layout .cda-campos{grid-template-columns:minmax(0,1fr)}
+  .admin-layout .cda-acoes{width:100%}
+  .admin-layout .cda-acoes .btn{flex:1 1 0;min-height:40px}
+  .admin-layout .cda-acoes .btn span{display:none}
+}

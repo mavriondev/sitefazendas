@@ -1,6 +1,6 @@
 import type { User, Farm, Contact, Deal, Document, Event, Access, SourceStatus } from "../shared";
 export type { User, Farm, Contact, Deal, Document, Event, Access, SourceStatus, Etapa } from "../shared";
-export { ETAPAS, ROTULOS } from "../shared";
+export { ETAPAS, ROTULOS, isCliente } from "../shared";
 const base = "/crm/api";
 let csrf = "";
 async function request<T>(path: string, method = "GET", body?: unknown): Promise<T> {
@@ -33,7 +33,7 @@ export const api = {
   access: (id: number) => request<Access>(`/users/${id}/access`),
   saveAccess: (id: number, b: Access) => request(`/users/${id}/access`, "PUT", b),
   farms: () => request<{ fazendas: Farm[]; fonte: SourceStatus }>("/farms"),
-  farm: (id: number) => request<{ fazenda: Farm; documentos: Document[]; negociacoes: Deal[]; historico: Event[]; site_url: string }>(`/farms/${id}`),
+  farm: (id: number) => request<{ fazenda: Farm; documentos: Document[]; documentos_erro: boolean; negociacoes: Deal[]; historico: Event[]; site_url: string }>(`/farms/${id}`),
   refreshSource: () => request<{ fazendas: number }>("/source/refresh", "POST", {}),
   importContacts: () => request<{ importados: number; existentes: number }>("/source/import", "POST", {}),
   contacts: (q = "") => request<{ contatos: Contact[] }>("/contacts?q=" + encodeURIComponent(q)),
@@ -43,11 +43,6 @@ export const api = {
   deleteContact: (id: number, versao: number) => request(`/contacts/${id}`, "DELETE", { versao }),
   deals: () => request<{ negociacoes: Deal[] }>("/deals"),
   saveDeal: (id: number | null, b: { contato_id: number; fazenda_id: number; etapa: string; proximo_retorno: string | null; observacoes: string; versao?: number; request_key?: string }) => request<Deal>(id ? `/deals/${id}` : "/deals", id ? "PUT" : "POST", b),
-  upload: (farmId: number, file: File, categoria: string, descricao: string, request_key: string) => {
-    const f = new FormData(); f.append("categoria", categoria); f.append("descricao", descricao); f.append("request_key", request_key); f.append("arquivo", file);
-    return request<Document>(`/farms/${farmId}/documents`, "POST", f);
-  },
-  deleteDocument: (id: number) => request(`/documents/${id}`, "DELETE", {}),
   downloadUrl: (id: number) => base + `/documents/${id}/download`,
   photoUrl: (farmId: number, arquivo: string) => base + `/farms/${farmId}/photos/${encodeURIComponent(arquivo)}`,
 };

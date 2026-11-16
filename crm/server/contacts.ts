@@ -13,7 +13,7 @@ export async function contacts(db: Query, u: User, contactId?: number, q = "") {
     ORDER BY c.criado_em DESC,c.id DESC`, [contactId ?? null, q, phoneQuery])).rows;
 }
 export async function deals(db: Query, u: User, filter?: { contact?: number; farm?: number; deal?: number }) {
-  return (await db.query(`SELECT d.*,c.nome AS contato_nome,f.snapshot->>'titulo' AS fazenda_titulo FROM crm_deals d
+  return (await db.query(`SELECT d.*,c.nome AS contato_nome,c.telefone AS contato_telefone,f.snapshot->>'titulo' AS fazenda_titulo FROM crm_deals d
     JOIN crm_contacts c ON c.id=d.contato_id JOIN crm_farms f ON f.id=d.fazenda_id
     WHERE ${contactScope(u)} AND ${farmScope(u)} AND ($1::int IS NULL OR d.contato_id=$1) AND ($2::int IS NULL OR d.fazenda_id=$2)
     AND ($3::int IS NULL OR d.id=$3) ORDER BY d.atualizado_em DESC,d.id DESC`,

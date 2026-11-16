@@ -12,7 +12,7 @@ import { registrarRotasAdmin } from "./routes/admin";
 import { lerSeo, origemSeo, resolverSeo, tagsSeo } from "./lib/seo";
 import { PAGINAS_SEO } from "../shared/seo";
 import { registrarRotasSeo } from "./routes/seo";
-import { caminhoRastreavel } from "../shared/rastreamento";
+import { CAMINHO_DIAGNOSTICO, caminhoRastreavel } from "../shared/rastreamento";
 import { caminhoDoArquivo } from "./lib/arquivos";
 import rateLimit from "express-rate-limit";
 import { instalarCsrf, rotasSeguras, validarCorpo, validarParametros } from "./lib/seguranca";
@@ -21,6 +21,8 @@ import { registrarRotasConteudo } from "./routes/conteudo";
 export interface OpcoesApp {
   db: Db;
   uploadsDir: string;
+  /** Pasta PRIVADA dos documentos (fora de uploadsDir). Sem ela, o envio de documentos fica desligado. */
+  documentosDir?: string;
   segredo: string;
   producao: boolean;
   /** Limites de tentativas (login/cadastro/contato). Desligue só em testes. */
@@ -34,6 +36,7 @@ export interface OpcoesApp {
 }
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const permiteProvedores = (caminho: string) => caminhoRastreavel(caminho) || caminho.replace(/\/+$/, "") === CAMINHO_DIAGNOSTICO;
 
 export function criarApp(o: OpcoesApp): Express {
   const app = express();
@@ -46,8 +49,8 @@ export function criarApp(o: OpcoesApp): Express {
         "img-src": ["'self'", "data:", "https://tile.openstreetmap.org", "https://i.ytimg.com", "https://www.facebook.com", "https://www.google-analytics.com", "https://region1.google-analytics.com"],
         "frame-src": ["https://www.youtube-nocookie.com"],
         "style-src": ["'self'", "'unsafe-inline'"],
-        "script-src": [(req: any) => caminhoRastreavel(req.path) ? "'self' https://www.googletagmanager.com https://connect.facebook.net" : "'self'"],
-        "connect-src": [(req: any) => caminhoRastreavel(req.path) ? "'self' https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://www.facebook.com" : "'self'"],
+        "script-src": [(req: any) => permiteProvedores(req.path) ? "'self' https://www.googletagmanager.com https://connect.facebook.net" : "'self'"],
+        "connect-src": [(req: any) => permiteProvedores(req.path) ? "'self' https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://www.facebook.com" : "'self'"],
         "upgrade-insecure-requests": o.producao ? [] : null,
       },
     },
@@ -87,7 +90,7 @@ export function criarApp(o: OpcoesApp): Express {
   registrarRotasAgro(rotas, o.db, { automatico: o.agroAutomatico ?? process.env.NODE_ENV !== "test", buscar: o.fetchAgro });
   registrarRotasPublicas(rotas, o.db, { limitar: o.limitar });
   registrarRotasConteudo(rotas, o.db, o.uploadsDir);
-  registrarRotasAdmin(rotas, o.db, exigirAdmin, { uploadsDir: o.uploadsDir });
+  registrarRotasAdmin(rotas, o.db, exigirAdmin, { uploadsDir: o.uploadsDir, documentosDir: o.documentosDir });
   registrarRotasSeo(rotas, o.db, o.uploadsDir, o.siteUrl);
 
 

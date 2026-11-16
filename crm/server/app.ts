@@ -13,7 +13,7 @@ import { registerContacts, deals, history } from "./contacts";
 import { documentRoutes, listDocuments } from "./documents";
 import { asyncRoute as route, who, publicUser, check, id, text, email, comparePassword, hashPassword, csrf, admin, canFarm, farmScope, Fault } from "./security";
 export interface Options {
-  db: Database; source?: Source; secret: string; documentsDir: string; siteUploadsDir?: string;
+  db: Database; source?: Source; secret: string; siteDocumentsDir?: string; siteUploadsDir?: string;
   production: boolean; siteUrl: string; sessionStore?: session.Store; clientDir?: string; limit?: boolean;
 }
 export function createCrm(o: Options) {
@@ -79,7 +79,7 @@ export function createCrm(o: Options) {
   app.get("/crm/api/farms/:id", route(async (req, res) => {
     const fid = id(req.params.id), u = who(req); await canFarm(o.db, u, fid);
     const farm = (await o.db.query("SELECT * FROM crm_farms WHERE id=$1", [fid])).rows[0];
-    res.json({ fazenda: farmDto(farm), documentos: await listDocuments(o.db, fid), negociacoes: await deals(o.db, u, { farm: fid }),
+    res.json({ fazenda: farmDto(farm), ...await listDocuments(o.source, fid).then(r => ({ documentos: r.documentos, documentos_erro: r.erro })), negociacoes: await deals(o.db, u, { farm: fid }),
       historico: await history(o.db, u, { farm: fid }), site_url: o.siteUrl });
   }));
   app.get("/crm/api/farms/:id/photos/:file", route(async (req, res) => {
@@ -92,7 +92,7 @@ export function createCrm(o: Options) {
   }));
   app.post("/crm/api/source/refresh", route(async (req, res) => { admin(req); res.json(await refresh(o.db, o.source, who(req))); }));
   app.post("/crm/api/source/import", route(async (req, res) => { admin(req); res.json(await importContacts(o.db, o.source, who(req))); }));
-  documentRoutes(app, o.db, o.documentsDir);
+  documentRoutes(app, o.db, o.source, o.siteDocumentsDir);
   app.use("/crm/api", (_req, res) => res.status(404).json({ message: "Recurso não encontrado." }));
   if (o.clientDir && fs.existsSync(path.join(o.clientDir, "index.html"))) {
     app.use("/crm", express.static(o.clientDir, { index: false, maxAge: 0 }));

@@ -4,6 +4,8 @@ export interface ConfigRastreamento {
 export const rastreamentoPadrao = (): ConfigRastreamento => ({
   ga4_id: "", ga4_ativo: false, meta_pixel_id: "", meta_pixel_ativo: false,
 });
+// Não pertence à lista de páginas medidas automaticamente: exige nova autorização.
+export const CAMINHO_DIAGNOSTICO = "/diagnostico-rastreamento";
 export const idGa4Valido = (s: string) => /^G-[A-Z0-9]{4,20}$/.test(s);
 export const idPixelValido = (s: string) => /^[0-9]{5,25}$/.test(s);
 export function validarRastreamento(c: any): string | null {

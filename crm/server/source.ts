@@ -4,16 +4,38 @@ import { check, event } from "./security";
 import { normalizePhone, type User } from "../shared";
 import crypto from "node:crypto";
 export interface SourceSnapshot { farms: any[]; contacts: any[]; presentations: any[] }
-export interface Source { read(): Promise<SourceSnapshot> }
+// Documentos privados cadastrados no PAINEL DO SITE. O CRM só lê (nunca grava) e só para baixar.
+export interface SiteDoc { id: number; fazenda_id: number; arquivo: string; nome: string; mime: string; categoria: string; descricao: string; tamanho: number; criado_em: string }
+export interface Source { read(): Promise<SourceSnapshot>; documents(farmId: number): Promise<SiteDoc[]>; document(id: number): Promise<SiteDoc | null> }
+const DOC_COLS = "id,fazenda_id,arquivo,nome,mime,categoria,descricao,tamanho,criado_em";
 export class PgSource implements Source {
   constructor(private pool: pg.Pool) {}
+  private async readOnly<T>(fn: (c: pg.PoolClient) => Promise<T>): Promise<T> {
+    const c = await this.pool.connect();
+    try { await c.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"); const out = await fn(c); await c.query("COMMIT"); return out; }
+    catch (e) { await c.query("ROLLBACK").catch(() => {}); throw e; } finally { c.release(); }
+  }
+  // Leitura ao vivo: o que sobe no painel do site aparece no CRM sem "Atualizar da origem".
+  // Se a tabela ainda não existe (site sem a versão nova), não há documentos.
+  async documents(farmId: number): Promise<SiteDoc[]> {
+    return this.readOnly(async c => {
+      if (!(await c.query("SELECT to_regclass('fazenda_documentos') AS t")).rows[0].t) return [];
+      return (await c.query(`SELECT ${DOC_COLS} FROM fazenda_documentos WHERE fazenda_id=$1 ORDER BY categoria,criado_em DESC,id DESC`, [farmId])).rows;
+    });
+  }
+  async document(id: number): Promise<SiteDoc | null> {
+    return this.readOnly(async c => {
+      if (!(await c.query("SELECT to_regclass('fazenda_documentos') AS t")).rows[0].t) return null;
+      return (await c.query(`SELECT ${DOC_COLS} FROM fazenda_documentos WHERE id=$1`, [id])).rows[0] ?? null;
+    });
+  }
   async read(): Promise<SourceSnapshot> {
     const c = await this.pool.connect();
     try {
       // O adaptador não possui método de escrita nem executa migrações.
       await c.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
       const rights = await c.query(`SELECT bool_or(has_table_privilege(current_user,t,'INSERT,UPDATE,DELETE,TRUNCATE,TRIGGER')) AS escrita
-        FROM unnest(ARRAY['fazendas','fazenda_atributos','fazenda_fotos','contatos','apresentacoes']) t`);
+        FROM unnest(ARRAY['fazendas','fazenda_atributos','fazenda_fotos','fazenda_documentos','contatos','apresentacoes']) t WHERE to_regclass(t) IS NOT NULL`);
       check(rights.rows[0]?.escrita === false, 503, "A credencial de origem deve ser exclusivamente de leitura.");
       const farms = (await c.query(`SELECT id,titulo,slug,status,regiao_publica,area_ha,descricao_publica,culturas,preco_exibicao,
         car_codigo,municipio,uf,notas_internas,atualizado_em FROM fazendas ORDER BY id`)).rows;

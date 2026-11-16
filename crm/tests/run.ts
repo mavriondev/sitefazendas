@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
-import { fixture, TEST_PASSWORD, PDF, PNG, PHOTO } from "./fixture";
-import { inspectDocument } from "../server/documents";
+import { fixture, TEST_PASSWORD, PDF, PNG, PHOTO, DOC_FILE } from "./fixture";
 import { PgSource } from "../server/source";
 import type pg from "pg";
 import { flowReview } from "./flow-review";
@@ -55,33 +54,39 @@ async function run() {
     assert.equal((await m.put(`/deals/${deal.json.id}`, { ...dealBody, etapa: "visita_agendada", proximo_retorno: null, versao: 1 })).status, 200);
     assert.equal((await m.put(`/deals/${deal.json.id}`, { ...dealBody, versao: 1 })).status, 409);
     assert.equal((await m.get("/deals")).json.negociacoes[0].proximo_retorno, null);
+    assert.equal((await m.get("/deals")).json.negociacoes[0].contato_telefone, "5534999990000");
     assert.ok((await m.get(`/contacts/${c.id}`)).json.historico.some((e: any) => e.acao === "Negociação atualizada"));
-    const upload = (buf: Buffer, name: string, reqKey = crypto.randomUUID()) => {
-      const form = new FormData(); form.append("categoria", "Matrícula"); form.append("descricao", "Documento de teste sintético"); form.append("request_key", reqKey);
-      form.append("arquivo", new Blob([new Uint8Array(buf)]), name); return form;
-    };
-    const docKey = crypto.randomUUID();
-    const doc = await m.post("/farms/1/documents", upload(PDF, "matricula.pdf", docKey)); assert.equal(doc.status, 201, doc.text);
-    assert.equal((await m.post("/farms/1/documents", upload(PDF, "matricula.pdf", docKey))).json.id, doc.json.id);
-    assert.equal((await m.get(`/documents/${doc.json.id}/download`)).status, 200);
-    const download = await m.get(`/documents/${doc.json.id}/download`);
+    // Documentos vêm do painel do site: o CRM só lê e baixa.
+    const docId = (await f.site.query("SELECT id FROM fazenda_documentos LIMIT 1")).rows[0].id;
+    const detail = (await m.get("/farms/1")).json;
+    assert.equal(detail.documentos.length, 1); assert.equal(detail.documentos_erro, false);
+    assert.equal(detail.documentos[0].nome, "Matrícula 12.345.pdf");
+    assert.ok(!("arquivo" in detail.documentos[0]) && !("mime" in detail.documentos[0]), "nome físico não vai ao navegador");
+    const download = await m.get(`/documents/${docId}/download`); assert.equal(download.status, 200);
     assert.match(download.headers.get("content-disposition") || "", /attachment/); assert.match(download.headers.get("cache-control") || "", /no-store/);
-    assert.equal((await anon.get(`/documents/${doc.json.id}/download`)).status, 401);
+    assert.match(download.headers.get("content-type") || "", /application\/pdf/); assert.deepEqual(download.buffer, PDF);
+    assert.ok((await m.get(`/contacts/${c.id}`)).json.historico.every((e: any) => e.acao !== "Documento baixado"));
+    assert.equal((await anon.get(`/documents/${docId}/download`)).status, 401);
     await admin.put(`/users/${other.id}/access`, { fazenda_ids: [], contato_ids: [c.id] });
-    assert.equal((await outsider.get(`/documents/${doc.json.id}/download`)).status, 404);
-    assert.equal((await outsider.get("/deals")).json.negociacoes.length, 0);
-    assert.equal((await m.post("/farms/1/documents", upload(Buffer.from("<script>bad</script>"), "fake.pdf"))).status, 415);
-    assert.equal((await m.post("/farms/1/documents", upload(PDF, "test.html"))).status, 415);
-    assert.equal((await m.post("/farms/1/documents", upload(Buffer.alloc(12 * 1024 * 1024 + 1), "grande.pdf"))).status, 413);
-    const image = await m.post("/farms/1/documents", upload(PNG, "foto.png"));
-    assert.equal(image.status, 201, image.text);
-    assert.match((await m.get(`/documents/${image.json.id}/download`)).headers.get("content-type") || "", /image\/png/);
-    await m.del(`/documents/${image.json.id}`);
-    assert.throws(() => inspectDocument(Buffer.from("%PDF-1.4\n/Java#53cript\n%%EOF\n"), "a.pdf"));
-    assert.throws(() => inspectDocument(Buffer.from("%PDF-1.4\n/ObjStm\n%%EOF\n"), "a.pdf"));
-    assert.equal((await m.del(`/documents/${doc.json.id}`)).status, 200);
-    assert.equal((await m.get(`/documents/${doc.json.id}/download`)).status, 404);
-    counts.push("negociações, histórico, retornos e documentos privados/assinaturas de arquivo");
+    assert.equal((await outsider.get(`/documents/${docId}/download`)).status, 404);
+    assert.equal((await outsider.get("/farms/1")).status, 404);
+    // Sem cadastro, edição ou remoção de documentos no CRM.
+    const form = new FormData(); form.append("categoria", "Matrícula"); form.append("arquivo", new Blob([new Uint8Array(PDF)]), "a.pdf");
+    assert.equal((await m.post("/farms/1/documents", form)).status, 404);
+    assert.equal((await m.del(`/documents/${docId}`)).status, 404);
+    // Leitura ao vivo: o que sobe no painel do site aparece sem "Atualizar da origem".
+    await f.site.query("INSERT INTO fazenda_documentos(fazenda_id,arquivo,nome,mime,categoria,descricao,tamanho) VALUES(1,$1,'CAR.pdf','application/pdf','CAR','',$2)", ["fedcba9876543210fedcba9876543210fedcba9876543210.pdf", PDF.length]);
+    assert.equal((await m.get("/farms/1")).json.documentos.length, 2);
+    // Arquivo ausente na pasta, ou nome fora do padrão, nunca vira download.
+    const missing = (await f.site.query("SELECT id FROM fazenda_documentos WHERE nome='CAR.pdf'")).rows[0].id;
+    assert.equal((await m.get(`/documents/${missing}/download`)).status, 404);
+    await assert.rejects(f.site.query("UPDATE fazenda_documentos SET arquivo='../segredo.pdf' WHERE id=$1", [missing]), "o banco do site recusa nome de arquivo fora do padrão");
+    await f.site.query("DELETE FROM fazenda_documentos WHERE id=$1", [missing]);
+    // Falha da origem não derruba a ficha: a lista vem vazia com aviso, e o download diz que está indisponível.
+    f.failSource(true);
+    const degraded = await m.get("/farms/1"); assert.equal(degraded.status, 200); assert.equal(degraded.json.documentos_erro, true); assert.deepEqual(degraded.json.documentos, []);
+    assert.equal((await m.get(`/documents/${docId}/download`)).status, 503); f.failSource(false);
+    counts.push("negociações, histórico, retornos e documentos lidos do painel do site (somente baixar)");
     const imported = await admin.post("/source/import", {}); assert.equal(imported.status, 200, imported.text); assert.equal(imported.json.importados, 2);
     assert.equal((await admin.post("/source/import", {})).json.importados, 0);
     assert.equal((await admin.post("/source/import", {})).json.existentes, 2);
@@ -127,10 +132,10 @@ async function run() {
     const original = await clean.sourceFingerprint(), a = clean.client();
     const sql: string[] = []; let writable = false, released = 0;
     const origin = new PgSource({ connect: async () => ({
-      query: async (query: string) => {
+      query: async (query: string, params?: unknown[]) => {
         sql.push(query);
         if (query.includes("has_table_privilege")) return { rows: [{ escrita: writable }] };
-        return clean.site.query(query);
+        return clean.site.query(query, params);
       }, release: () => { released++; },
     }) } as unknown as pg.Pool);
     const source = await origin.read();
@@ -139,6 +144,11 @@ async function run() {
     writable = true;
     await assert.rejects(() => origin.read(), /exclusivamente de leitura/);
     assert.equal(released, 2); assert.equal(sql.at(-1), "ROLLBACK");
+    writable = false; sql.length = 0;
+    const docs = await origin.documents(1); assert.equal(docs.length, 1); assert.equal(docs[0]!.nome, "Matrícula 12.345.pdf");
+    assert.equal((await origin.document(docs[0]!.id))?.fazenda_id, 1); assert.equal(await origin.document(999999), null);
+    assert.deepEqual(await origin.documents(2), []);
+    assert.ok(sql.every(q => /^(BEGIN|SELECT|COMMIT|ROLLBACK)/.test(q)) && sql.filter(q => q.startsWith("BEGIN")).every(q => q.includes("READ ONLY")), "documentos: só leitura");
     process.stdout.write("PASS adaptador PostgreSQL lê o esquema real, exige READ ONLY e recusa credencial de escrita\n");
     await a.post("/login", { email: "gestor@crm.test", senha: TEST_PASSWORD });
     await a.post("/source/import", {}); await a.post("/source/refresh", {});

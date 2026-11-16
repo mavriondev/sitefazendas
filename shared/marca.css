@@ -1,0 +1,26 @@
+/* Identidade Gramogol compartilhada entre site público e CRM.
+   Só tokens e primitivas de botão: sem resets, fontes externas ou scripts. */
+:root {
+  --ga-green: #90c52d;
+  --ga-green-deep: #173c25;
+  --ga-green-dark: #102e1e;
+  --ga-lime: #dce25a;
+  --ga-cream: #faf7f0;
+  --ga-ink: #181818;
+  --ga-copy: #4e4e4e;
+  --ga-line: #e9e8df;
+  --ga-kicker: #466b22;
+  --ga-btn-ink: #1c2811;
+  --ga-focus: #648128;
+  --ga-display: "Instrument Sans", sans-serif;
+  --ga-body: "Nunito Sans", sans-serif;
+  --ga-control-height: 48px;
+  --ga-control-radius: 15px;
+  --ga-control-gap: 10px;
+  --ga-control-font: 600 14px/1.25 var(--ga-display);
+}
+.ga-btn { min-height: 56px; padding: 13px 19px 13px 25px; border: 0; border-radius: var(--ga-control-radius); background: var(--ga-lime); color: var(--ga-btn-ink); font: 700 15px var(--ga-display); display: inline-flex; align-items: center; justify-content: center; gap: 15px; transition: background .2s, transform .2s; }
+.ga-btn:hover { background: var(--ga-green); transform: translateY(-2px); }
+.ga-btn svg { width: 18px; height: 18px; }
+.ga-btn--green { background: var(--ga-green); }
+.ga-btn--green:hover { background: var(--ga-lime); }
