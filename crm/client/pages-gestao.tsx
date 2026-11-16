@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, Download, ExternalLink, FileText, KeyRound, Lock, Plus, RefreshCw, Search, ShieldCheck, Trash2, Unlock, Upload, UsersRound } from "lucide-react";
+import { AlertTriangle, ArrowLeft, FolderDown, Download, ExternalLink, FileText, KeyRound, Lock, Plus, RefreshCw, Search, ShieldCheck, Trash2, Unlock, Upload, UsersRound } from "lucide-react";
 import { api, key, type Access, type Deal, type User } from "./api";
 import { DealForm } from "./forms";
 import { DealRow } from "./pages-atendimento";
@@ -118,6 +118,7 @@ export function FarmDetail() {
         <div className="head">
           <div style={{ minWidth: 0 }}><div className="eyebrow">{[f.regiao, areaLabel(f.area)].filter(Boolean).join(" · ") || "Fazenda"}</div><h1 data-testid="text-farm-title">{f.titulo}</h1></div>
           <div className="row">
+            <Link className="btn" to={`/materiais/${f.id}`} data-testid="link-farm-materiais"><FolderDown size={15} />Materiais</Link>
             {pub ? (<>
               <a className="btn accent" href={pdfUrl(site_url, f.slug)} target="_blank" rel="noopener noreferrer" data-testid="link-farm-pdf"><FileText size={15} />PDF</a>
               <a className="btn" href={publicUrl(site_url, f.slug)} target="_blank" rel="noopener noreferrer" data-testid="link-farm-public"><ExternalLink size={15} />Página pública</a>

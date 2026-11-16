@@ -157,3 +157,22 @@ export function ShareLinkButton({ f, url }: { f: Farm; url: string }) {
   };
   return <button className="btn" onClick={share} data-testid="button-share-link"><Link2 size={15} />Enviar link</button>;
 }
+
+/** Lista de documentos só para baixar (sem editar nem remover). */
+export function DocsReadOnly({ docs }: { docs: Document[] }) {
+  if (!docs.length) return <div className="muted small">Nenhum documento enviado para esta fazenda.</div>;
+  return (
+    <div className="list">{groupDocs(docs).map(([cat, list]) => (
+      <div key={cat}>
+        <div className="doc-group">{cat} · {list.length}</div>
+        {list.map((d) => (
+          <div className="item" key={d.id} data-testid={`row-material-doc-${d.id}`}>
+            <div className="item-main"><div className="item-title">{d.nome}</div>{d.descricao && <div className="item-sub">{d.descricao}</div>}</div>
+            <a className="btn sm" href={api.downloadUrl(d.id)} download={d.nome} data-testid={`link-material-doc-${d.id}`}><Download size={14} />Baixar</a>
+            <ShareDocButton d={d} />
+          </div>
+        ))}
+      </div>
+    ))}</div>
+  );
+}
