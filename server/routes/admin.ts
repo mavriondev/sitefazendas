@@ -7,7 +7,7 @@ import { limparTelefone } from "../auth";
 import { gerarSlug } from "../lib/slug";
 import { sanitizarImagem } from "../lib/foto";
 import { validarGeoJsonPoligono, centroAproximado } from "../lib/geojson";
-import { validarPublicacao, atributoParaPublico, type AtributoRow, type FazendaRow, type FotoRow } from "../lib/publico";
+import { validarPublicacao, atributoParaPublico, projetarFazendaPublica, type AtributoRow, type FazendaRow, type FotoRow } from "../lib/publico";
 import { atributoManual, gravarManual, validarEntradaManual } from "../lib/atributos-db";
 import { vazaDadoSensivel } from "../lib/sigilo";
 import { ATRIBUTOS, chaveValida } from "../../shared/atributos";
@@ -16,6 +16,9 @@ import { apagarArquivo as apagarArquivoUpload, salvarArquivo } from "../lib/arqu
 import { registrarRotasVideos } from "./videos";
 import { registrarRotasDocumentos } from "./documentos";
 import { apagarDocumento } from "../lib/documentos";
+import { registrarRotasCards } from "./cards";
+import { cardsIniciais } from "../../shared/cards";
+import { cardsParaPublico } from "../lib/cards";
 
 const STATUS = ["rascunho", "revisao", "publicada", "vendida", "arquivada"];
 
@@ -96,6 +99,7 @@ const COLUNAS_EDITAVEIS = [
 export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: OpcoesAdmin) {
   registrarRotasVideos(app, db, exigirAdmin);
   registrarRotasDocumentos(app, db, exigirAdmin, op.documentosDir);
+  registrarRotasCards(app, db, exigirAdmin);
   const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 12 * 1024 * 1024, files: 1, fields: 8, fieldSize: 4096, parts: 10, fieldNameSize: 100 },
@@ -150,11 +154,17 @@ export function registrarRotasAdmin(app: Express, db: Db, exigirAdmin: any, op: 
   app.get("/api/admin/fazendas/:id", exigirAdmin, async (req, res) => {
     const c = await carregar(db, idDe(req));
     if (!c) return res.status(404).json({ message: "Fazenda não encontrada." });
+    const publica = projetarFazendaPublica(c.f, c.atributos, []);
+    // Expor só o contexto necessário à prévia, sem reaproveitar a linha privada.
+    const base = { area: publica.area, regiao: publica.regiao, culturas: publica.culturas, atributos: publica.atributos };
     res.json({
       fazenda: c.f, atributos: c.atributos, fotos: c.fotos, videos: c.videos, documentos: c.documentos,
       problemas_publicacao: validarPublicacao(c.f, c.fotos, c.atributos, c.videos),
       atributos_catalogo: ATRIBUTOS,
       previa_publica: c.atributos.map(atributoParaPublico).filter(Boolean),
+      cards_configuracao: c.f.cards ?? cardsIniciais(base),
+      cards_base_publica: base,
+      cards_previa: cardsParaPublico(c.f.cards, base, c.f),
     });
   });
 

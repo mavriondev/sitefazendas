@@ -4,13 +4,14 @@ import { api } from "../api";
 import { Erro, Ok, Aviso } from "../components/Avisos";
 import { VideosAdmin } from "./VideosAdmin";
 import { DocumentosAdmin } from "./DocumentosAdmin";
+import { CardsAdmin } from "./CardsAdmin";
 import { ICONES } from "../components/Caracteristicas";
 import { Info } from "lucide-react";
 import { ESTADOS_BRASIL } from "../../../shared/filtros-publicos";
 import { Campo, useAcaoUnica, useConfirmar, useFormularioComRascunho } from "./comuns";
 
 type Confirmar = ReturnType<typeof useConfirmar>[0];
-type Aba = "dados" | "atributos" | "fotos" | "videos" | "documentos" | "publicar";
+type Aba = "dados" | "cards" | "atributos" | "fotos" | "videos" | "documentos" | "publicar";
 const ESTADO_ROTULO: Record<string, string> = { confirmado: "Confirmado", indicado: "Indicado por fonte", sem_dado: "Sem dado" };
 
 export default function FazendaEditor() {
@@ -26,25 +27,26 @@ export default function FazendaEditor() {
     try { await fn(); setOk(msg); await carregar(); } catch (x) { setErro(x); await carregar(); }
   });
   const [confirmar, dialogo] = useConfirmar();
-  if (!d) return <><Erro erro={erro} /><p className="suave">Carregando…</p></>;
+  if (!d || String(d.fazenda.id) !== id) return <><Erro erro={erro} /><p className="suave">Carregando…</p></>;
   const f = d.fazenda;
   return (
     <>
       <p><Link to="/admin">← Fazendas</Link></p>
       <h1>{f.titulo} <span className="etiqueta">{f.status}</span></h1>
       <div className="abas" role="tablist" aria-label="Seções da fazenda" onKeyDown={(e) => {
-        const abas: Aba[] = ["dados", "atributos", "fotos", "videos", "documentos", "publicar"];
+        const abas: Aba[] = ["dados", "cards", "atributos", "fotos", "videos", "documentos", "publicar"];
         const i = abas.indexOf(aba);
         const j = e.key === "ArrowRight" ? (i + 1) % abas.length : e.key === "ArrowLeft" ? (i + abas.length - 1) % abas.length : e.key === "Home" ? 0 : e.key === "End" ? abas.length - 1 : -1;
         if (j < 0) return;
         e.preventDefault(); setAba(abas[j]);
         requestAnimationFrame(() => document.getElementById(`aba-${abas[j]}`)?.focus());
-      }}>{(["dados", "atributos", "fotos", "videos", "documentos", "publicar"] as Aba[]).map((a) => (
+      }}>{(["dados", "cards", "atributos", "fotos", "videos", "documentos", "publicar"] as Aba[]).map((a) => (
         <button key={a} id={`aba-${a}`} role="tab" aria-selected={aba === a} aria-controls="painel-aba" tabIndex={aba === a ? 0 : -1}
-          className={aba === a ? "ativo" : ""} onClick={() => setAba(a)}>{{ dados: "Dados", atributos: "Dados da terra", fotos: "Fotos", videos: "Vídeos", documentos: "Documentos", publicar: "Publicação" }[a]}</button>))}</div>
+          className={aba === a ? "ativo" : ""} onClick={() => setAba(a)}>{{ dados: "Dados", cards: "Cards", atributos: "Dados da terra", fotos: "Fotos", videos: "Vídeos", documentos: "Documentos", publicar: "Publicação" }[a]}</button>))}</div>
       <Erro erro={erro} />{ok && <Ok>{ok}</Ok>}
       <div id="painel-aba" role="tabpanel" aria-labelledby={`aba-${aba}`} aria-busy={ocupado} className={ocupado ? "ocupado" : ""}>
         <div hidden={aba !== "dados"}><Dados key={String(f.atualizado_em)} f={f} acao={acao} id={id!} confirmar={confirmar} /></div>
+        <div hidden={aba !== "cards"}>{d.cards_base_publica && <CardsAdmin key={id} id={id!} config={d.cards_configuracao ?? []} base={d.cards_base_publica} previaSalva={d.cards_previa} acao={acao} confirmar={confirmar} />}</div>
         {aba === "atributos" && <Atributos d={d} acao={acao} id={id!} confirmar={confirmar} />}
         {aba === "fotos" && <Fotos d={d} acao={acao} id={id!} confirmar={confirmar} />}
         {aba === "videos" && <VideosAdmin videos={d.videos ?? []} acao={acao} id={id!} confirmar={confirmar}/>}
@@ -88,6 +90,7 @@ function Dados({ f, acao, id, confirmar }: { f: any; acao: any; id: string; conf
           {T("preco_exibicao", "Valor exibido (texto livre, opcional)")}{T("whatsapp_proprio", "WhatsApp desta fazenda (vazio = padrão)")}
         </div>
         <label htmlFor="desc">Descrição pública</label><textarea id="desc" rows={6} value={v.descricao_publica} onChange={set("descricao_publica")} />
+        <p className="suave pequeno">Texto seu, escrito para publicação. Área, água, solo e demais dados técnicos são editados em Dados da terra e exibidos pelos cards vinculados (aba Cards); evite copiá-los aqui para não ficarem desatualizados.</p>
         <label className="linha" style={{ fontWeight: 400 }}><input type="checkbox" style={{ width: "auto" }} checked={v.destaque} onChange={set("destaque")} />Destaque na home</label>
         <div style={{ maxWidth: 200 }}>{T("destaque_ordem", "Ordem do destaque (menor primeiro)", { inputMode: "numeric" })}</div>
         <label className="linha" style={{ fontWeight: 400 }}><input type="checkbox" style={{ width: "auto" }} checked={v.mostrar_mapa} onChange={set("mostrar_mapa")} />Mostrar silhueta do imóvel (exige polígono)</label>

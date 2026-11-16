@@ -41,7 +41,10 @@ export const caminhoDocumento = (dir: string, arquivo: string): string | null =>
 export async function salvarDocumento(dir: string, arquivo: string, dados: Buffer) {
   const destino = caminhoDocumento(dir, arquivo); if (!destino) throw new Error("Nome de arquivo inválido.");
   await fs.mkdir(dir, { recursive: true, mode: 0o700 });
-  await fs.writeFile(destino, dados, { flag: "wx", mode: 0o600 });
+  // O grupo privado da pasta pode ler pelo ponto de montagem somente leitura do CRM.
+  // A pasta permanece fora dos uploads públicos; nenhum acesso é dado a outros usuários.
+  await fs.writeFile(destino, dados, { flag: "wx", mode: 0o640 });
+  await fs.chmod(destino, 0o640); // A UMask restritiva do serviço não deve bloquear a leitura do CRM.
 }
 export async function apagarDocumento(dir: string, arquivo: string | null) {
   const destino = arquivo ? caminhoDocumento(dir, arquivo) : null;

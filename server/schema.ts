@@ -201,6 +201,9 @@ export const MIGRACOES: string[] = [
   )`,
   // Opt-in por imóvel: nunca transforma a área de cadastros legados em pública.
   `ALTER TABLE fazendas ADD COLUMN IF NOT EXISTS mostrar_area_exata BOOLEAN NOT NULL DEFAULT FALSE`,
+  // NULL preserva a compatibilidade inicial; [] oculta a faixa por decisão editorial.
+  `ALTER TABLE fazendas ADD COLUMN IF NOT EXISTS cards JSONB DEFAULT NULL
+    CHECK (cards IS NULL OR (jsonb_typeof(cards) = 'array' AND jsonb_array_length(cards) <= 24))`,
 ];
 
 export async function migrar(db: Db): Promise<void> {

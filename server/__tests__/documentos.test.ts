@@ -43,7 +43,10 @@ export async function rodar() {
     assert.ok(!("arquivo" in doc), "o nome físico não vai ao navegador");
     const arquivos = fs.readdirSync(documentosDir); assert.equal(arquivos.length, 1);
     assert.match(arquivos[0], /^[a-f0-9]{48}\.pdf$/);
-    assert.equal(fs.statSync(path.join(documentosDir, arquivos[0])).mode & 0o077, 0, "arquivo só do dono");
+    const modo = fs.statSync(path.join(documentosDir, arquivos[0])).mode;
+    assert.equal(modo & 0o027, 0, "sem escrita/execução de grupo nem acesso para outros");
+    assert.equal(modo & 0o600, 0o600, "dono mantém leitura e escrita");
+    assert.equal(modo & 0o040, 0o040, "grupo privado pode ler mesmo com UMask restritiva");
 
     const lista = (await admin.get(rota)).json.documentos;
     assert.equal(lista.length, 1); assert.ok(!("arquivo" in lista[0]));

@@ -30,6 +30,12 @@ Usar `/etc/gramogol/runtime.json` com permissões restritas e o carregador
 O banco e o usuário PostgreSQL são exclusivos da Gramogol; não são os da Hub/Connect.
 Uploads persistem em `/var/lib/gramogol/uploads`, fora do código e de `dist`.
 
+Para documentos compartilhados com o CRM, criar a pasta privada com dono do site,
+grupo exclusivo do CRM e modo `2750` (setgid). Os arquivos novos usam `0640`:
+somente o site grava. Expor ao CRM por bind mount somente leitura, apontado por
+`CRM_SITE_DOCUMENTS_DIR`, sem liberar travessia da pasta privada do site. Conceder
+apenas `SELECT` em `fazenda_documentos` à credencial de origem já usada pelo CRM.
+
 ## 3. Instalar a versão aprovada
 - Em diretório de release separado, obter o commit aprovado do repositório
   `mavriondev/sitefazendas`. Usar a versão suportada de Node e o lockfile do projeto.
