@@ -3,13 +3,14 @@ import { Link, useParams } from "react-router-dom";
 import { api } from "../api";
 import { Erro, Ok, Aviso } from "../components/Avisos";
 import { VideosAdmin } from "./VideosAdmin";
+import { DocumentosAdmin } from "./DocumentosAdmin";
 import { ICONES } from "../components/Caracteristicas";
 import { Info } from "lucide-react";
 import { ESTADOS_BRASIL } from "../../../shared/filtros-publicos";
 import { Campo, useAcaoUnica, useConfirmar, useFormularioComRascunho } from "./comuns";
 
 type Confirmar = ReturnType<typeof useConfirmar>[0];
-type Aba = "dados" | "atributos" | "fotos" | "videos" | "publicar";
+type Aba = "dados" | "atributos" | "fotos" | "videos" | "documentos" | "publicar";
 const ESTADO_ROTULO: Record<string, string> = { confirmado: "Confirmado", indicado: "Indicado por fonte", sem_dado: "Sem dado" };
 
 export default function FazendaEditor() {
@@ -32,21 +33,22 @@ export default function FazendaEditor() {
       <p><Link to="/admin">← Fazendas</Link></p>
       <h1>{f.titulo} <span className="etiqueta">{f.status}</span></h1>
       <div className="abas" role="tablist" aria-label="Seções da fazenda" onKeyDown={(e) => {
-        const abas: Aba[] = ["dados", "atributos", "fotos", "videos", "publicar"];
+        const abas: Aba[] = ["dados", "atributos", "fotos", "videos", "documentos", "publicar"];
         const i = abas.indexOf(aba);
         const j = e.key === "ArrowRight" ? (i + 1) % abas.length : e.key === "ArrowLeft" ? (i + abas.length - 1) % abas.length : e.key === "Home" ? 0 : e.key === "End" ? abas.length - 1 : -1;
         if (j < 0) return;
         e.preventDefault(); setAba(abas[j]);
         requestAnimationFrame(() => document.getElementById(`aba-${abas[j]}`)?.focus());
-      }}>{(["dados", "atributos", "fotos", "videos", "publicar"] as Aba[]).map((a) => (
+      }}>{(["dados", "atributos", "fotos", "videos", "documentos", "publicar"] as Aba[]).map((a) => (
         <button key={a} id={`aba-${a}`} role="tab" aria-selected={aba === a} aria-controls="painel-aba" tabIndex={aba === a ? 0 : -1}
-          className={aba === a ? "ativo" : ""} onClick={() => setAba(a)}>{{ dados: "Dados", atributos: "Dados da terra", fotos: "Fotos", videos: "Vídeos", publicar: "Publicação" }[a]}</button>))}</div>
+          className={aba === a ? "ativo" : ""} onClick={() => setAba(a)}>{{ dados: "Dados", atributos: "Dados da terra", fotos: "Fotos", videos: "Vídeos", documentos: "Documentos", publicar: "Publicação" }[a]}</button>))}</div>
       <Erro erro={erro} />{ok && <Ok>{ok}</Ok>}
       <div id="painel-aba" role="tabpanel" aria-labelledby={`aba-${aba}`} aria-busy={ocupado} className={ocupado ? "ocupado" : ""}>
         <div hidden={aba !== "dados"}><Dados key={String(f.atualizado_em)} f={f} acao={acao} id={id!} confirmar={confirmar} /></div>
         {aba === "atributos" && <Atributos d={d} acao={acao} id={id!} confirmar={confirmar} />}
         {aba === "fotos" && <Fotos d={d} acao={acao} id={id!} confirmar={confirmar} />}
         {aba === "videos" && <VideosAdmin videos={d.videos ?? []} acao={acao} id={id!} confirmar={confirmar}/>}
+        {aba === "documentos" && <DocumentosAdmin documentos={d.documentos ?? []} acao={acao} id={id!} confirmar={confirmar} />}
         {aba === "publicar" && <Publicar d={d} acao={acao} id={id!} confirmar={confirmar} />}
       </div>
       {dialogo}

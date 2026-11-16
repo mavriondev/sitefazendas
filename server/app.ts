@@ -21,6 +21,8 @@ import { registrarRotasConteudo } from "./routes/conteudo";
 export interface OpcoesApp {
   db: Db;
   uploadsDir: string;
+  /** Pasta PRIVADA dos documentos (fora de uploadsDir). Sem ela, o envio de documentos fica desligado. */
+  documentosDir?: string;
   segredo: string;
   producao: boolean;
   /** Limites de tentativas (login/cadastro/contato). Desligue só em testes. */
@@ -87,7 +89,7 @@ export function criarApp(o: OpcoesApp): Express {
   registrarRotasAgro(rotas, o.db, { automatico: o.agroAutomatico ?? process.env.NODE_ENV !== "test", buscar: o.fetchAgro });
   registrarRotasPublicas(rotas, o.db, { limitar: o.limitar });
   registrarRotasConteudo(rotas, o.db, o.uploadsDir);
-  registrarRotasAdmin(rotas, o.db, exigirAdmin, { uploadsDir: o.uploadsDir });
+  registrarRotasAdmin(rotas, o.db, exigirAdmin, { uploadsDir: o.uploadsDir, documentosDir: o.documentosDir });
   registrarRotasSeo(rotas, o.db, o.uploadsDir, o.siteUrl);
 
 
