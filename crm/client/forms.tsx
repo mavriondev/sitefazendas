@@ -3,7 +3,7 @@ import { AlertTriangle } from "lucide-react";
 import { api, key, ETAPAS, ROTULOS, type Contact, type Deal, type Etapa } from "./api";
 import { isClosedStage } from "../shared";
 import { QuickReturn, toLocal } from "./quick";
-import { ErrorBox, Modal, useAction, useAuth, useDirty, useLoad, digits, reloadCurrentRecord } from "./ui";
+import { ErrorBox, Modal, fmtPhone, useAction, useAuth, useDirty, useLoad, digits, reloadCurrentRecord } from "./ui";
 
 /* ---------- Deal ---------- */
 
@@ -48,7 +48,7 @@ export function DealForm({ deal, presetContato, presetFazenda, onClose, onSaved 
             <label className="f">Contato
               <select value={contato} onChange={(e) => setContato(e.target.value)} required data-testid="select-deal-contact" disabled={!!presetContato}>
                 <option value="">{opts.loading ? "Carregando…" : "Selecione"}</option>
-                {opts.data?.[0].contatos.map((c) => <option key={c.id} value={c.id}>{c.nome} · {c.telefone}</option>)}
+                {opts.data?.[0].contatos.map((c) => <option key={c.id} value={c.id}>{c.nome} · {fmtPhone(c.telefone)}</option>)}
               </select>
             </label>
             <label className="f">Fazenda

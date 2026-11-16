@@ -5,7 +5,7 @@ import { isClosedStage } from "../shared";
 import { api, ETAPAS, ROTULOS, isCliente, type Deal, type Etapa } from "./api";
 import { ContactForm, DealForm } from "./forms";
 import { DealControls, QuickContactForm, waMessage } from "./quick";
-import { Empty, ErrorBox, EtapaTag, History, PerfilTag, RetornoTag, Skeleton, dayDiff, fmtDate, initials, useAction, useAuth, useLoad, waLink } from "./ui";
+import { Empty, ErrorBox, EtapaTag, History, PerfilTag, RetornoTag, Skeleton, dayDiff, fmtDate, fmtPhone, initials, useAction, useAuth, useLoad, waLink } from "./ui";
 
 export function DealRow({ d, hide, onChanged }: { d: Deal; hide?: "contato" | "fazenda"; onChanged: () => void }) {
   return (
@@ -65,7 +65,7 @@ export function Home() {
                   {ETAPAS.map((e) => {
                     const n = deals.filter((d) => d.etapa === e).length;
                     return (
-                      <Link key={e} to={`/negociacoes/todas?etapa=${e}`} className="row" style={{ textDecoration: "none", color: "inherit", justifyContent: "space-between" }} data-testid={`link-stage-${e}`}>
+                      <Link key={e} to={`/negociacoes/todas?etapa=${e}`} className="row stage-row" style={{ textDecoration: "none", color: "inherit", justifyContent: "space-between" }} data-testid={`link-stage-${e}`}>
                         <EtapaTag e={e} />
                         <span style={{ flex: 1, height: 6, margin: "0 10px", background: "hsl(var(--paper-2))", borderRadius: 9, overflow: "hidden" }}>
                           <span style={{ display: "block", height: "100%", width: `${(n / deals.length) * 100}%`, background: "hsl(var(--ink))" }} />
@@ -120,7 +120,7 @@ export function Contacts() {
           {shownContacts().map((c) => (
             <Link key={c.id} to={`/contatos/${c.id}`} className="item" data-testid={`row-contact-${c.id}`}>
               <span className="avatar">{initials(c.nome)}</span>
-              <div className="item-main"><div className="item-title">{c.nome}</div><div className="item-sub"><span className="mono">{c.telefone}</span> · {c.responsavel_nome}</div></div>
+              <div className="item-main"><div className="item-title">{c.nome}</div><div className="item-sub"><span className="mono">{fmtPhone(c.telefone)}</span> · {c.responsavel_nome}</div></div>
               <PerfilTag cliente={clientes.has(c.id)} />
               {c.fazenda_ids.length > 0 && <span className="tag">{c.fazenda_ids.length} faz.</span>}
             </Link>
@@ -168,7 +168,7 @@ export function ContactDetail() {
         <div className="stack">
           <section className="card">
             <div className="row" style={{ marginBottom: 14 }}>
-              {c.telefone ? <a className="btn accent" href={`tel:${c.telefone}`} data-testid="link-call"><Phone size={15} /><span className="mono">{c.telefone}</span></a> : <span className="muted">Telefone não informado na origem.</span>}
+              {c.telefone ? <a className="btn accent" href={`tel:${c.telefone}`} data-testid="link-call"><Phone size={15} /><span className="mono">{fmtPhone(c.telefone)}</span></a> : <span className="muted">Telefone não informado na origem.</span>}
               {c.email && <a className="btn" href={`mailto:${c.email}`} data-testid="link-email"><Mail size={15} />{c.email}</a>}
             </div>
             <label className="f">Mensagem para WhatsApp

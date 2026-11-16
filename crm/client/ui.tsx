@@ -85,6 +85,13 @@ export function useAction() {
 export const fmtDate = (s: string | null | undefined) => s ? new Date(s).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 export const fmtDateTime = (s: string | null | undefined) => s ? new Date(s).toLocaleString("pt-BR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
 export const fmtSize = (n: number) => n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1).replace(".", ",")} MB`;
+/** 5538999991234 -> (38) 99999-1234 (só para exibir; o valor guardado não muda). */
+export function fmtPhone(tel: string | null | undefined) {
+  const d = (tel ?? "").replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, "");
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return tel ?? "";
+}
 export const digits = (s: string) => s.replace(/\D/g, "");
 export const initials = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]!.toUpperCase()).join("") || "?";
 export function waLink(tel: string, msg: string) {

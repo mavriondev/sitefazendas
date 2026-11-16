@@ -57,12 +57,12 @@ export function DealControls({ d, onChanged }: { d: Deal; onChanged: () => void 
         {tel && <a className="btn sm" href={waLink(tel, waMessage(d.contato_nome, d.fazenda_titulo))} target="_blank" rel="noopener noreferrer" data-testid={`link-wa-${d.id}`}><MessageCircle size={14} />WhatsApp</a>}
         {tel && <a className="btn sm" href={`tel:${tel}`} data-testid={`link-call-${d.id}`}><Phone size={14} />Ligar</a>}
       </div>
-      <div className="chips" role="group" aria-label="Status da negociação">
+      <div className="chips cols" role="group" aria-label="Status da negociação">
         {ETAPAS.map((e) => <button key={e} className={`chip ${d.etapa === e ? "on" : ""}`} disabled={act.busy} aria-pressed={d.etapa === e} onClick={() => { if (d.etapa !== e) void save({ etapa: e }); }} data-testid={`chip-status-${d.id}-${e}`}>{ROTULOS[e]}</button>)}
       </div>
       {!closed && (
-        <div className="chips" role="group" aria-label="Lembrar de retornar">
-          <span className="small muted" style={{ alignSelf: "center" }}>Lembrar:</span>
+        <div className="chips cols" role="group" aria-label="Lembrar de retornar">
+          <span className="small muted chip-label" style={{ alignSelf: "center" }}>Lembrar de retornar:</span>
           {ATALHOS.slice(0, 3).map((a) => {
             const v = daysFromNow(a.days);
             return <button key={a.days} className={`chip ${toLocal(d.proximo_retorno) === v ? "on" : ""}`} disabled={act.busy} onClick={() => void save({ proximo_retorno: new Date(v).toISOString() })} data-testid={`chip-remind-${d.id}-${a.days}d`}>{a.label}</button>;
