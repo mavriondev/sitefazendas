@@ -6,6 +6,7 @@ import { AuthCtx, confirmLeave, resetDirty, useAction, useAuth, useNavigationGua
 import { ContactDetail, Contacts, Deals, Home } from "./pages-atendimento";
 import { Account, FarmDetail, Farms, Import, Team } from "./pages-gestao";
 import { Materiais, MateriaisFazenda } from "./materiais";
+import { NegociacoesFazenda, NegociacoesPorAtivo } from "./negociacoes";
 
 function Login({ onLogin, expired }: { onLogin: (u: User) => void; expired: boolean }) {
   const [email, setEmail] = useState("");
@@ -130,7 +131,9 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/contatos" element={<Contacts />} />
           <Route path="/contatos/:id" element={<ContactDetail />} />
-          <Route path="/negociacoes" element={<Deals />} />
+          <Route path="/negociacoes" element={<NegociacoesPorAtivo />} />
+          <Route path="/negociacoes/todas" element={<Deals />} />
+          <Route path="/negociacoes/:id" element={<NegociacoesFazenda />} />
           <Route path="/fazendas" element={<Farms />} />
           <Route path="/fazendas/:id" element={<FarmDetail />} />
           <Route path="/materiais" element={<Materiais />} />

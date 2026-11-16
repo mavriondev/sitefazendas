@@ -42,7 +42,7 @@ export function Home() {
       <div className="head">
         <div><div className="eyebrow">Bom trabalho, {user.nome.split(" ")[0]}</div><h1>Retornos e negócios</h1></div>
         <div className="row">
-          <Link className="btn" to="/negociacoes?nova=1" data-testid="link-new-deal"><Plus size={16} />Negociação</Link>
+          <Link className="btn" to="/negociacoes/todas?nova=1" data-testid="link-new-deal"><Plus size={16} />Negociação</Link>
           <button className="btn primary" onClick={() => setQuick(true)} data-testid="button-quick-contact"><Plus size={16} />Novo contato</button>
         </div>
       </div>
@@ -50,10 +50,10 @@ export function Home() {
       {q.loading && !q.data ? <Skeleton /> : q.data && (
         <>
           <div className="stats">
-            <Link className="stat hot" to="/negociacoes?retorno=atrasado" data-testid="stat-overdue"><b>{atrasados}</b><span>Retornos atrasados</span></Link>
-            <Link className="stat" to="/negociacoes?retorno=hoje" data-testid="stat-today"><b>{hoje}</b><span>Para hoje</span></Link>
-            <Link className="stat" to="/negociacoes?retorno=sem" data-testid="stat-noreturn"><b>{semRetorno}</b><span>Ativas sem retorno</span></Link>
-            <Link className="stat" to="/negociacoes" data-testid="stat-active"><b>{ativas.length}</b><span>Negociações ativas</span></Link>
+            <Link className="stat hot" to="/negociacoes/todas?retorno=atrasado" data-testid="stat-overdue"><b>{atrasados}</b><span>Retornos atrasados</span></Link>
+            <Link className="stat" to="/negociacoes/todas?retorno=hoje" data-testid="stat-today"><b>{hoje}</b><span>Para hoje</span></Link>
+            <Link className="stat" to="/negociacoes/todas?retorno=sem" data-testid="stat-noreturn"><b>{semRetorno}</b><span>Ativas sem retorno</span></Link>
+            <Link className="stat" to="/negociacoes/todas" data-testid="stat-active"><b>{ativas.length}</b><span>Negociações ativas</span></Link>
           </div>
           <div className="grid2">
             <section className="card">
@@ -68,7 +68,7 @@ export function Home() {
                   {ETAPAS.map((e) => {
                     const n = deals.filter((d) => d.etapa === e).length;
                     return (
-                      <Link key={e} to={`/negociacoes?etapa=${e}`} className="row" style={{ textDecoration: "none", color: "inherit", justifyContent: "space-between" }} data-testid={`link-stage-${e}`}>
+                      <Link key={e} to={`/negociacoes/todas?etapa=${e}`} className="row" style={{ textDecoration: "none", color: "inherit", justifyContent: "space-between" }} data-testid={`link-stage-${e}`}>
                         <EtapaTag e={e} />
                         <span style={{ flex: 1, height: 6, margin: "0 10px", background: "hsl(var(--paper-2))", borderRadius: 9, overflow: "hidden" }}>
                           <span style={{ display: "block", height: "100%", width: `${(n / deals.length) * 100}%`, background: "hsl(var(--ink))" }} />
@@ -223,7 +223,7 @@ export function Deals() {
   return (
     <div className="page">
       <div className="head">
-        <div><div className="eyebrow">Funil</div><h1>Negociações</h1></div>
+        <div><Link className="back" to="/negociacoes"><ArrowLeft size={14} />Por fazenda</Link><div className="eyebrow">Todas por retorno</div><h1>Negociações</h1></div>
         <button className="btn primary" onClick={() => setEdit("new")} data-testid="button-new-deal"><Plus size={16} />Nova negociação</button>
       </div>
       <div className="stack" style={{ gap: 8 }}>
