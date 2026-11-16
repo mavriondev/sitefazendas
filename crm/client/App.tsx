@@ -7,6 +7,8 @@ import { ContactDetail, Contacts, Deals, Home } from "./pages-atendimento";
 import { Account, FarmDetail, Farms, Import, Team } from "./pages-gestao";
 import { Materiais, MateriaisFazenda } from "./materiais";
 import { NegociacoesFazenda, NegociacoesPorAtivo } from "./negociacoes";
+import logoClaro from "../../client/public/images/gramogol/logo-gramogol-claro.png";
+import fotoLogin from "../../client/public/images/gramogol/grao-mogol-serra.jpg";
 
 function Login({ onLogin, expired }: { onLogin: (u: User) => void; expired: boolean }) {
   const [email, setEmail] = useState("");
@@ -14,8 +16,8 @@ function Login({ onLogin, expired }: { onLogin: (u: User) => void; expired: bool
   const act = useAction();
   return (
     <div className="login">
-      <div className="login-art">
-        <div style={{ position: "relative", zIndex: 1 }}><div className="brand" style={{ padding: 0 }}>Gramogol</div><div className="brand-sub" style={{ padding: 0 }}>Área da equipe</div></div>
+      <div className="login-art" style={{ ["--login-photo" as string]: `url(${fotoLogin})` }}>
+        <div style={{ position: "relative", zIndex: 1 }}><div className="brand" style={{ padding: 0 }}><img src={logoClaro} alt="Gramogol" /></div><div className="brand-sub" style={{ padding: 0 }}>Área da equipe</div></div>
         <div className="big" style={{ position: "relative", zIndex: 1 }}>Quem ligou,<br />qual fazenda,<br /><em>quando voltar.</em></div>
       </div>
       <div className="login-form">
@@ -53,7 +55,7 @@ function Shell({ children, onLogout }: { children: ReactNode; onLogout: () => vo
   ];
   const side = (
     <aside className="side">
-      <div className="brand">Gramogol</div>
+      <div className="brand"><img src={logoClaro} alt="Gramogol" /></div>
       <div className="brand-sub">CRM da equipe</div>
       <nav className="nav">{links.map((l) => <NavLink key={l.to} to={l.to} end={l.end} data-testid={`nav-${l.to.slice(1) || "home"}`}><l.icon size={17} />{l.label}</NavLink>)}</nav>
       <div className="side-foot">
@@ -67,7 +69,7 @@ function Shell({ children, onLogout }: { children: ReactNode; onLogout: () => vo
     <div className="shell">
       {side}
       <header className="topbar">
-        <Link to="/" className="brand" style={{ color: "inherit", textDecoration: "none" }}>Gramogol</Link>
+        <Link to="/" className="brand" style={{ color: "inherit", textDecoration: "none" }}><img src={logoClaro} alt="Gramogol" /></Link>
         <button onClick={() => setOpen(true)} aria-label="Menu" data-testid="button-menu"><Menu size={22} /></button>
       </header>
       {open && <div className="drawer" onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>{side}</div>}
@@ -112,7 +114,7 @@ function App() {
     setUser(null); setExpired(false); setEpoch((n) => n + 1); nav("/login", { replace: true });
   };
 
-  if (state === "loading") return <div className="login-form" style={{ minHeight: "100dvh" }}><div className="brand" style={{ color: "hsl(var(--ink))", opacity: .5 }}>Gramogol</div></div>;
+  if (state === "loading") return <div className="login-form" style={{ minHeight: "100dvh" }}><div className="brand" style={{ color: "hsl(var(--ink))", opacity: .5 }} aria-busy="true">Gramogol</div></div>;
   if (state === "error") return (
     <div className="login-form" style={{ minHeight: "100dvh" }}>
       <div className="empty" style={{ maxWidth: 380 }}><h3>Sem conexão com o CRM</h3><div className="small" style={{ marginBottom: 12 }}>Verifique a internet e tente de novo.</div><button className="btn primary" onClick={boot} data-testid="button-retry-boot"><RefreshCw size={15} />Tentar de novo</button></div>
