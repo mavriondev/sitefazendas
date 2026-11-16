@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowLeft, Download, ExternalLink, FileText, KeyRound, L
 import { api, key, type Access, type Deal, type User } from "./api";
 import { DealForm } from "./forms";
 import { DealRow } from "./pages-atendimento";
+import { PhotosCard, ShareDocButton, ShareLinkButton } from "./share";
 import { Empty, ErrorBox, History, Modal, Skeleton, fmtDate, fmtDateTime, fmtSize, initials, pdfUrl, publicUrl, useAction, useAuth, useDirty, useLoad } from "./ui";
 
 const LABELS: Record<string, string> = { car: "CAR", uf: "UF", preco: "Preço", notas_internas: "Notas internas", municipio: "Município", observacao: "Observação", publico: "Mostrar no site", valor_json: "Informação", agua: "Água", energia: "Energia", argila: "Argila", altitude: "Altitude", confirmado: "Confirmado", nao_informado: "Não informado", nao_detectado: "Não detectado", detectado: "Detectado", corretor: "Cadastro manual" };
@@ -116,6 +117,7 @@ export function FarmDetail() {
             {pub ? (<>
               <a className="btn accent" href={pdfUrl(site_url, f.slug)} target="_blank" rel="noopener noreferrer" data-testid="link-farm-pdf"><FileText size={15} />PDF</a>
               <a className="btn" href={publicUrl(site_url, f.slug)} target="_blank" rel="noopener noreferrer" data-testid="link-farm-public"><ExternalLink size={15} />Página pública</a>
+              <ShareLinkButton f={f} url={publicUrl(site_url, f.slug)} />
             </>) : <span className="tag warn">Status: {f.status} — sem link público</span>}
           </div>
         </div>
@@ -124,7 +126,7 @@ export function FarmDetail() {
       <ErrorBox error={q.error} retry={q.reload} />
       <div className="grid2">
         <div className="stack">
-          {f.fotos.length > 0 && <section className="card"><div className="photos">{f.fotos.map((p) => <figure key={p.arquivo}><img src={api.photoUrl(f.id, p.arquivo)} alt={p.legenda ?? f.titulo} loading="lazy" />{p.legenda && <figcaption>{p.legenda}</figcaption>}</figure>)}</div></section>}
+          <PhotosCard f={f} />
           <section className="card">
             <div className="card-h"><h2>Dados</h2><span className="small muted">Somente leitura · {fmtDate(f.atualizado_em)}</span></div>
             {f.descricao && <p style={{ whiteSpace: "pre-wrap", marginTop: 0 }}>{f.descricao}</p>}
@@ -152,6 +154,7 @@ export function FarmDetail() {
                 <FileText size={18} className="muted" style={{ flex: "none" }} />
                 <div className="item-main"><div className="item-title">{d.nome}</div><div className="item-sub">{d.categoria}{d.descricao ? ` · ${d.descricao}` : ""} · {fmtSize(d.tamanho)} · {d.autor_nome}, {fmtDate(d.criado_em)}</div></div>
                 <a className="btn sm" href={api.downloadUrl(d.id)} download={d.nome} aria-label="Baixar" data-testid={`link-download-${d.id}`}><Download size={14} /></a>
+                <ShareDocButton d={d} />
                 <button className="btn sm danger" onClick={() => removeDoc(d.id, d.nome)} disabled={del.busy} aria-label="Remover" data-testid={`button-delete-doc-${d.id}`}><Trash2 size={14} /></button>
               </div>))}</div> : <Empty title="Nenhum documento">Matrícula, CAR, mapas: envie abaixo para a equipe achar rápido.</Empty>}
             <UploadForm farmId={f.id} onDone={q.reload} />

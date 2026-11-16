@@ -145,7 +145,7 @@ export function QuickContactForm({ onClose, onSaved }: { onClose: () => void; on
   const lista = (farms.data?.fazendas ?? []).filter((f) => f.disponivel);
 
   return (
-    <Modal title="Novo cliente" onClose={close}>
+    <Modal title="Novo contato" onClose={close}>
       <form className="form" onSubmit={submit}>
         <fieldset className="form form-fields" disabled={act.busy}>
           <fieldset className="form form-fields" disabled={!!saved} style={{ border: 0, padding: 0, margin: 0 }}>
@@ -167,7 +167,7 @@ export function QuickContactForm({ onClose, onSaved }: { onClose: () => void; on
                 <div>{dups.length ? <>Este telefone já está em: {dups.map((d, i) => <span key={d.id}>{i > 0 && ", "}<Link to={`/contatos/${d.id}`}>{d.nome}</Link></span>)}.</> : "Este telefone já pertence a outro cadastro da equipe."}</div>
                 <label className="row" style={{ fontWeight: 500 }}>
                   <input type="checkbox" checked={confirmDup} onChange={(e) => setConfirmDup(e.target.checked)} data-testid="checkbox-quick-duplicate" />
-                  Cadastrar mesmo assim como cliente separado
+                  Cadastrar mesmo assim como contato separado
                 </label>
               </div>
             </div>
@@ -187,7 +187,7 @@ export function QuickContactForm({ onClose, onSaved }: { onClose: () => void; on
             </div>
           )}
           <label className="f">Observação (opcional)<textarea value={obs} onChange={(e) => setObs(e.target.value)} maxLength={4000} style={{ minHeight: 60 }} data-testid="input-quick-notes" /></label>
-          {saved && err && <div className="alert warn"><AlertTriangle size={17} /><div>O cliente foi salvo, mas a negociação não. Tente salvar de novo ou <Link to={`/contatos/${saved.id}`}>abra o cliente</Link>.</div></div>}
+          {saved && err && <div className="alert warn"><AlertTriangle size={17} /><div>O contato foi salvo, mas a negociação não. Tente salvar de novo ou <Link to={`/contatos/${saved.id}`}>abra o contato</Link>.</div></div>}
           <ErrorBox error={dups ? null : err} />
           <div className="modal-foot">
             <button type="button" className="btn" onClick={close}>Cancelar</button>

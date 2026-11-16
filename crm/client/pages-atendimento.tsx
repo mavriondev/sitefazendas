@@ -43,7 +43,7 @@ export function Home() {
         <div><div className="eyebrow">Bom trabalho, {user.nome.split(" ")[0]}</div><h1>Retornos e negócios</h1></div>
         <div className="row">
           <Link className="btn" to="/negociacoes?nova=1" data-testid="link-new-deal"><Plus size={16} />Negociação</Link>
-          <button className="btn primary" onClick={() => setQuick(true)} data-testid="button-quick-contact"><Plus size={16} />Novo cliente</button>
+          <button className="btn primary" onClick={() => setQuick(true)} data-testid="button-quick-contact"><Plus size={16} />Novo contato</button>
         </div>
       </div>
       <ErrorBox error={q.error} retry={q.reload} />
