@@ -1,8 +1,10 @@
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, FolderDown, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { api } from "./api";
 import { DocsDownloadAll, DocsReadOnly, PhotosCard, ShareLinkButton } from "./share";
+import { humanKey, fmtVal } from "./pages-gestao";
+import { type Farm } from "./api";
 import { Empty, ErrorBox, Skeleton, initials, publicUrl, useLoad } from "./ui";
 
 /* Área "Materiais": só visualizar e baixar o que foi enviado. Nada aqui edita dados. */
@@ -52,11 +54,35 @@ export function MateriaisFazenda() {
         </div>
       </div>
       <ErrorBox error={q.error} retry={q.reload} />
+      <Resumo f={f} />
       {f.fotos.length ? <PhotosCard f={f} /> : <section className="card"><div className="card-h"><h2>Fotos</h2></div><div className="muted small">Nenhuma foto nesta fazenda.</div></section>}
       <section className="card">
         <div className="card-h"><h2>Documentos <span className="tag">{documentos.length}</span></h2><DocsDownloadAll docs={documentos} /></div>
         <DocsReadOnly docs={documentos} />
       </section>
     </div>
+  );
+}
+
+/** Resumo só com dados de anúncio: nunca CAR, município, UF nem notas internas. */
+function Resumo({ f }: { f: Farm }) {
+  const d = f.dados as { culturas?: unknown; preco?: unknown };
+  const linhas: Array<[string, string]> = [];
+  if (f.regiao) linhas.push(["Região", f.regiao]);
+  if (f.area) linhas.push(["Área", areaLabel(f.area)]);
+  if (d.culturas && fmtVal(d.culturas) !== "—") linhas.push(["Culturas", fmtVal(d.culturas)]);
+  if (d.preco && fmtVal(d.preco) !== "—") linhas.push(["Valor", fmtVal(d.preco)]);
+  for (const a of f.atributos) {
+    if (a.publico !== true) continue;
+    const v = a.valor_json != null && fmtVal(a.valor_json) !== "—" ? fmtVal(a.valor_json) : a.achado != null ? fmtVal(a.achado) : "—";
+    if (v !== "—") linhas.push([humanKey(String(a.chave ?? "Informação")), v]);
+  }
+  if (!f.descricao && !linhas.length) return null;
+  return (
+    <section className="card" data-testid="card-resumo">
+      <div className="card-h"><h2>Resumo</h2></div>
+      {f.descricao && <p style={{ whiteSpace: "pre-wrap", marginTop: 0 }}>{f.descricao}</p>}
+      {linhas.length > 0 && <dl className="kv">{linhas.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl>}
+    </section>
   );
 }
