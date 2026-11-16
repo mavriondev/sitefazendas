@@ -1,11 +1,10 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, FolderDown, ListFilter, Plus, Search } from "lucide-react";
-import { api, ETAPAS, ROTULOS, type Deal } from "./api";
+import { api, ETAPAS, ROTULOS } from "./api";
 import { isClosedStage } from "../shared";
 import { DealForm } from "./forms";
 import { DealRow } from "./pages-atendimento";
-import { DoneForm } from "./quick";
 import { Empty, ErrorBox, Skeleton, dayDiff, initials, useLoad } from "./ui";
 
 const areaLabel = (v: string | null) => v ? `${Number(v).toLocaleString("pt-BR")} ha` : "";
@@ -62,8 +61,7 @@ export function NegociacoesPorAtivo() {
 export function NegociacoesFazenda() {
   const id = Number(useParams().id);
   const q = useLoad(() => api.farm(id), [id]);
-  const [edit, setEdit] = useState<Deal | "new" | null>(null);
-  const [done, setDone] = useState<Deal | null>(null);
+  const [creating, setCreating] = useState(false);
   if (q.loading && !q.data) return <div className="page"><Skeleton rows={5} /></div>;
   if (!q.data) return <div className="page"><Link className="back" to="/negociacoes"><ArrowLeft size={14} />Negociações</Link><ErrorBox error={q.error} retry={q.error?.status === 404 || q.error?.status === 403 ? undefined : q.reload} /></div>;
   const { fazenda: f, negociacoes } = q.data;
@@ -77,7 +75,7 @@ export function NegociacoesFazenda() {
           <div style={{ minWidth: 0 }}><div className="eyebrow">{[f.regiao, areaLabel(f.area)].filter(Boolean).join(" · ") || "Fazenda"}</div><h1 data-testid="text-negociacao-title">{f.titulo}</h1></div>
           <div className="row">
             <Link className="btn" to={`/materiais/${f.id}`}><FolderDown size={15} />Materiais</Link>
-            <button className="btn primary" onClick={() => setEdit("new")} disabled={!f.disponivel} data-testid="button-new-deal-farm"><Plus size={16} />Nova negociação</button>
+            <button className="btn primary" onClick={() => setCreating(true)} disabled={!f.disponivel} data-testid="button-new-deal-farm"><Plus size={16} />Nova negociação</button>
           </div>
         </div>
       </div>
@@ -86,17 +84,16 @@ export function NegociacoesFazenda() {
       {ativas.map(({ e, ds }) => (
         <section className="card" key={e} data-testid={`group-stage-${e}`}>
           <div className="card-h"><h2>{ROTULOS[e]}</h2><span className="tag">{ds.length}</span></div>
-          <div className="list">{ds.map((d) => <DealRow key={d.id} d={d} hide="fazenda" onEdit={setEdit} onDone={setDone} />)}</div>
+          <div className="list">{ds.map((d) => <DealRow key={d.id} d={d} hide="fazenda" onChanged={q.reload} />)}</div>
         </section>
       ))}
       {encerradas.length > 0 && (
         <details className="card" data-testid="group-closed">
           <summary style={{ cursor: "pointer", fontWeight: 600 }}>Encerradas ({encerradas.length})</summary>
-          <div className="list" style={{ marginTop: 10 }}>{encerradas.map((d) => <DealRow key={d.id} d={d} hide="fazenda" onEdit={setEdit} />)}</div>
+          <div className="list" style={{ marginTop: 10 }}>{encerradas.map((d) => <DealRow key={d.id} d={d} hide="fazenda" onChanged={q.reload} />)}</div>
         </details>
       )}
-      {edit && <DealForm deal={edit === "new" ? null : edit} presetFazenda={f.id} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); q.reload(); }} />}
-      {done && <DoneForm deal={done} onClose={() => setDone(null)} onSaved={() => { setDone(null); q.reload(); }} />}
+      {creating && <DealForm presetFazenda={f.id} onClose={() => setCreating(false)} onSaved={() => { setCreating(false); q.reload(); }} />}
     </div>
   );
 }

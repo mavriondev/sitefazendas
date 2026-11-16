@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, Check, MessageCircle, Phone } from "lucide-react";
+import { AlertTriangle, MessageCircle, Phone } from "lucide-react";
 import { api, key, ETAPAS, ROTULOS, type Contact, type Deal, type Etapa } from "./api";
 import { isClosedStage } from "../shared";
 import { ErrorBox, Modal, useAction, useAuth, useDirty, useLoad, waLink } from "./ui";
@@ -35,70 +35,52 @@ export function QuickReturn({ value, onChange }: { value: string; onChange: (v: 
 export const waMessage = (nome: string, fazenda?: string | null) =>
   `Olá, ${nome.trim().split(/\s+/)[0]}! Aqui é da Gramogol${fazenda ? `, sobre a ${fazenda}` : ""}.`;
 
-/** Ações de um retorno: ligar, WhatsApp com mensagem pronta e registrar atendimento. */
-export function DealActions({ d, onDone }: { d: Deal; onDone: (d: Deal) => void }) {
-  const tel = d.contato_telefone;
-  return (
-    <div className="row" style={{ marginTop: 8 }}>
-      {tel && <a className="btn sm" href={`tel:${tel}`} data-testid={`link-call-${d.id}`}><Phone size={14} />Ligar</a>}
-      {tel && <a className="btn sm" href={waLink(tel, waMessage(d.contato_nome, d.fazenda_titulo))} target="_blank" rel="noopener noreferrer" data-testid={`link-wa-${d.id}`}><MessageCircle size={14} />WhatsApp</a>}
-      <button className="btn sm primary" onClick={() => onDone(d)} data-testid={`button-done-${d.id}`}><Check size={14} />Feito</button>
-    </div>
-  );
-}
-
-/* ---------- Registrar atendimento ---------- */
-const hoje = () => new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-export function DoneForm({ deal, onClose, onSaved }: { deal: Deal; onClose: () => void; onSaved: () => void }) {
-  const [nota, setNota] = useState("");
-  const [etapa, setEtapa] = useState<Etapa>(deal.etapa);
-  const [retorno, setRetorno] = useState("");
-  const dirty = !!nota.trim() || etapa !== deal.etapa || !!retorno;
-  const clearDirty = useDirty(dirty);
+/** Controles de uma negociação: tudo em botões. A conversa acontece no WhatsApp; o CRM só marca o status. */
+export function DealControls({ d, onChanged }: { d: Deal; onChanged: () => void }) {
   const act = useAction();
-  const closed = isClosedStage(etapa);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!closed && !retorno) { act.setError(new Error("Escolha quando retornar, ou mude a etapa para Concluída/Não avançou.")); return; }
-    // A anotação entra no topo das observações com a data; o histórico guarda cada versão.
-    const obs = nota.trim() ? `${hoje()} – ${nota.trim()}${deal.observacoes ? "\n" + deal.observacoes : ""}`.slice(0, 4000) : deal.observacoes;
-    const ok = await act.run(() => api.saveDeal(deal.id, {
-      contato_id: deal.contato_id, fazenda_id: deal.fazenda_id, etapa, observacoes: obs, versao: deal.versao,
-      proximo_retorno: closed || !retorno ? null : new Date(retorno).toISOString(),
-    }));
-    if (ok) { clearDirty(); onSaved(); }
-  };
-  const close = () => { if (!act.busy && (!dirty || window.confirm("Descartar este registro?"))) onClose(); };
-
+  const [obsOpen, setObsOpen] = useState(false);
+  const [obs, setObs] = useState(d.observacoes);
+  const tel = d.contato_telefone;
+  const closed = isClosedStage(d.etapa);
+  const save = (patch: { etapa?: Etapa; proximo_retorno?: string | null; observacoes?: string }) => act.run(async () => {
+    try {
+      await api.saveDeal(d.id, {
+        contato_id: d.contato_id, fazenda_id: d.fazenda_id, etapa: patch.etapa ?? d.etapa,
+        observacoes: patch.observacoes ?? d.observacoes,
+        proximo_retorno: "proximo_retorno" in patch ? patch.proximo_retorno ?? null : d.proximo_retorno, versao: d.versao,
+      });
+    } finally { onChanged(); } // em conflito de versão, recarrega o estado atual
+  });
   return (
-    <Modal title="Registrar atendimento" onClose={close}>
-      <form className="form" onSubmit={submit}>
-        <fieldset className="form form-fields" disabled={act.busy}>
-          <div className="small muted">{deal.contato_nome} · {deal.fazenda_titulo}</div>
-          <label className="f">O que foi conversado (opcional)
-            <textarea value={nota} onChange={(e) => setNota(e.target.value)} maxLength={1000} placeholder="Ex.: pediu fotos da sede, vai falar com o sócio" style={{ minHeight: 70 }} data-testid="input-done-note" />
-          </label>
-          <label className="f">Etapa
-            <select value={etapa} onChange={(e) => setEtapa(e.target.value as Etapa)} data-testid="select-done-stage">
-              {ETAPAS.map((s) => <option key={s} value={s}>{ROTULOS[s]}</option>)}
-            </select>
-          </label>
-          {!closed && (
-            <div className="f" style={{ display: "grid", gap: 6 }}>
-              <span className="small" style={{ fontWeight: 500, color: "hsl(var(--ink-2))" }}>Próximo retorno</span>
-              <QuickReturn value={retorno} onChange={setRetorno} />
-              <input type="datetime-local" value={retorno} onChange={(e) => setRetorno(e.target.value)} aria-label="Data e hora do próximo retorno" data-testid="input-done-return" />
-            </div>
-          )}
-          <ErrorBox error={act.error} />
-          <div className="modal-foot">
-            <button type="button" className="btn" onClick={close}>Cancelar</button>
-            <button className="btn primary" disabled={act.busy} data-testid="button-save-done">{act.busy ? "Salvando…" : "Salvar"}</button>
+    <div className="stack" style={{ gap: 8, marginTop: 8 }} data-testid={`controls-deal-${d.id}`}>
+      <div className="row">
+        {tel && <a className="btn sm" href={waLink(tel, waMessage(d.contato_nome, d.fazenda_titulo))} target="_blank" rel="noopener noreferrer" data-testid={`link-wa-${d.id}`}><MessageCircle size={14} />WhatsApp</a>}
+        {tel && <a className="btn sm" href={`tel:${tel}`} data-testid={`link-call-${d.id}`}><Phone size={14} />Ligar</a>}
+      </div>
+      <div className="chips" role="group" aria-label="Status da negociação">
+        {ETAPAS.map((e) => <button key={e} className={`chip ${d.etapa === e ? "on" : ""}`} disabled={act.busy} aria-pressed={d.etapa === e} onClick={() => { if (d.etapa !== e) void save({ etapa: e }); }} data-testid={`chip-status-${d.id}-${e}`}>{ROTULOS[e]}</button>)}
+      </div>
+      {!closed && (
+        <div className="chips" role="group" aria-label="Lembrar de retornar">
+          <span className="small muted" style={{ alignSelf: "center" }}>Lembrar:</span>
+          {ATALHOS.slice(0, 3).map((a) => {
+            const v = daysFromNow(a.days);
+            return <button key={a.days} className={`chip ${toLocal(d.proximo_retorno) === v ? "on" : ""}`} disabled={act.busy} onClick={() => void save({ proximo_retorno: new Date(v).toISOString() })} data-testid={`chip-remind-${d.id}-${a.days}d`}>{a.label}</button>;
+          })}
+          {d.proximo_retorno && <button className="chip" disabled={act.busy} onClick={() => void save({ proximo_retorno: null })} data-testid={`chip-remind-${d.id}-none`}>Sem lembrete</button>}
+        </div>
+      )}
+      <div>
+        <button className="btn ghost sm" onClick={() => setObsOpen((o) => !o)} aria-expanded={obsOpen} data-testid={`button-obs-${d.id}`}>{obsOpen ? "Fechar observação" : d.observacoes ? "Editar observação" : "Adicionar observação"}</button>
+        {obsOpen && (
+          <div className="stack" style={{ gap: 6, marginTop: 6 }}>
+            <textarea value={obs} onChange={(e) => setObs(e.target.value)} maxLength={4000} style={{ minHeight: 60 }} placeholder="Opcional" aria-label="Observação" data-testid={`input-obs-${d.id}`} />
+            <div className="row"><button className="btn sm primary" disabled={act.busy || obs === d.observacoes} onClick={async () => { await save({ observacoes: obs }); setObsOpen(false); }} data-testid={`button-save-obs-${d.id}`}>Salvar observação</button></div>
           </div>
-        </fieldset>
-      </form>
-    </Modal>
+        )}
+      </div>
+      <ErrorBox error={act.error} />
+    </div>
   );
 }
 
