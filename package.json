@@ -9,6 +9,11 @@
     "start": "NODE_ENV=production node dist/server.js",
     "check": "tsc --noEmit",
     "test": "NODE_ENV=test tsx server/__tests__/run-all.ts",
+    "crm:check": "tsc --noEmit --project crm/tsconfig.json",
+    "crm:test": "NODE_ENV=test tsx crm/tests/run.ts",
+    "crm:build": "vite build --config crm/vite.config.ts && esbuild crm/server/index.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-crm/server.js",
+    "crm:start": "NODE_ENV=production node dist-crm/server.js",
+    "crm:preview": "tsx crm/tests/preview.ts",
     "seed:exemplo": "tsx server/scripts/seed-exemplo.ts"
   },
   "dependencies": {
