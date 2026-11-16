@@ -45,6 +45,9 @@ export const api = {
   },
 };
 
+import type { CardPublico } from "../../shared/cards";
+export type { CardPublico };
+
 export interface Usuario { nome: string; email: string; papel: "comprador" | "admin"; nivel_acesso: "aberto" | "desbloqueado" | "completo" }
 export interface ConfigPublica {
   nome_site: string; whatsapp_padrao: string; texto_creci: string; aviso_intermediacao: string;
@@ -58,6 +61,7 @@ export interface FazendaPublica {
   atributos: AtributoPublico[]; forma: { d: string; viewBox: string } | null;
   videos: Array<{ id: number; youtube_id: string; titulo: string }>;
   regiao_mapa: { lat: number; lon: number; raio_km: number } | null; whatsapp: string | null;
+  cards: CardPublico[];
 }
 
 export const soDigitos = (s: string) => s.replace(/\D/g, "");
