@@ -10,7 +10,8 @@ própria; usar somente recarga suave autorizada, nunca reiniciar Nginx por causa
 - `CRM_DATABASE_URL`: banco/usuário de escrita exclusivos do CRM.
 - `CRM_SOURCE_DATABASE_URL`: usuário separado exclusivamente SELECT na base do site.
 - `CRM_SESSION_SECRET`: segredo novo do CRM; não reaproveitar o do site.
-- `CRM_DOCUMENTS_DIR`: diretório privado exclusivo, fora de qualquer raiz pública.
+- `CRM_SITE_DOCUMENTS_DIR`: ponto de montagem privado dos documentos enviados pelo painel do
+  site (`DOCUMENTOS_DIR` do site), **somente leitura** pelo CRM. O CRM não grava documentos.
 - `CRM_SITE_UPLOADS_DIR`: ponto de montagem privado das fotos, por exemplo
   `/var/lib/gramogol-crm/site-photos`, somente leitura pelo CRM.
 - `CRM_SITE_URL`: origem HTTPS do site (`https://fazendasgramogol.com.br`).
@@ -34,7 +35,7 @@ Git, PR, logs ou arquivos públicos. Não editar `/etc/gramogol/runtime.json` do
    de sistema `gramogol-crm` próprios, sem privilégios nas tabelas do site.
    Isso só pode ser feito na implantação autorizada, nunca durante desenvolvimento.
 3. Preparar a conta de origem sem privilégios de escrita nas tabelas `fazendas`,
-   `fazenda_atributos`, `fazenda_fotos`, `contatos`, `apresentacoes`. Conceder somente
+   `fazenda_atributos`, `fazenda_fotos`, `fazenda_documentos`, `contatos`, `apresentacoes`. Conceder somente
    CONNECT/USAGE/SELECT necessários. Não usar o proprietário do banco, superusuário,
    credenciais de Hub/Connect nem conta com associação a papéis de escrita.
    Conferir `has_table_privilege` e tentativa de escrita em ambiente descartável.
@@ -48,8 +49,9 @@ Git, PR, logs ou arquivos públicos. Não editar `/etc/gramogol/runtime.json` do
    `BindReadOnlyPaths` do template. Criar o ponto de montagem privado antes de
    iniciar o serviço. O processo não precisa atravessar o diretório privado
    original do site, que deve manter suas restrições.
-   Criar diretório
-   privado de documentos do CRM com dono `gramogol-crm`, modo 0700, fora dos uploads.
+   Os documentos ficam na pasta privada do site (`DOCUMENTOS_DIR`, fora de `UPLOADS_DIR`);
+   dar ao usuário do CRM somente leitura dela (ACL específica, como nas fotos) e montá-la
+   como somente leitura no serviço.
    Não modificar arquivos ou permissões de outros produtos para conseguir acesso.
 5. Preparar novo release fora de `/opt/gramogol`, por exemplo sob
    `/opt/gramogol-crm-releases/`, apontando `/opt/gramogol-crm` ao release aprovado.

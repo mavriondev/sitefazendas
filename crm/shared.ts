@@ -25,7 +25,7 @@ export interface Deal {
 export interface Event { id: number; acao: string; autor_nome: string; criado_em: string; detalhes: Record<string, unknown> }
 export interface Document {
   id: number; fazenda_id: number; nome: string; categoria: string; descricao: string;
-  tamanho: number; criado_em: string; autor_nome: string;
+  tamanho: number; criado_em: string;
 }
 export interface Access { fazenda_ids: number[]; contato_ids: number[] }
 export interface SourceStatus { atualizado_em: string | null; erro: boolean; site_url: string }

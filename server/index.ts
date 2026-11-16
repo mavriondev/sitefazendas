@@ -14,6 +14,14 @@ async function main() {
   if (producao && !process.env.UPLOADS_DIR) {
     throw new Error("Defina UPLOADS_DIR: pasta em disco PERSISTENTE para as fotos (e faça backup dela).");
   }
+  const uploads = path.resolve(process.env.UPLOADS_DIR || "uploads");
+  const documentos = path.resolve(process.env.DOCUMENTOS_DIR || "documentos");
+  if (producao && !process.env.DOCUMENTOS_DIR) {
+    throw new Error("Defina DOCUMENTOS_DIR: pasta PRIVADA e persistente dos documentos (diferente de UPLOADS_DIR; faça backup).");
+  }
+  if (documentos === uploads || documentos.startsWith(uploads + path.sep) || uploads.startsWith(documentos + path.sep)) {
+    throw new Error("DOCUMENTOS_DIR não pode ser a mesma pasta de UPLOADS_DIR nem ficar dentro dela (ou conter ela).");
+  }
   let segredo = process.env.SESSION_SECRET || "";
   if (!segredo) {
     if (producao) throw new Error("Defina SESSION_SECRET (texto aleatório longo).");
@@ -32,7 +40,8 @@ async function main() {
   const PgStore = connectPgSimple(session);
   const app = criarApp({
     db,
-    uploadsDir: path.resolve(process.env.UPLOADS_DIR || "uploads"),
+    uploadsDir: uploads,
+    documentosDir: documentos,
     segredo,
     producao,
     limitar: true,

@@ -113,7 +113,8 @@ function Lightbox({ f, index, onIndex, onClose }: { f: Farm; index: number; onIn
 }
 
 /* ---------- Documentos ---------- */
-export const CATEGORIAS = ["Matrícula", "Escritura", "CAR", "CCIR", "ITR", "Georreferenciamento", "Mapa", "Laudos", "Outros"];
+import { CATEGORIAS_DOCUMENTO } from "../../shared/documentos";
+export const CATEGORIAS: readonly string[] = CATEGORIAS_DOCUMENTO;
 export function DocsDownloadAll({ docs }: { docs: Document[] }) {
   const act = useAction();
   if (docs.length < 2) return null;

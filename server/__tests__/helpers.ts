@@ -24,7 +24,8 @@ export async function subirApp(opts: { fetchAgro?: typeof fetch; limitar?: boole
   const db = await criarDbTeste();
   await garantirAdmin(db, "admin@teste.com", "senha-forte-1");
   const uploadsDir = fs.mkdtempSync(path.join(os.tmpdir(), "sf-up-"));
-  const app = criarApp({ db, uploadsDir, segredo: "segredo-de-teste", producao: false, limitar: opts.limitar ?? false, fetchAgro: opts.fetchAgro, clientDir:opts.clientDir,siteUrl:"https://portal.teste.example" });
+  const documentosDir = fs.mkdtempSync(path.join(os.tmpdir(), "sf-docs-"));
+  const app = criarApp({ db, uploadsDir, documentosDir, segredo: "segredo-de-teste", producao: false, limitar: opts.limitar ?? false, fetchAgro: opts.fetchAgro, clientDir:opts.clientDir,siteUrl:"https://portal.teste.example" });
   const server = await new Promise<import("node:http").Server>((ok) => { const s = app.listen(0, "127.0.0.1", () => ok(s)); });
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 
@@ -46,7 +47,7 @@ export async function subirApp(opts: { fetchAgro?: typeof fetch; limitar?: boole
       if (sc) cookie = sc.split(";")[0];
       const texto = await r.text();
       let json: any = null; try { json = JSON.parse(texto); } catch { /* não é JSON */ }
-      return { status: r.status, json, texto };
+      return { status: r.status, json, texto, headers: r.headers };
     };
     return {
       get: (r: string) => chamar("GET", r),
@@ -64,7 +65,7 @@ export async function subirApp(opts: { fetchAgro?: typeof fetch; limitar?: boole
   const admin = cliente();
   const login = await admin.post("/api/auth/entrar", { email: "admin@teste.com", senha: "senha-forte-1" });
   if (login.status !== 200) throw new Error("login admin falhou nos testes");
-  return { db, base, uploadsDir, cliente, admin, fechar: () => new Promise<void>((ok) => server.close(() => ok())) };
+  return { db, base, uploadsDir, documentosDir, cliente, admin, fechar: () => new Promise<void>((ok) => server.close(() => ok())) };
 }
 
 /** JPEG sintético com EXIF contendo orientação 6 e "GPS" falso, mais XMP e comentário. */

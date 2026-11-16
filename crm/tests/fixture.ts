@@ -15,6 +15,7 @@ import { syntheticPhoto } from "./photo";
 export const TEST_PASSWORD = "Senha-exclusiva-teste-2026";
 export const PHOTO = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png";
 export const PNG = syntheticPhoto();
+export const DOC_FILE = "0123456789abcdef0123456789abcdef0123456789abcdef.pdf";
 export const PDF = Buffer.from("%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n");
 export function wrap(pg: PGlite): Database {
   const query = (p: any): Query => ({
@@ -30,6 +31,7 @@ export async function fixture(clientDir?: string, limit = false) {
     (2,'fazenda-veredas','Fazenda Veredas','rascunho','Centro-Oeste',800,'Área para agricultura.','Acesso restrito.')`);
   await site.query("INSERT INTO fazenda_atributos(fazenda_id,chave,estado,achado,valor_json,publico) VALUES(1,'agua','confirmado','detectado','\"Córrego perene\"',TRUE)");
   await site.query("INSERT INTO fazenda_fotos(fazenda_id,arquivo,legenda,capa) VALUES(1,$1,'Vista da propriedade',TRUE)", [PHOTO]);
+  await site.query("INSERT INTO fazenda_documentos(fazenda_id,arquivo,nome,mime,categoria,descricao,tamanho) VALUES(1,$1,'Matrícula 12.345.pdf','application/pdf','Matrícula','Certidão de teste',$2)", [DOC_FILE, PDF.length]);
   await site.query("INSERT INTO contatos(id,nome,whatsapp,email,mensagem,origem,fazenda_id) VALUES(1,'Marina Costa','5534999991111','marina@crm.test','Tenho interesse em visitar.','vitrine',1)");
   await site.query("INSERT INTO apresentacoes(id,comprador_nome,comprador_contato,canal,fazenda_id) VALUES(1,'Rafael Lima','5534999992222','whatsapp',1)");
   let failing = false, reads = 0;
@@ -42,12 +44,16 @@ export async function fixture(clientDir?: string, limit = false) {
       f.fotos = (await site.query("SELECT arquivo,legenda FROM fazenda_fotos WHERE fazenda_id=$1", [f.id])).rows;
     }
     return { farms, contacts: (await site.query("SELECT * FROM contatos ORDER BY id")).rows, presentations: (await site.query("SELECT * FROM apresentacoes ORDER BY id")).rows };
-  } };
+  },
+  // Leitura ao vivo dos documentos do painel do site (somente SELECT).
+  async documents(farmId: number) { if (failing) throw Error("Fonte indisponível"); return (await site.query("SELECT * FROM fazenda_documentos WHERE fazenda_id=$1 ORDER BY categoria,id", [farmId])).rows; },
+  async document(id: number) { if (failing) throw Error("Fonte indisponível"); return (await site.query("SELECT * FROM fazenda_documentos WHERE id=$1", [id])).rows[0] ?? null; } };
   const adminRow = (await db.query("SELECT * FROM crm_users WHERE papel='admin'")).rows[0];
   await refresh(db, source, publicUser(adminRow));
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "gramogol-crm-test-")), documentsDir = path.join(dir, "private"), photosDir = path.join(dir, "site-readonly");
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "gramogol-crm-test-")), siteDocsDir = path.join(dir, "site-docs-readonly"), photosDir = path.join(dir, "site-readonly");
   await fs.mkdir(photosDir); await fs.writeFile(path.join(photosDir, PHOTO), PNG);
-  const app = createCrm({ db, source, secret: "segredo-apenas-dos-testes-crm-isolados-2026", documentsDir,
+  await fs.mkdir(siteDocsDir); await fs.writeFile(path.join(siteDocsDir, DOC_FILE), PDF);
+  const app = createCrm({ db, source, secret: "segredo-apenas-dos-testes-crm-isolados-2026", siteDocumentsDir: siteDocsDir,
     siteUploadsDir: photosDir, siteUrl: "https://portal.test", production: false, clientDir, limit });
   const server = await new Promise<import("node:http").Server>(resolve => { const s = app.listen(0, "127.0.0.1", () => resolve(s)); });
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -69,9 +75,9 @@ export async function fixture(clientDir?: string, limit = false) {
     return { req, get: (p: string) => req("GET", p), post: (p: string, b: any) => req("POST", p, b), put: (p: string, b: any) => req("PUT", p, b), del: (p: string, b = {}) => req("DELETE", p, b) };
   }
   async function sourceFingerprint() {
-    const data = await Promise.all(["fazendas", "fazenda_atributos", "fazenda_fotos", "contatos", "apresentacoes"].map(async t => (await site.query(`SELECT * FROM ${t} ORDER BY id`)).rows));
+    const data = await Promise.all(["fazendas", "fazenda_atributos", "fazenda_fotos", "fazenda_documentos", "contatos", "apresentacoes"].map(async t => (await site.query(`SELECT * FROM ${t} ORDER BY id`)).rows));
     return JSON.stringify(data);
   }
-  return { db, site, source, app, dir, base, client, server, sourceFingerprint, failSource: (v: boolean) => { failing = v; }, reads: () => reads,
+  return { db, site, source, app, dir, siteDocsDir, base, client, server, sourceFingerprint, failSource: (v: boolean) => { failing = v; }, reads: () => reads,
     async close() { await new Promise<void>(resolve => server.close(() => resolve())); await crmPg.close(); await sitePg.close(); await fs.rm(dir, { recursive: true, force: true }); } };
 }

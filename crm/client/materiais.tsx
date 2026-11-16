@@ -42,7 +42,7 @@ export function MateriaisFazenda() {
   const q = useLoad(() => api.farm(id), [id]);
   if (q.loading && !q.data) return <div className="page"><Skeleton rows={5} /></div>;
   if (!q.data) return <div className="page"><Link className="back" to="/materiais"><ArrowLeft size={14} />Materiais</Link><ErrorBox error={q.error} retry={q.reload} /></div>;
-  const { fazenda: f, documentos, site_url } = q.data;
+  const { fazenda: f, documentos, site_url, documentos_erro } = q.data;
   const pub = f.disponivel && f.status === "publicada";
   return (
     <div className="page">
@@ -58,6 +58,7 @@ export function MateriaisFazenda() {
       {f.fotos.length ? <PhotosCard f={f} /> : <section className="card"><div className="card-h"><h2>Fotos</h2></div><div className="muted small">Nenhuma foto nesta fazenda.</div></section>}
       <section className="card">
         <div className="card-h"><h2>Documentos <span className="tag">{documentos.length}</span></h2><DocsDownloadAll docs={documentos} /></div>
+        {documentos_erro && <div className="alert warn" style={{ marginBottom: 8 }}>Não foi possível ler os documentos agora. Tente de novo em instantes.</div>}
         <DocsReadOnly docs={documentos} />
       </section>
     </div>

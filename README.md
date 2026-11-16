@@ -28,11 +28,15 @@ Os filtros do catálogo só enxergam dados públicos e agem sobre as mesmas faix
 | `SESSION_SECRET` | sim (produção) | texto aleatório longo |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | 1ª execução | cria o admin (senha mín. 12 caracteres e máx. 72 bytes; troque depois) |
 | `UPLOADS_DIR` | sim (produção) | pasta em disco PERSISTENTE das fotos |
+| `DOCUMENTOS_DIR` | sim (produção) | pasta PRIVADA e PERSISTENTE dos documentos (matrícula, CAR…). Diferente de `UPLOADS_DIR`, nunca pública |
 | `SITE_URL` | recomendado | endereço público (links de compartilhamento) |
 | `PORT` | não | padrão 5000 |
 
 ## Fotos
 Ficam em disco (`UPLOADS_DIR`), sem dependência de nenhum provedor: faça backup dessa pasta. Fotos de fazendas não publicadas só o administrador abre; as publicadas têm cache de 1 dia. O GPS é removido no envio.
+
+## Documentos privados
+No painel, aba **Documentos** da fazenda: matrícula, CAR, mapas e outros (PDF, JPEG ou PNG até 12 MB), por tipo. Ficam em `DOCUMENTOS_DIR`, **nunca aparecem no site público** e só o administrador do painel e o CRM interno (somente leitura, para baixar) os acessam. Faça backup dessa pasta.
 
 ## Contas e senhas
 - Sem serviço de e-mail: quem esquece a senha pede um link ao corretor (WhatsApp); no painel, Usuários → "Link de nova senha" (uso único, 1 hora).

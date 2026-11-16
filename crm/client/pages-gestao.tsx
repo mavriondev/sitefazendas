@@ -4,7 +4,7 @@ import { AlertTriangle, ArrowLeft, FolderDown, Download, ExternalLink, FileText,
 import { api, key, type Access, type Deal, type User } from "./api";
 import { DealForm } from "./forms";
 import { DealRow } from "./pages-atendimento";
-import { CATEGORIAS, DocsDownloadAll, PhotosCard, ShareDocButton, ShareLinkButton, groupDocs } from "./share";
+import { DocsDownloadAll, DocsReadOnly, PhotosCard, ShareLinkButton } from "./share";
 import { Empty, ErrorBox, History, Modal, Skeleton, fmtDate, fmtDateTime, fmtSize, initials, pdfUrl, publicUrl, useAction, useAuth, useDirty, useLoad } from "./ui";
 
 const LABELS: Record<string, string> = { car: "CAR", uf: "UF", preco: "Preço", notas_internas: "Notas internas", municipio: "Município", observacao: "Observação", publico: "Mostrar no site", valor_json: "Informação", agua: "Água", energia: "Energia", argila: "Argila", altitude: "Altitude", confirmado: "Confirmado", nao_informado: "Não informado", nao_detectado: "Não detectado", detectado: "Detectado", corretor: "Cadastro manual" };
@@ -50,66 +50,14 @@ export function Farms() {
   );
 }
 
-const MAX = 12 * 1024 * 1024;
-const TIPOS = ["application/pdf", "image/jpeg", "image/png"];
-function UploadForm({ farmId, onDone }: { farmId: number; onDone: () => void }) {
-  const [file, setFile] = useState<File | null>(null);
-  const [categoria, setCategoria] = useState("");
-  const [descricao, setDescricao] = useState("");
-  const [local, setLocal] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const reqKey = useRef<string | null>(null);
-  const act = useAction();
-  const clearDirty = useDirty(!!file || !!descricao || !!categoria);
-  const pick = (f: File | null) => {
-    reqKey.current = null; setLocal("");
-    if (f && !TIPOS.includes(f.type)) { setLocal("Envie apenas PDF, JPEG ou PNG."); f = null; }
-    else if (f && f.size > MAX) { setLocal("O arquivo passa de 12 MB."); f = null; }
-    setFile(f); if (!f && inputRef.current) inputRef.current.value = "";
-  };
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file) { setLocal("Escolha um arquivo."); return; }
-    if (!categoria) { setLocal("Escolha o tipo de documento."); return; }
-    if (!reqKey.current) reqKey.current = key();
-    const r = await act.run(() => api.upload(farmId, file, categoria.trim(), descricao.trim(), reqKey.current!));
-    if (r) { reqKey.current = null; clearDirty(); setFile(null); setDescricao(""); setCategoria(""); if (inputRef.current) inputRef.current.value = ""; onDone(); }
-  };
-  return (
-    <form className="form" onSubmit={submit} style={{ borderTop: "1px solid hsl(var(--line))", paddingTop: 14, marginTop: 14 }}>
-      <fieldset className="form form-fields" disabled={act.busy}>
-      <label className="f">Arquivo (PDF, JPEG ou PNG até 12 MB)<input ref={inputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" onChange={(e) => pick(e.target.files?.[0] ?? null)} data-testid="input-doc-file" /></label>
-      <div className="form-2">
-        <div className="f" style={{ display: "grid", gap: 6, gridColumn: "1 / -1" }}>
-          <span className="small" style={{ fontWeight: 500, color: "hsl(var(--ink-2))" }}>Tipo de documento</span>
-          <div className="chips" role="group" aria-label="Tipo de documento">
-            {CATEGORIAS.map((c) => <button type="button" key={c} className={`chip ${categoria === c ? "on" : ""}`} onClick={() => setCategoria(c)} data-testid={`chip-doc-${c}`}>{c}</button>)}
-          </div>
-        </div>
-        <label className="f" style={{ gridColumn: "1 / -1" }}>Descrição (opcional)<input value={descricao} maxLength={300} onChange={(e) => setDescricao(e.target.value)} data-testid="input-doc-description" /></label>
-      </div>
-      {local && <div className="alert bad"><AlertTriangle size={17} />{local}</div>}
-      <ErrorBox error={act.error} />
-      <button className="btn primary" style={{ justifySelf: "start" }} disabled={act.busy || !file} data-testid="button-upload-doc"><Upload size={15} />{act.busy ? "Enviando…" : "Enviar documento"}</button>
-      </fieldset>
-    </form>
-  );
-}
-
 export function FarmDetail() {
   const id = Number(useParams().id);
   const q = useLoad(() => api.farm(id), [id]);
   const [deal, setDeal] = useState<Deal | "new" | null>(null);
-  const del = useAction();
   if (q.loading && !q.data) return <div className="page"><Skeleton rows={5} /></div>;
   if (!q.data) return <div className="page"><Link className="back" to="/fazendas"><ArrowLeft size={14} />Fazendas</Link><ErrorBox error={q.error} retry={q.reload} /></div>;
   const { fazenda: f, documentos, negociacoes, historico, site_url } = q.data;
   const pub = f.disponivel && f.status === "publicada";
-  const removeDoc = async (docId: number, nome: string) => {
-    if (!window.confirm(`Remover o documento "${nome}"?`)) return;
-    const ok = await del.run(async () => { await api.deleteDocument(docId); return true; });
-    if (ok) q.reload();
-  };
   const dados = Object.entries(f.dados ?? {});
   return (
     <div className="page">
@@ -153,16 +101,9 @@ export function FarmDetail() {
         <div className="stack">
           <section className="card">
             <div className="card-h"><h2>Documentos <span className="tag">{documentos.length}</span></h2><DocsDownloadAll docs={documentos} /></div>
-            <ErrorBox error={del.error} />
-            {documentos.length ? <div className="list">{groupDocs(documentos).map(([cat, docs]) => (<Fragment key={cat}><div className="doc-group" data-testid={`group-doc-${cat}`}>{cat} · {docs.length}</div>{docs.map((d) => (
-              <div className="item" key={d.id} data-testid={`row-doc-${d.id}`}>
-                <FileText size={18} className="muted" style={{ flex: "none" }} />
-                <div className="item-main"><div className="item-title">{d.nome}</div><div className="item-sub">{d.descricao ? `${d.descricao} · ` : ""}{fmtSize(d.tamanho)} · {d.autor_nome}, {fmtDate(d.criado_em)}</div></div>
-                <a className="btn sm" href={api.downloadUrl(d.id)} download={d.nome} aria-label="Baixar" data-testid={`link-download-${d.id}`}><Download size={14} /></a>
-                <ShareDocButton d={d} />
-                <button className="btn sm danger" onClick={() => removeDoc(d.id, d.nome)} disabled={del.busy} aria-label="Remover" data-testid={`button-delete-doc-${d.id}`}><Trash2 size={14} /></button>
-              </div>))}</Fragment>))}</div> : <Empty title="Nenhum documento">Matrícula, CAR, mapas: envie abaixo para a equipe achar rápido.</Empty>}
-            <UploadForm farmId={f.id} onDone={q.reload} />
+            {q.data.documentos_erro && <div className="alert warn"><AlertTriangle size={17} />Não foi possível ler os documentos do site agora. Tente de novo em instantes.</div>}
+            <DocsReadOnly docs={documentos} />
+            <p className="small muted" style={{ marginBottom: 0 }}>Os documentos são enviados no painel do site; aqui só dá para baixar.</p>
           </section>
           <section className="card"><div className="card-h"><h2>Histórico</h2></div><History events={historico} /></section>
         </div>

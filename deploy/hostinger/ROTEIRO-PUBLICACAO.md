@@ -17,7 +17,7 @@ parar e obter autorização prévia.
 
 ## 2. Configuração do site — nomes de variáveis, sem valores
 - Execução: `NODE_ENV`, `PORT`, `BIND_HOST`, `SITE_URL`.
-- Obrigatórias: `DATABASE_URL`, `SESSION_SECRET`, `UPLOADS_DIR`.
+- Obrigatórias: `DATABASE_URL`, `SESSION_SECRET`, `UPLOADS_DIR`, `DOCUMENTOS_DIR` (pasta privada, diferente de `UPLOADS_DIR`).
 - Somente no bootstrap de administrador novo: `ADMIN_EMAIL`, `ADMIN_PASSWORD`.
   Não recriar o administrador existente nem manter senha de bootstrap sem necessidade.
 - Cadastro manual: não requer chaves da Hub, do Connect ou de IA.

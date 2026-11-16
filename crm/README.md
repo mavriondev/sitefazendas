@@ -73,16 +73,17 @@ Publicação de uma fazenda não equivale a liberação do acesso comercial.
 
 ## Documentos
 
-PDF simples, JPEG e PNG, até 12 MB. Imagens são validadas e têm metadados removidos
-pelo sanitizador já usado no produto. PDFs precisam de assinatura e término
-válidos; recursos ativos, JavaScript, anexos, criptografia e object streams são
-rejeitados. O download sempre é attachment, com CSP restrita; não há visualizador
-embutido. Nomes físicos são aleatórios; o nome original é higienizado.
+Os documentos (matrícula, CAR, mapas…) são **enviados no painel do site**, na aba
+"Documentos" de cada fazenda, e ficam numa pasta privada do site (`DOCUMENTOS_DIR`), nunca
+públicos. O CRM **só lê e baixa**: não há envio, edição nem remoção de documentos aqui.
+A lista é lida ao vivo da tabela `fazenda_documentos` (somente SELECT) e os arquivos vêm de
+`CRM_SITE_DOCUMENTS_DIR`, montado somente leitura. O download exige acesso à fazenda,
+é sempre anexo, com CSP restrita e `no-store`, e fica registrado no histórico.
+Se a origem cair, a ficha abre normalmente com aviso e a lista de documentos vazia.
 
-Isso **não é antivírus nem certificação do conteúdo**. Arquivos recebidos de fora
-da equipe precisam de verificação de origem; inspeção antimalware/quarentena é uma
-evolução separada. Documentos usam pasta exclusiva modo 0700 e arquivos 0600;
-não apontar essa pasta para uploads públicos, raiz web, assets ou diretórios do site.
+PDF simples, JPEG e PNG (até 12 MB) são validados no envio pelo painel; PDFs com recursos
+ativos, anexos ou criptografia são recusados. Isso **não é antivírus**. A tabela
+`crm_documents` de versões anteriores deixou de ser usada e foi mantida sem alteração.
 
 ## Limites intencionais
 

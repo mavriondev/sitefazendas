@@ -175,6 +175,20 @@ export const MIGRACOES: string[] = [
     criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
   `CREATE INDEX IF NOT EXISTS idx_fazenda_videos_ordem ON fazenda_videos (fazenda_id, ordem, id)`,
+  // Documentos privados (matrícula, CAR, mapas…): sobem pelo painel, nunca aparecem no site público.
+  // O CRM interno os lê (somente leitura) para baixar. O arquivo fica em DOCUMENTOS_DIR, fora de UPLOADS_DIR.
+  `CREATE TABLE IF NOT EXISTS fazenda_documentos (
+    id SERIAL PRIMARY KEY,
+    fazenda_id INTEGER NOT NULL REFERENCES fazendas(id) ON DELETE CASCADE,
+    arquivo TEXT NOT NULL UNIQUE CHECK (arquivo ~ '^[a-f0-9]{48}\\.(pdf|jpg|png)$'),
+    nome TEXT NOT NULL,
+    mime TEXT NOT NULL CHECK (mime IN ('application/pdf','image/jpeg','image/png')),
+    categoria TEXT NOT NULL,
+    descricao TEXT NOT NULL DEFAULT '',
+    tamanho INTEGER NOT NULL CHECK (tamanho > 0 AND tamanho <= 12582912),
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_fazenda_documentos_fazenda ON fazenda_documentos (fazenda_id, categoria, id)`,
   `CREATE TABLE IF NOT EXISTS site_midias (
     arquivo TEXT PRIMARY KEY CHECK (arquivo ~ '^[a-f0-9]{32}\\.(jpg|png)$'),
     publicado BOOLEAN NOT NULL DEFAULT FALSE,
