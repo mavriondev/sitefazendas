@@ -2,14 +2,10 @@ import { useMemo, useRef, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { api, key, ETAPAS, ROTULOS, type Contact, type Deal, type Etapa } from "./api";
 import { isClosedStage } from "../shared";
+import { QuickReturn, toLocal } from "./quick";
 import { ErrorBox, Modal, useAction, useAuth, useDirty, useLoad, digits, reloadCurrentRecord } from "./ui";
 
 /* ---------- Deal ---------- */
-const toLocal = (iso: string | null) => {
-  if (!iso) return "";
-  const d = new Date(iso); const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
-};
 
 export function DealForm({ deal, presetContato, presetFazenda, onClose, onSaved }: {
   deal?: Deal | null; presetContato?: number; presetFazenda?: number; onClose: () => void; onSaved: (d: Deal) => void;
@@ -73,6 +69,7 @@ export function DealForm({ deal, presetContato, presetFazenda, onClose, onSaved 
             <input type="datetime-local" value={retorno} onChange={(e) => setRetorno(e.target.value)} disabled={isClosedStage(etapa)} data-testid="input-deal-return" />
           </label>
         </div>
+        {!isClosedStage(etapa) && <QuickReturn value={retorno} onChange={setRetorno} />}
         {retorno && <button type="button" className="btn ghost sm" style={{ justifySelf: "start" }} onClick={() => setRetorno("")} data-testid="button-clear-return">Limpar retorno</button>}
         <label className="f">Observações
           <textarea value={obs} onChange={(e) => setObs(e.target.value)} maxLength={4000} data-testid="input-deal-notes" />

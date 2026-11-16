@@ -55,6 +55,7 @@ async function run() {
     assert.equal((await m.put(`/deals/${deal.json.id}`, { ...dealBody, etapa: "visita_agendada", proximo_retorno: null, versao: 1 })).status, 200);
     assert.equal((await m.put(`/deals/${deal.json.id}`, { ...dealBody, versao: 1 })).status, 409);
     assert.equal((await m.get("/deals")).json.negociacoes[0].proximo_retorno, null);
+    assert.equal((await m.get("/deals")).json.negociacoes[0].contato_telefone, "5534999990000");
     assert.ok((await m.get(`/contacts/${c.id}`)).json.historico.some((e: any) => e.acao === "Negociação atualizada"));
     const upload = (buf: Buffer, name: string, reqKey = crypto.randomUUID()) => {
       const form = new FormData(); form.append("categoria", "Matrícula"); form.append("descricao", "Documento de teste sintético"); form.append("request_key", reqKey);

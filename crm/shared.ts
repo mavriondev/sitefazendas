@@ -19,7 +19,7 @@ export interface Contact {
   fazenda_ids: number[]; criado_em: string;
 }
 export interface Deal {
-  id: number; contato_id: number; fazenda_id: number; contato_nome: string; fazenda_titulo: string;
+  id: number; contato_id: number; fazenda_id: number; contato_nome: string; contato_telefone: string | null; fazenda_titulo: string;
   etapa: Etapa; proximo_retorno: string | null; observacoes: string; versao: number; atualizado_em: string;
 }
 export interface Event { id: number; acao: string; autor_nome: string; criado_em: string; detalhes: Record<string, unknown> }

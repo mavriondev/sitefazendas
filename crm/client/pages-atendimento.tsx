@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, CalendarClock, MessageCircle, Pencil, Phone, Plus, Search, Trash2, Mail } from "lucide-react";
+import { isClosedStage } from "../shared";
 import { api, ETAPAS, ROTULOS, type Deal, type Etapa } from "./api";
 import { ContactForm, DealForm } from "./forms";
+import { DealActions, DoneForm, QuickContactForm, waMessage } from "./quick";
 import { Empty, ErrorBox, EtapaTag, History, RetornoTag, Skeleton, dayDiff, fmtDate, initials, useAction, useAuth, useLoad, waLink } from "./ui";
 
-export function DealRow({ d, onEdit, hide }: { d: Deal; onEdit: (d: Deal) => void; hide?: "contato" | "fazenda" }) {
+export function DealRow({ d, onEdit, hide, onDone }: { d: Deal; onEdit: (d: Deal) => void; hide?: "contato" | "fazenda"; onDone?: (d: Deal) => void }) {
   return (
     <div className="item" data-testid={`row-deal-${d.id}`}>
       <div className="item-main">
@@ -14,6 +16,7 @@ export function DealRow({ d, onEdit, hide }: { d: Deal; onEdit: (d: Deal) => voi
         </div>
         <div className="item-sub">{hide ? `Atualizado ${fmtDate(d.atualizado_em)}` : d.fazenda_titulo}{d.observacoes ? ` · ${d.observacoes}` : ""}</div>
         <div className="row" style={{ marginTop: 6 }}><EtapaTag e={d.etapa} /><RetornoTag iso={d.proximo_retorno} /></div>
+        {onDone && <DealActions d={d} onDone={onDone} />}
       </div>
       <button className="btn sm" onClick={() => onEdit(d)} aria-label="Editar negociação" data-testid={`button-edit-deal-${d.id}`}><Pencil size={14} /></button>
     </div>
@@ -25,6 +28,9 @@ export function Home() {
   const { user } = useAuth();
   const q = useLoad(() => api.deals(), []);
   const [edit, setEdit] = useState<Deal | null>(null);
+  const [done, setDone] = useState<Deal | null>(null);
+  const [quick, setQuick] = useState(false);
+  const nav = useNavigate();
   const deals = q.data?.negociacoes ?? [];
   const ativas = deals.filter((d) => d.etapa !== "concluida" && d.etapa !== "nao_avancou");
   const retornos = ativas.filter((d) => d.proximo_retorno && dayDiff(d.proximo_retorno) <= 7).sort((a, b) => a.proximo_retorno!.localeCompare(b.proximo_retorno!));
@@ -35,7 +41,10 @@ export function Home() {
     <div className="page">
       <div className="head">
         <div><div className="eyebrow">Bom trabalho, {user.nome.split(" ")[0]}</div><h1>Retornos e negócios</h1></div>
-        <Link className="btn primary" to="/negociacoes?nova=1" data-testid="link-new-deal"><Plus size={16} />Negociação</Link>
+        <div className="row">
+          <Link className="btn" to="/negociacoes?nova=1" data-testid="link-new-deal"><Plus size={16} />Negociação</Link>
+          <button className="btn primary" onClick={() => setQuick(true)} data-testid="button-quick-contact"><Plus size={16} />Novo cliente</button>
+        </div>
       </div>
       <ErrorBox error={q.error} retry={q.reload} />
       {q.loading && !q.data ? <Skeleton /> : q.data && (
@@ -48,8 +57,8 @@ export function Home() {
           </div>
           <div className="grid2">
             <section className="card">
-              <div className="card-h"><h2>Próximos 7 dias</h2><CalendarClock size={18} className="muted" /></div>
-              {retornos.length ? <div className="list">{retornos.map((d) => <DealRow key={d.id} d={d} onEdit={setEdit} />)}</div>
+              <div className="card-h"><h2>Retornos até a próxima semana</h2><CalendarClock size={18} className="muted" /></div>
+              {retornos.length ? <div className="list">{retornos.map((d) => <DealRow key={d.id} d={d} onEdit={setEdit} onDone={setDone} />)}</div>
                 : <Empty title="Agenda livre">Nenhum retorno marcado até a próxima semana.</Empty>}
             </section>
             <section className="card">
@@ -75,6 +84,8 @@ export function Home() {
         </>
       )}
       {edit && <DealForm deal={edit} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); q.reload(); }} />}
+      {done && <DoneForm deal={done} onClose={() => setDone(null)} onSaved={() => { setDone(null); q.reload(); }} />}
+      {quick && <QuickContactForm onClose={() => setQuick(false)} onSaved={(c) => { setQuick(false); nav(`/contatos/${c.id}`); }} />}
     </div>
   );
 }
@@ -120,12 +131,13 @@ export function ContactDetail() {
   const q = useLoad(() => Promise.all([api.contact(id), api.farms()]), [id]);
   const [editing, setEditing] = useState(false);
   const [deal, setDeal] = useState<Deal | "new" | null>(null);
-  const [msg, setMsg] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
   const del = useAction();
   if (q.loading && !q.data) return <div className="page"><Skeleton rows={5} /></div>;
   if (!q.data) return <div className="page"><Link className="back" to="/contatos"><ArrowLeft size={14} />Contatos</Link><ErrorBox error={q.error} retry={q.error?.status === 404 || q.error?.status === 403 ? undefined : q.reload} /></div>;
   const [{ contato: c, negociacoes, historico }, { fazendas }] = q.data;
   const linked = fazendas.filter((f) => c.fazenda_ids.includes(f.id));
+  const wa = msg ?? waMessage(c.nome, linked.length === 1 ? linked[0]!.titulo : null);
   const remove = async () => {
     if (!window.confirm(`Remover o contato ${c.nome} e suas negociações no CRM? Esta ação não pode ser desfeita. O cadastro no site não será alterado.`)) return;
     const ok = await del.run(async () => { await api.deleteContact(c.id, c.versao); return true; });
@@ -153,12 +165,12 @@ export function ContactDetail() {
               {c.email && <a className="btn" href={`mailto:${c.email}`} data-testid="link-email"><Mail size={15} />{c.email}</a>}
             </div>
             <label className="f">Mensagem para WhatsApp
-              <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder={`Olá, ${c.nome.split(" ")[0]}! Aqui é da Gramogol…`} style={{ minHeight: 64 }} data-testid="input-wa-message" />
+              <textarea value={wa} onChange={(e) => setMsg(e.target.value)} placeholder={`Olá, ${c.nome.split(" ")[0]}! Aqui é da Gramogol…`} style={{ minHeight: 64 }} data-testid="input-wa-message" />
             </label>
             <div className="row" style={{ marginTop: 8 }}>
-              <a className="btn" aria-disabled={!msg.trim() || !c.telefone} style={!msg.trim() || !c.telefone ? { opacity: .5, pointerEvents: "none" } : undefined}
-                onClick={e => { if (!msg.trim() || !c.telefone) e.preventDefault(); }}
-                href={c.telefone && msg.trim() ? waLink(c.telefone, msg) : undefined} target="_blank" rel="noopener noreferrer" data-testid="link-whatsapp"><MessageCircle size={15} />Abrir no WhatsApp</a>
+              <a className="btn" aria-disabled={!wa.trim() || !c.telefone} style={!wa.trim() || !c.telefone ? { opacity: .5, pointerEvents: "none" } : undefined}
+                onClick={e => { if (!wa.trim() || !c.telefone) e.preventDefault(); }}
+                href={c.telefone && wa.trim() ? waLink(c.telefone, wa) : undefined} target="_blank" rel="noopener noreferrer" data-testid="link-whatsapp"><MessageCircle size={15} />Abrir no WhatsApp</a>
             </div>
             <dl className="kv" style={{ marginTop: 16 }}>
               <dt>Origem</dt><dd>{c.origem || "—"}</dd>
@@ -196,6 +208,7 @@ export function Deals() {
   const q = useLoad(() => api.deals(), []);
   const [edit, setEdit] = useState<Deal | "new" | null>(sp.get("nova") ? "new" : null);
   const [text, setText] = useState("");
+  const [done, setDone] = useState<Deal | null>(null);
   const setParam = (k: string, v: string) => { const n = new URLSearchParams(sp); if (v) n.set(k, v); else n.delete(k); n.delete("nova"); setSp(n, { replace: true }); };
   const shown = useMemo(() => (q.data?.negociacoes ?? []).filter((d) => {
     if (etapa && d.etapa !== etapa) return false;
@@ -225,9 +238,10 @@ export function Deals() {
       </div>
       <ErrorBox error={q.error} retry={q.reload} />
       {q.loading && !q.data ? <Skeleton rows={6} /> : q.data && (shown.length ?
-        <div className="list">{shown.map((d) => <DealRow key={d.id} d={d} onEdit={setEdit} />)}</div> :
+        <div className="list">{shown.map((d) => <DealRow key={d.id} d={d} onEdit={setEdit} onDone={isClosedStage(d.etapa) ? undefined : setDone} />)}</div> :
         <Empty title="Nada neste filtro">{q.data.negociacoes.length ? "Ajuste a etapa ou o retorno." : "Nenhuma negociação registrada ainda."}</Empty>)}
       {edit && <DealForm deal={edit === "new" ? null : edit} onClose={() => { setEdit(null); setParam("nova", ""); }} onSaved={() => { setEdit(null); q.reload(); }} />}
+      {done && <DoneForm deal={done} onClose={() => setDone(null)} onSaved={() => { setDone(null); q.reload(); }} />}
     </div>
   );
 }
