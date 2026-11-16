@@ -1,10 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { AlertTriangle, CalendarClock, Handshake, KeyRound, LogOut, Map, Menu, RefreshCw, Upload, UserRound, UsersRound } from "lucide-react";
+import { AlertTriangle, CalendarClock, FolderDown, Handshake, KeyRound, LogOut, Map, Menu, RefreshCw, Upload, UserRound, UsersRound } from "lucide-react";
 import { api, type User } from "./api";
 import { AuthCtx, confirmLeave, resetDirty, useAction, useAuth, useNavigationGuard } from "./ui";
 import { ContactDetail, Contacts, Deals, Home } from "./pages-atendimento";
 import { Account, FarmDetail, Farms, Import, Team } from "./pages-gestao";
+import { Materiais, MateriaisFazenda } from "./materiais";
+import { NegociacoesFazenda, NegociacoesPorAtivo } from "./negociacoes";
 
 function Login({ onLogin, expired }: { onLogin: (u: User) => void; expired: boolean }) {
   const [email, setEmail] = useState("");
@@ -44,6 +46,7 @@ function Shell({ children, onLogout }: { children: ReactNode; onLogout: () => vo
     { to: "/contatos", label: "Contatos", short: "Contatos", icon: UserRound },
     { to: "/negociacoes", label: "Negociações", short: "Negócios", icon: Handshake },
     { to: "/fazendas", label: "Fazendas", short: "Fazendas", icon: Map },
+    { to: "/materiais", label: "Materiais", short: "Materiais", icon: FolderDown },
     { to: "/equipe", label: "Equipe", short: "Equipe", icon: UsersRound },
     ...(admin ? [{ to: "/importacao", label: "Importação", short: "Importar", icon: Upload }] : []),
     { to: "/conta", label: "Minha conta", short: "Conta", icon: KeyRound },
@@ -128,9 +131,13 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/contatos" element={<Contacts />} />
           <Route path="/contatos/:id" element={<ContactDetail />} />
-          <Route path="/negociacoes" element={<Deals />} />
+          <Route path="/negociacoes" element={<NegociacoesPorAtivo />} />
+          <Route path="/negociacoes/todas" element={<Deals />} />
+          <Route path="/negociacoes/:id" element={<NegociacoesFazenda />} />
           <Route path="/fazendas" element={<Farms />} />
           <Route path="/fazendas/:id" element={<FarmDetail />} />
+          <Route path="/materiais" element={<Materiais />} />
+          <Route path="/materiais/:id" element={<MateriaisFazenda />} />
           <Route path="/equipe" element={<Team />} />
           <Route path="/conta" element={<Account />} />
           <Route path="/importacao" element={admin ? <Import /> : <NotFound />} />

@@ -1,14 +1,16 @@
 import { Fragment, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, Download, ExternalLink, FileText, KeyRound, Lock, Plus, RefreshCw, Search, ShieldCheck, Trash2, Unlock, Upload, UsersRound } from "lucide-react";
+import { AlertTriangle, ArrowLeft, FolderDown, Download, ExternalLink, FileText, KeyRound, Lock, Plus, RefreshCw, Search, ShieldCheck, Trash2, Unlock, Upload, UsersRound } from "lucide-react";
 import { api, key, type Access, type Deal, type User } from "./api";
 import { DealForm } from "./forms";
 import { DealRow } from "./pages-atendimento";
+import { Personalizar } from "./personalizar";
+import { CATEGORIAS, DocsDownloadAll, PhotosCard, ShareDocButton, ShareLinkButton, groupDocs } from "./share";
 import { Empty, ErrorBox, History, Modal, Skeleton, fmtDate, fmtDateTime, fmtSize, initials, pdfUrl, publicUrl, useAction, useAuth, useDirty, useLoad } from "./ui";
 
 const LABELS: Record<string, string> = { car: "CAR", uf: "UF", preco: "Preço", notas_internas: "Notas internas", municipio: "Município", observacao: "Observação", publico: "Mostrar no site", valor_json: "Informação", agua: "Água", energia: "Energia", argila: "Argila", altitude: "Altitude", confirmado: "Confirmado", nao_informado: "Não informado", nao_detectado: "Não detectado", detectado: "Detectado", corretor: "Cadastro manual" };
-const humanKey = (k: string) => LABELS[k] ?? (k.charAt(0).toUpperCase() + k.slice(1)).replace(/_/g, " ");
-const fmtVal = (v: unknown): string => {
+export const humanKey = (k: string) => LABELS[k] ?? (k.charAt(0).toUpperCase() + k.slice(1)).replace(/_/g, " ");
+export const fmtVal = (v: unknown): string => {
   if (v === null || v === undefined || v === "") return "—";
   if (typeof v === "boolean") return v ? "Sim" : "Não";
   if (Array.isArray(v)) return v.length ? v.map(fmtVal).join(", ") : "—";
@@ -69,6 +71,7 @@ function UploadForm({ farmId, onDone }: { farmId: number; onDone: () => void }) 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) { setLocal("Escolha um arquivo."); return; }
+    if (!categoria) { setLocal("Escolha o tipo de documento."); return; }
     if (!reqKey.current) reqKey.current = key();
     const r = await act.run(() => api.upload(farmId, file, categoria.trim(), descricao.trim(), reqKey.current!));
     if (r) { reqKey.current = null; clearDirty(); setFile(null); setDescricao(""); setCategoria(""); if (inputRef.current) inputRef.current.value = ""; onDone(); }
@@ -78,10 +81,13 @@ function UploadForm({ farmId, onDone }: { farmId: number; onDone: () => void }) 
       <fieldset className="form form-fields" disabled={act.busy}>
       <label className="f">Arquivo (PDF, JPEG ou PNG até 12 MB)<input ref={inputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" onChange={(e) => pick(e.target.files?.[0] ?? null)} data-testid="input-doc-file" /></label>
       <div className="form-2">
-        <label className="f">Categoria<input list="doc-cats" value={categoria} onChange={(e) => setCategoria(e.target.value)} required maxLength={80} data-testid="input-doc-category" />
-          <datalist id="doc-cats"><option value="Matrícula" /><option value="CAR" /><option value="CCIR" /><option value="ITR" /><option value="Georreferenciamento" /><option value="Mapa" /><option value="Outros" /></datalist>
-        </label>
-        <label className="f">Descrição<input value={descricao} maxLength={300} onChange={(e) => setDescricao(e.target.value)} data-testid="input-doc-description" /></label>
+        <div className="f" style={{ display: "grid", gap: 6, gridColumn: "1 / -1" }}>
+          <span className="small" style={{ fontWeight: 500, color: "hsl(var(--ink-2))" }}>Tipo de documento</span>
+          <div className="chips" role="group" aria-label="Tipo de documento">
+            {CATEGORIAS.map((c) => <button type="button" key={c} className={`chip ${categoria === c ? "on" : ""}`} onClick={() => setCategoria(c)} data-testid={`chip-doc-${c}`}>{c}</button>)}
+          </div>
+        </div>
+        <label className="f" style={{ gridColumn: "1 / -1" }}>Descrição (opcional)<input value={descricao} maxLength={300} onChange={(e) => setDescricao(e.target.value)} data-testid="input-doc-description" /></label>
       </div>
       {local && <div className="alert bad"><AlertTriangle size={17} />{local}</div>}
       <ErrorBox error={act.error} />
@@ -94,7 +100,7 @@ function UploadForm({ farmId, onDone }: { farmId: number; onDone: () => void }) 
 export function FarmDetail() {
   const id = Number(useParams().id);
   const q = useLoad(() => api.farm(id), [id]);
-  const [deal, setDeal] = useState<Deal | "new" | null>(null);
+  const [deal, setDeal] = useState(false);
   const del = useAction();
   if (q.loading && !q.data) return <div className="page"><Skeleton rows={5} /></div>;
   if (!q.data) return <div className="page"><Link className="back" to="/fazendas"><ArrowLeft size={14} />Fazendas</Link><ErrorBox error={q.error} retry={q.reload} /></div>;
@@ -113,9 +119,11 @@ export function FarmDetail() {
         <div className="head">
           <div style={{ minWidth: 0 }}><div className="eyebrow">{[f.regiao, areaLabel(f.area)].filter(Boolean).join(" · ") || "Fazenda"}</div><h1 data-testid="text-farm-title">{f.titulo}</h1></div>
           <div className="row">
+            <Link className="btn" to={`/materiais/${f.id}`} data-testid="link-farm-materiais"><FolderDown size={15} />Materiais</Link>
             {pub ? (<>
               <a className="btn accent" href={pdfUrl(site_url, f.slug)} target="_blank" rel="noopener noreferrer" data-testid="link-farm-pdf"><FileText size={15} />PDF</a>
               <a className="btn" href={publicUrl(site_url, f.slug)} target="_blank" rel="noopener noreferrer" data-testid="link-farm-public"><ExternalLink size={15} />Página pública</a>
+              <ShareLinkButton f={f} url={publicUrl(site_url, f.slug)} />
             </>) : <span className="tag warn">Status: {f.status} — sem link público</span>}
           </div>
         </div>
@@ -124,7 +132,7 @@ export function FarmDetail() {
       <ErrorBox error={q.error} retry={q.reload} />
       <div className="grid2">
         <div className="stack">
-          {f.fotos.length > 0 && <section className="card"><div className="photos">{f.fotos.map((p) => <figure key={p.arquivo}><img src={api.photoUrl(f.id, p.arquivo)} alt={p.legenda ?? f.titulo} loading="lazy" />{p.legenda && <figcaption>{p.legenda}</figcaption>}</figure>)}</div></section>}
+          <PhotosCard f={f} />
           <section className="card">
             <div className="card-h"><h2>Dados</h2><span className="small muted">Somente leitura · {fmtDate(f.atualizado_em)}</span></div>
             {f.descricao && <p style={{ whiteSpace: "pre-wrap", marginTop: 0 }}>{f.descricao}</p>}
@@ -139,27 +147,28 @@ export function FarmDetail() {
             </>)}
           </section>
           <section className="card">
-            <div className="card-h"><h2>Negociações</h2><button className="btn sm primary" onClick={() => setDeal("new")} disabled={!f.disponivel} data-testid="button-new-deal"><Plus size={14} />Nova</button></div>
-            {negociacoes.length ? <div className="list">{negociacoes.map((d) => <DealRow key={d.id} d={d} hide="fazenda" onEdit={setDeal} />)}</div> : <Empty title="Sem negociações">Ninguém em negociação por esta fazenda ainda.</Empty>}
+            <div className="card-h"><h2>Negociações</h2><button className="btn sm primary" onClick={() => setDeal(true)} disabled={!f.disponivel} data-testid="button-new-deal"><Plus size={14} />Nova</button></div>
+            {negociacoes.length ? <div className="list">{negociacoes.map((d) => <DealRow key={d.id} d={d} hide="fazenda" onChanged={q.reload} />)}</div> : <Empty title="Sem negociações">Ninguém em negociação por esta fazenda ainda.</Empty>}
           </section>
         </div>
         <div className="stack">
           <section className="card">
-            <div className="card-h"><h2>Documentos</h2><span className="tag">{documentos.length}</span></div>
+            <div className="card-h"><h2>Documentos <span className="tag">{documentos.length}</span></h2><DocsDownloadAll docs={documentos} /></div>
             <ErrorBox error={del.error} />
-            {documentos.length ? <div className="list">{documentos.map((d) => (
+            {documentos.length ? <div className="list">{groupDocs(documentos).map(([cat, docs]) => (<Fragment key={cat}><div className="doc-group" data-testid={`group-doc-${cat}`}>{cat} · {docs.length}</div>{docs.map((d) => (
               <div className="item" key={d.id} data-testid={`row-doc-${d.id}`}>
                 <FileText size={18} className="muted" style={{ flex: "none" }} />
-                <div className="item-main"><div className="item-title">{d.nome}</div><div className="item-sub">{d.categoria}{d.descricao ? ` · ${d.descricao}` : ""} · {fmtSize(d.tamanho)} · {d.autor_nome}, {fmtDate(d.criado_em)}</div></div>
+                <div className="item-main"><div className="item-title">{d.nome}</div><div className="item-sub">{d.descricao ? `${d.descricao} · ` : ""}{fmtSize(d.tamanho)} · {d.autor_nome}, {fmtDate(d.criado_em)}</div></div>
                 <a className="btn sm" href={api.downloadUrl(d.id)} download={d.nome} aria-label="Baixar" data-testid={`link-download-${d.id}`}><Download size={14} /></a>
+                <ShareDocButton d={d} />
                 <button className="btn sm danger" onClick={() => removeDoc(d.id, d.nome)} disabled={del.busy} aria-label="Remover" data-testid={`button-delete-doc-${d.id}`}><Trash2 size={14} /></button>
-              </div>))}</div> : <Empty title="Nenhum documento">Matrícula, CAR, mapas: envie abaixo para a equipe achar rápido.</Empty>}
+              </div>))}</Fragment>))}</div> : <Empty title="Nenhum documento">Matrícula, CAR, mapas: envie abaixo para a equipe achar rápido.</Empty>}
             <UploadForm farmId={f.id} onDone={q.reload} />
           </section>
           <section className="card"><div className="card-h"><h2>Histórico</h2></div><History events={historico} /></section>
         </div>
       </div>
-      {deal && <DealForm deal={deal === "new" ? null : deal} presetFazenda={f.id} onClose={() => setDeal(null)} onSaved={() => { setDeal(null); q.reload(); }} />}
+      {deal && <DealForm deal={null} presetFazenda={f.id} onClose={() => setDeal(false)} onSaved={() => { setDeal(false); q.reload(); }} />}
     </div>
   );
 }
@@ -302,6 +311,7 @@ export function Account() {
   return (
     <div className="page" style={{ maxWidth: 520 }}>
       <div><div className="eyebrow">{user.papel === "admin" ? "Administrador" : "Membro"}</div><h1>{user.nome}</h1><div className="muted">{user.email}</div></div>
+      <Personalizar />
       <form className="card form" onSubmit={submit}>
         <h2>Trocar senha</h2>
         <label className="f">Senha atual<input type="password" autoComplete="current-password" value={v.atual} onChange={(e) => setV({ ...v, atual: e.target.value })} required data-testid="input-current-password" /></label>

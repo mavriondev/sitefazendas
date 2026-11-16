@@ -1,21 +1,32 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, CalendarClock, MessageCircle, Pencil, Phone, Plus, Search, Trash2, Mail } from "lucide-react";
-import { api, ETAPAS, ROTULOS, type Deal, type Etapa } from "./api";
+import { ArrowLeft, CalendarClock, ChevronDown, ChevronUp, MessageCircle, Pencil, Phone, Plus, Search, Trash2, Mail } from "lucide-react";
+import { isClosedStage } from "../shared";
+import { api, ETAPAS, ROTULOS, isCliente, type Deal, type Etapa } from "./api";
 import { ContactForm, DealForm } from "./forms";
-import { Empty, ErrorBox, EtapaTag, History, RetornoTag, Skeleton, dayDiff, fmtDate, initials, useAction, useAuth, useLoad, waLink } from "./ui";
+import { DealContactButtons, DealPanel, QuickContactForm, waMessage } from "./quick";
+import { usePrefs } from "./prefs";
+import { Empty, ErrorBox, EtapaTag, History, PerfilTag, RetornoTag, Skeleton, dayDiff, fmtDate, fmtPhone, initials, useAction, useAuth, useLoad, waLink } from "./ui";
 
-export function DealRow({ d, onEdit, hide }: { d: Deal; onEdit: (d: Deal) => void; hide?: "contato" | "fazenda" }) {
+export function DealRow({ d, hide, onChanged }: { d: Deal; hide?: "contato" | "fazenda"; onChanged: () => void }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="item" data-testid={`row-deal-${d.id}`}>
-      <div className="item-main">
-        <div className="item-title">
-          {hide === "contato" ? <Link to={`/fazendas/${d.fazenda_id}`}>{d.fazenda_titulo}</Link> : <Link to={`/contatos/${d.contato_id}`}>{d.contato_nome}</Link>}
+    <div className="deal" data-testid={`row-deal-${d.id}`}>
+      <div className="deal-top">
+        <div className="item-main">
+          <div className="item-title">
+            {hide === "contato" ? <Link to={`/fazendas/${d.fazenda_id}`}>{d.fazenda_titulo}</Link> : <Link to={`/contatos/${d.contato_id}`}>{d.contato_nome}</Link>}
+          </div>
+          <div className="item-sub">{hide ? `Atualizado ${fmtDate(d.atualizado_em)}` : d.fazenda_titulo}</div>
         </div>
-        <div className="item-sub">{hide ? `Atualizado ${fmtDate(d.atualizado_em)}` : d.fazenda_titulo}{d.observacoes ? ` · ${d.observacoes}` : ""}</div>
-        <div className="row" style={{ marginTop: 6 }}><EtapaTag e={d.etapa} /><RetornoTag iso={d.proximo_retorno} /></div>
+        <DealContactButtons d={d} />
       </div>
-      <button className="btn sm" onClick={() => onEdit(d)} aria-label="Editar negociação" data-testid={`button-edit-deal-${d.id}`}><Pencil size={14} /></button>
+      {d.observacoes && <div className="deal-note">{d.observacoes}</div>}
+      <div className="deal-tags">
+        <EtapaTag e={d.etapa} /><RetornoTag iso={d.proximo_retorno} />
+        <button className="deal-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open} data-testid={`button-status-${d.id}`}>Status{open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
+      </div>
+      {open && <DealPanel d={d} onChanged={onChanged} />}
     </div>
   );
 }
@@ -24,7 +35,9 @@ export function DealRow({ d, onEdit, hide }: { d: Deal; onEdit: (d: Deal) => voi
 export function Home() {
   const { user } = useAuth();
   const q = useLoad(() => api.deals(), []);
-  const [edit, setEdit] = useState<Deal | null>(null);
+  const [quick, setQuick] = useState(false);
+  const nav = useNavigate();
+  const prefs = usePrefs();
   const deals = q.data?.negociacoes ?? [];
   const ativas = deals.filter((d) => d.etapa !== "concluida" && d.etapa !== "nao_avancou");
   const retornos = ativas.filter((d) => d.proximo_retorno && dayDiff(d.proximo_retorno) <= 7).sort((a, b) => a.proximo_retorno!.localeCompare(b.proximo_retorno!));
@@ -35,31 +48,36 @@ export function Home() {
     <div className="page">
       <div className="head">
         <div><div className="eyebrow">Bom trabalho, {user.nome.split(" ")[0]}</div><h1>Retornos e negócios</h1></div>
-        <Link className="btn primary" to="/negociacoes?nova=1" data-testid="link-new-deal"><Plus size={16} />Negociação</Link>
+        <div className="row">
+          <Link className="btn" to="/negociacoes/todas?nova=1" data-testid="link-new-deal"><Plus size={16} />Negociação</Link>
+          <button className="btn primary" onClick={() => setQuick(true)} data-testid="button-quick-contact"><Plus size={16} />Novo contato</button>
+        </div>
       </div>
       <ErrorBox error={q.error} retry={q.reload} />
       {q.loading && !q.data ? <Skeleton /> : q.data && (
         <>
-          <div className="stats">
-            <Link className="stat hot" to="/negociacoes?retorno=atrasado" data-testid="stat-overdue"><b>{atrasados}</b><span>Retornos atrasados</span></Link>
-            <Link className="stat" to="/negociacoes?retorno=hoje" data-testid="stat-today"><b>{hoje}</b><span>Para hoje</span></Link>
-            <Link className="stat" to="/negociacoes?retorno=sem" data-testid="stat-noreturn"><b>{semRetorno}</b><span>Ativas sem retorno</span></Link>
-            <Link className="stat" to="/negociacoes" data-testid="stat-active"><b>{ativas.length}</b><span>Negociações ativas</span></Link>
-          </div>
-          <div className="grid2">
+          {prefs.resumo && (
+            <div className="mini-stats" data-testid="resumo">
+              <Link className={`mini ${atrasados ? "hot" : ""}`} to="/negociacoes/todas?retorno=atrasado" data-testid="stat-overdue"><b>{atrasados}</b><span>Atrasados</span></Link>
+              <Link className="mini" to="/negociacoes/todas?retorno=hoje" data-testid="stat-today"><b>{hoje}</b><span>Hoje</span></Link>
+              <Link className="mini" to="/negociacoes/todas?retorno=sem" data-testid="stat-noreturn"><b>{semRetorno}</b><span>Sem retorno</span></Link>
+              <Link className="mini" to="/negociacoes/todas" data-testid="stat-active"><b>{ativas.length}</b><span>Ativas</span></Link>
+            </div>
+          )}
+          <div className={prefs.porEtapa ? "grid2" : "stack"}>
             <section className="card">
-              <div className="card-h"><h2>Próximos 7 dias</h2><CalendarClock size={18} className="muted" /></div>
-              {retornos.length ? <div className="list">{retornos.map((d) => <DealRow key={d.id} d={d} onEdit={setEdit} />)}</div>
+              <div className="card-h"><h2>Retornos da semana</h2><CalendarClock size={18} className="muted" /></div>
+              {retornos.length ? <div className="list">{retornos.map((d) => <DealRow key={d.id} d={d} onChanged={q.reload} />)}</div>
                 : <Empty title="Agenda livre">Nenhum retorno marcado até a próxima semana.</Empty>}
             </section>
-            <section className="card">
+            {prefs.porEtapa && <section className="card">
               <div className="card-h"><h2>Por etapa</h2></div>
               {deals.length === 0 ? <Empty title="Nenhuma negociação">Abra um contato e registre o primeiro interesse.</Empty> : (
                 <div className="stack" style={{ gap: 8 }}>
                   {ETAPAS.map((e) => {
                     const n = deals.filter((d) => d.etapa === e).length;
                     return (
-                      <Link key={e} to={`/negociacoes?etapa=${e}`} className="row" style={{ textDecoration: "none", color: "inherit", justifyContent: "space-between" }} data-testid={`link-stage-${e}`}>
+                      <Link key={e} to={`/negociacoes/todas?etapa=${e}`} className="row stage-row" style={{ textDecoration: "none", color: "inherit", justifyContent: "space-between" }} data-testid={`link-stage-${e}`}>
                         <EtapaTag e={e} />
                         <span style={{ flex: 1, height: 6, margin: "0 10px", background: "hsl(var(--paper-2))", borderRadius: 9, overflow: "hidden" }}>
                           <span style={{ display: "block", height: "100%", width: `${(n / deals.length) * 100}%`, background: "hsl(var(--ink))" }} />
@@ -70,11 +88,11 @@ export function Home() {
                   })}
                 </div>
               )}
-            </section>
+            </section>}
           </div>
         </>
       )}
-      {edit && <DealForm deal={edit} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); q.reload(); }} />}
+      {quick && <QuickContactForm onClose={() => setQuick(false)} onSaved={(c) => { setQuick(false); nav(`/contatos/${c.id}`); }} />}
     </div>
   );
 }
@@ -83,9 +101,17 @@ export function Home() {
 export function Contacts() {
   const [q, setQ] = useState("");
   const [term, setTerm] = useState("");
-  const list = useLoad(() => api.contacts(term), [term]);
+  const list = useLoad(() => Promise.all([api.contacts(term), api.deals()]), [term]);
   const [creating, setCreating] = useState(false);
+  const [perfil, setPerfil] = useState<"todos" | "contatos" | "clientes">("todos");
+  const clientes = useMemo(() => {
+    const set = new Set<number>(); const por = new Map<number, string[]>();
+    for (const d of list.data?.[1].negociacoes ?? []) por.set(d.contato_id, [...(por.get(d.contato_id) ?? []), d.etapa]);
+    for (const [id, et] of por) if (isCliente(et)) set.add(id);
+    return set;
+  }, [list.data]);
   const nav = useNavigate();
+  const shownContacts = () => (list.data?.[0].contatos ?? []).filter((c) => perfil === "todos" || (perfil === "clientes") === clientes.has(c.id));
   return (
     <div className="page">
       <div className="head">
@@ -97,13 +123,17 @@ export function Contacts() {
         <button className="btn" data-testid="button-search">Buscar</button>
       </form>
       <ErrorBox error={list.error} retry={list.reload} />
-      {list.loading && !list.data ? <Skeleton rows={6} /> : list.data && (list.data.contatos.length === 0 ?
+      <div className="chips" role="group" aria-label="Perfil">
+        {([["todos", "Todos"], ["contatos", "Só contatos"], ["clientes", "Clientes"]] as const).map(([k, l]) => <button key={k} className={`chip ${perfil === k ? "on" : ""}`} onClick={() => setPerfil(k)} data-testid={`chip-perfil-${k}`}>{l}</button>)}
+      </div>
+      {list.loading && !list.data ? <Skeleton rows={6} /> : list.data && (shownContacts().length === 0 ?
         <Empty title={term ? "Ninguém encontrado" : "Carteira vazia"}>{term ? `Nada corresponde a "${term}".` : "Cadastre o primeiro contato para começar."}</Empty> : (
         <div className="list">
-          {list.data.contatos.map((c) => (
+          {shownContacts().map((c) => (
             <Link key={c.id} to={`/contatos/${c.id}`} className="item" data-testid={`row-contact-${c.id}`}>
               <span className="avatar">{initials(c.nome)}</span>
-              <div className="item-main"><div className="item-title">{c.nome}</div><div className="item-sub"><span className="mono">{c.telefone}</span> · {c.responsavel_nome}</div></div>
+              <div className="item-main"><div className="item-title">{c.nome}</div><div className="item-sub"><span className="mono">{fmtPhone(c.telefone)}</span> · {c.responsavel_nome}</div></div>
+              <PerfilTag cliente={clientes.has(c.id)} />
               {c.fazenda_ids.length > 0 && <span className="tag">{c.fazenda_ids.length} faz.</span>}
             </Link>
           ))}
@@ -119,13 +149,14 @@ export function ContactDetail() {
   const nav = useNavigate();
   const q = useLoad(() => Promise.all([api.contact(id), api.farms()]), [id]);
   const [editing, setEditing] = useState(false);
-  const [deal, setDeal] = useState<Deal | "new" | null>(null);
-  const [msg, setMsg] = useState("");
+  const [deal, setDeal] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
   const del = useAction();
   if (q.loading && !q.data) return <div className="page"><Skeleton rows={5} /></div>;
   if (!q.data) return <div className="page"><Link className="back" to="/contatos"><ArrowLeft size={14} />Contatos</Link><ErrorBox error={q.error} retry={q.error?.status === 404 || q.error?.status === 403 ? undefined : q.reload} /></div>;
   const [{ contato: c, negociacoes, historico }, { fazendas }] = q.data;
   const linked = fazendas.filter((f) => c.fazenda_ids.includes(f.id));
+  const wa = msg ?? waMessage(c.nome, linked.length === 1 ? linked[0]!.titulo : null);
   const remove = async () => {
     if (!window.confirm(`Remover o contato ${c.nome} e suas negociações no CRM? Esta ação não pode ser desfeita. O cadastro no site não será alterado.`)) return;
     const ok = await del.run(async () => { await api.deleteContact(c.id, c.versao); return true; });
@@ -136,7 +167,7 @@ export function ContactDetail() {
       <div>
         <Link className="back" to="/contatos"><ArrowLeft size={14} />Contatos</Link>
         <div className="head">
-          <div style={{ minWidth: 0 }}><div className="eyebrow">Responsável: {c.responsavel_nome}</div><h1 data-testid="text-contact-name">{c.nome}</h1></div>
+          <div style={{ minWidth: 0 }}><div className="eyebrow">Responsável: {c.responsavel_nome}</div><h1 data-testid="text-contact-name">{c.nome}</h1><div style={{ marginTop: 6 }}><PerfilTag cliente={isCliente(negociacoes.map((d) => d.etapa))} /></div></div>
           <div className="row">
             <button className="btn" onClick={() => setEditing(true)} data-testid="button-edit-contact"><Pencil size={15} />Editar</button>
             <button className="btn danger" onClick={remove} disabled={del.busy} data-testid="button-delete-contact"><Trash2 size={15} />Remover</button>
@@ -149,16 +180,16 @@ export function ContactDetail() {
         <div className="stack">
           <section className="card">
             <div className="row" style={{ marginBottom: 14 }}>
-              {c.telefone ? <a className="btn accent" href={`tel:${c.telefone}`} data-testid="link-call"><Phone size={15} /><span className="mono">{c.telefone}</span></a> : <span className="muted">Telefone não informado na origem.</span>}
+              {c.telefone ? <a className="btn accent" href={`tel:${c.telefone}`} data-testid="link-call"><Phone size={15} /><span className="mono">{fmtPhone(c.telefone)}</span></a> : <span className="muted">Telefone não informado na origem.</span>}
               {c.email && <a className="btn" href={`mailto:${c.email}`} data-testid="link-email"><Mail size={15} />{c.email}</a>}
             </div>
             <label className="f">Mensagem para WhatsApp
-              <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder={`Olá, ${c.nome.split(" ")[0]}! Aqui é da Gramogol…`} style={{ minHeight: 64 }} data-testid="input-wa-message" />
+              <textarea value={wa} onChange={(e) => setMsg(e.target.value)} placeholder={`Olá, ${c.nome.split(" ")[0]}! Aqui é da Gramogol…`} style={{ minHeight: 64 }} data-testid="input-wa-message" />
             </label>
             <div className="row" style={{ marginTop: 8 }}>
-              <a className="btn" aria-disabled={!msg.trim() || !c.telefone} style={!msg.trim() || !c.telefone ? { opacity: .5, pointerEvents: "none" } : undefined}
-                onClick={e => { if (!msg.trim() || !c.telefone) e.preventDefault(); }}
-                href={c.telefone && msg.trim() ? waLink(c.telefone, msg) : undefined} target="_blank" rel="noopener noreferrer" data-testid="link-whatsapp"><MessageCircle size={15} />Abrir no WhatsApp</a>
+              <a className="btn" aria-disabled={!wa.trim() || !c.telefone} style={!wa.trim() || !c.telefone ? { opacity: .5, pointerEvents: "none" } : undefined}
+                onClick={e => { if (!wa.trim() || !c.telefone) e.preventDefault(); }}
+                href={c.telefone && wa.trim() ? waLink(c.telefone, wa) : undefined} target="_blank" rel="noopener noreferrer" data-testid="link-whatsapp"><MessageCircle size={15} />Abrir no WhatsApp</a>
             </div>
             <dl className="kv" style={{ marginTop: 16 }}>
               <dt>Origem</dt><dd>{c.origem || "—"}</dd>
@@ -167,8 +198,8 @@ export function ContactDetail() {
             </dl>
           </section>
           <section className="card">
-            <div className="card-h"><h2>Negociações</h2><button className="btn sm primary" onClick={() => setDeal("new")} data-testid="button-new-deal"><Plus size={14} />Nova</button></div>
-            {negociacoes.length ? <div className="list">{negociacoes.map((d) => <DealRow key={d.id} d={d} hide="contato" onEdit={setDeal} />)}</div> : <Empty title="Sem negociações">Registre o interesse deste contato em uma fazenda.</Empty>}
+            <div className="card-h"><h2>Negociações</h2><button className="btn sm primary" onClick={() => setDeal(true)} data-testid="button-new-deal"><Plus size={14} />Nova</button></div>
+            {negociacoes.length ? <div className="list">{negociacoes.map((d) => <DealRow key={d.id} d={d} hide="contato" onChanged={q.reload} />)}</div> : <Empty title="Sem negociações">Registre o interesse deste contato em uma fazenda.</Empty>}
           </section>
         </div>
         <div className="stack">
@@ -181,7 +212,7 @@ export function ContactDetail() {
         </div>
       </div>
       {editing && <ContactForm contact={c} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); q.reload(); }} />}
-      {deal && <DealForm deal={deal === "new" ? null : deal} presetContato={c.id} onClose={() => setDeal(null)} onSaved={() => { setDeal(null); q.reload(); }} />}
+      {deal && <DealForm deal={null} presetContato={c.id} onClose={() => setDeal(false)} onSaved={() => { setDeal(false); q.reload(); }} />}
     </div>
   );
 }
@@ -194,7 +225,7 @@ export function Deals() {
   const etapa = (sp.get("etapa") ?? "") as Etapa | "";
   const ret = (sp.get("retorno") ?? "todos") as Ret;
   const q = useLoad(() => api.deals(), []);
-  const [edit, setEdit] = useState<Deal | "new" | null>(sp.get("nova") ? "new" : null);
+  const [creating, setCreating] = useState(!!sp.get("nova"));
   const [text, setText] = useState("");
   const setParam = (k: string, v: string) => { const n = new URLSearchParams(sp); if (v) n.set(k, v); else n.delete(k); n.delete("nova"); setSp(n, { replace: true }); };
   const shown = useMemo(() => (q.data?.negociacoes ?? []).filter((d) => {
@@ -210,8 +241,8 @@ export function Deals() {
   return (
     <div className="page">
       <div className="head">
-        <div><div className="eyebrow">Funil</div><h1>Negociações</h1></div>
-        <button className="btn primary" onClick={() => setEdit("new")} data-testid="button-new-deal"><Plus size={16} />Nova negociação</button>
+        <div><Link className="back" to="/negociacoes"><ArrowLeft size={14} />Por fazenda</Link><div className="eyebrow">Todas por retorno</div><h1>Negociações</h1></div>
+        <button className="btn primary" onClick={() => setCreating(true)} data-testid="button-new-deal"><Plus size={16} />Nova negociação</button>
       </div>
       <div className="stack" style={{ gap: 8 }}>
         <div className="chips" role="group" aria-label="Etapa">
@@ -225,9 +256,9 @@ export function Deals() {
       </div>
       <ErrorBox error={q.error} retry={q.reload} />
       {q.loading && !q.data ? <Skeleton rows={6} /> : q.data && (shown.length ?
-        <div className="list">{shown.map((d) => <DealRow key={d.id} d={d} onEdit={setEdit} />)}</div> :
+        <div className="list">{shown.map((d) => <DealRow key={d.id} d={d} onChanged={q.reload} />)}</div> :
         <Empty title="Nada neste filtro">{q.data.negociacoes.length ? "Ajuste a etapa ou o retorno." : "Nenhuma negociação registrada ainda."}</Empty>)}
-      {edit && <DealForm deal={edit === "new" ? null : edit} onClose={() => { setEdit(null); setParam("nova", ""); }} onSaved={() => { setEdit(null); q.reload(); }} />}
+      {creating && <DealForm onClose={() => { setCreating(false); setParam("nova", ""); }} onSaved={() => { setCreating(false); q.reload(); }} />}
     </div>
   );
 }

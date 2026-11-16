@@ -1,6 +1,6 @@
 import type { User, Farm, Contact, Deal, Document, Event, Access, SourceStatus } from "../shared";
 export type { User, Farm, Contact, Deal, Document, Event, Access, SourceStatus, Etapa } from "../shared";
-export { ETAPAS, ROTULOS } from "../shared";
+export { ETAPAS, ROTULOS, isCliente } from "../shared";
 const base = "/crm/api";
 let csrf = "";
 async function request<T>(path: string, method = "GET", body?: unknown): Promise<T> {
