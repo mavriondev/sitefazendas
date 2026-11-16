@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowLeft, FolderDown, Download, ExternalLink, FileText,
 import { api, key, type Access, type Deal, type User } from "./api";
 import { DealForm } from "./forms";
 import { DealRow } from "./pages-atendimento";
+import { Personalizar } from "./personalizar";
 import { DocsDownloadAll, DocsReadOnly, PhotosCard, ShareLinkButton } from "./share";
 import { Empty, ErrorBox, History, Modal, Skeleton, fmtDate, fmtDateTime, fmtSize, initials, pdfUrl, publicUrl, useAction, useAuth, useDirty, useLoad } from "./ui";
 
@@ -251,6 +252,7 @@ export function Account() {
   return (
     <div className="page" style={{ maxWidth: 520 }}>
       <div><div className="eyebrow">{user.papel === "admin" ? "Administrador" : "Membro"}</div><h1>{user.nome}</h1><div className="muted">{user.email}</div></div>
+      <Personalizar />
       <form className="card form" onSubmit={submit}>
         <h2>Trocar senha</h2>
         <label className="f">Senha atual<input type="password" autoComplete="current-password" value={v.atual} onChange={(e) => setV({ ...v, atual: e.target.value })} required data-testid="input-current-password" /></label>

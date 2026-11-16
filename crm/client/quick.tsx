@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { AlertTriangle, MessageCircle, Phone } from "lucide-react";
 import { api, key, ETAPAS, ROTULOS, type Contact, type Deal, type Etapa } from "./api";
 import { isClosedStage } from "../shared";
+import { usePrefs } from "./prefs";
 import { ErrorBox, Modal, useAction, useAuth, useDirty, useLoad, waLink } from "./ui";
 
 /* ---------- datas ---------- */
@@ -35,12 +36,26 @@ export function QuickReturn({ value, onChange }: { value: string; onChange: (v: 
 export const waMessage = (nome: string, fazenda?: string | null) =>
   `Olá, ${nome.trim().split(/\s+/)[0]}! Aqui é da Gramogol${fazenda ? `, sobre a ${fazenda}` : ""}.`;
 
-/** Controles de uma negociação: tudo em botões. A conversa acontece no WhatsApp; o CRM só marca o status. */
-export function DealControls({ d, onChanged }: { d: Deal; onChanged: () => void }) {
+/** Botões de contato, um ao lado do outro: a conversa acontece no WhatsApp. */
+export function DealContactButtons({ d }: { d: Deal }) {
+  const { ligar } = usePrefs();
+  const tel = d.contato_telefone;
+  if (!tel) return null;
+  return (
+    <div className="deal-actions">
+      <a className="icon-btn wa" href={waLink(tel, waMessage(d.contato_nome, d.fazenda_titulo))} target="_blank" rel="noopener noreferrer" aria-label={`WhatsApp com ${d.contato_nome}`} title="WhatsApp" data-testid={`link-wa-${d.id}`}><MessageCircle size={20} /></a>
+      {ligar && <a className="icon-btn" href={`tel:${tel}`} aria-label={`Ligar para ${d.contato_nome}`} title="Ligar" data-testid={`link-call-${d.id}`}><Phone size={20} /></a>}
+    </div>
+  );
+}
+
+const CURTO: Record<number, string> = { 1: "Amanhã", 3: "3 dias", 7: "1 semana" };
+/** Painel de status de uma negociação: tudo em botões. Aparece ao tocar em "Status". */
+export function DealPanel({ d, onChanged }: { d: Deal; onChanged: () => void }) {
+  const prefs = usePrefs();
   const act = useAction();
   const [obsOpen, setObsOpen] = useState(false);
   const [obs, setObs] = useState(d.observacoes);
-  const tel = d.contato_telefone;
   const closed = isClosedStage(d.etapa);
   const save = (patch: { etapa?: Etapa; proximo_retorno?: string | null; observacoes?: string }) => act.run(async () => {
     try {
@@ -52,33 +67,33 @@ export function DealControls({ d, onChanged }: { d: Deal; onChanged: () => void 
     } finally { onChanged(); } // em conflito de versão, recarrega o estado atual
   });
   return (
-    <div className="stack" style={{ gap: 8, marginTop: 8 }} data-testid={`controls-deal-${d.id}`}>
-      <div className="row">
-        {tel && <a className="btn sm" href={waLink(tel, waMessage(d.contato_nome, d.fazenda_titulo))} target="_blank" rel="noopener noreferrer" data-testid={`link-wa-${d.id}`}><MessageCircle size={14} />WhatsApp</a>}
-        {tel && <a className="btn sm" href={`tel:${tel}`} data-testid={`link-call-${d.id}`}><Phone size={14} />Ligar</a>}
-      </div>
-      <div className="chips cols" role="group" aria-label="Status da negociação">
+    <div className="stack deal-panel" style={{ gap: 10 }} data-testid={`controls-deal-${d.id}`}>
+      <div className="chips cols3" role="group" aria-label="Status da negociação">
         {ETAPAS.map((e) => <button key={e} className={`chip ${d.etapa === e ? "on" : ""}`} disabled={act.busy} aria-pressed={d.etapa === e} onClick={() => { if (d.etapa !== e) void save({ etapa: e }); }} data-testid={`chip-status-${d.id}-${e}`}>{ROTULOS[e]}</button>)}
       </div>
-      {!closed && (
-        <div className="chips cols" role="group" aria-label="Lembrar de retornar">
-          <span className="small muted chip-label" style={{ alignSelf: "center" }}>Lembrar de retornar:</span>
-          {ATALHOS.slice(0, 3).map((a) => {
-            const v = daysFromNow(a.days);
-            return <button key={a.days} className={`chip ${toLocal(d.proximo_retorno) === v ? "on" : ""}`} disabled={act.busy} onClick={() => void save({ proximo_retorno: new Date(v).toISOString() })} data-testid={`chip-remind-${d.id}-${a.days}d`}>{a.label}</button>;
-          })}
-          {d.proximo_retorno && <button className="chip" disabled={act.busy} onClick={() => void save({ proximo_retorno: null })} data-testid={`chip-remind-${d.id}-none`}>Sem lembrete</button>}
+      {!closed && prefs.lembrar && (
+        <div className="stack" style={{ gap: 6 }}>
+          <span className="small muted">Lembrar de retornar</span>
+          <div className="chips cols4" role="group" aria-label="Lembrar de retornar">
+            {[1, 3, 7].map((days) => {
+              const v = daysFromNow(days);
+              return <button key={days} className={`chip ${toLocal(d.proximo_retorno) === v ? "on" : ""}`} disabled={act.busy} onClick={() => void save({ proximo_retorno: new Date(v).toISOString() })} data-testid={`chip-remind-${d.id}-${days}d`}>{CURTO[days]}</button>;
+            })}
+            <button className={`chip ${d.proximo_retorno ? "" : "on"}`} disabled={act.busy || !d.proximo_retorno} onClick={() => void save({ proximo_retorno: null })} data-testid={`chip-remind-${d.id}-none`}>Sem</button>
+          </div>
         </div>
       )}
-      <div>
-        <button className="btn ghost sm" onClick={() => setObsOpen((o) => !o)} aria-expanded={obsOpen} data-testid={`button-obs-${d.id}`}>{obsOpen ? "Fechar observação" : d.observacoes ? "Editar observação" : "Adicionar observação"}</button>
-        {obsOpen && (
-          <div className="stack" style={{ gap: 6, marginTop: 6 }}>
-            <textarea value={obs} onChange={(e) => setObs(e.target.value)} maxLength={4000} style={{ minHeight: 60 }} placeholder="Opcional" aria-label="Observação" data-testid={`input-obs-${d.id}`} />
-            <div className="row"><button className="btn sm primary" disabled={act.busy || obs === d.observacoes} onClick={async () => { await save({ observacoes: obs }); setObsOpen(false); }} data-testid={`button-save-obs-${d.id}`}>Salvar observação</button></div>
-          </div>
-        )}
-      </div>
+      {prefs.observacao && (
+        <div>
+          <button className="btn ghost sm" onClick={() => setObsOpen((o) => !o)} aria-expanded={obsOpen} data-testid={`button-obs-${d.id}`}>{obsOpen ? "Fechar observação" : d.observacoes ? "Editar observação" : "Adicionar observação"}</button>
+          {obsOpen && (
+            <div className="stack" style={{ gap: 6, marginTop: 6 }}>
+              <textarea value={obs} onChange={(e) => setObs(e.target.value)} maxLength={4000} style={{ minHeight: 60 }} placeholder="Opcional" aria-label="Observação" data-testid={`input-obs-${d.id}`} />
+              <div className="row"><button className="btn sm primary" disabled={act.busy || obs === d.observacoes} onClick={async () => { await save({ observacoes: obs }); setObsOpen(false); }} data-testid={`button-save-obs-${d.id}`}>Salvar observação</button></div>
+            </div>
+          )}
+        </div>
+      )}
       <ErrorBox error={act.error} />
     </div>
   );

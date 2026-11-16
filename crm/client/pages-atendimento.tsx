@@ -1,23 +1,32 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, CalendarClock, MessageCircle, Pencil, Phone, Plus, Search, Trash2, Mail } from "lucide-react";
+import { ArrowLeft, CalendarClock, ChevronDown, ChevronUp, MessageCircle, Pencil, Phone, Plus, Search, Trash2, Mail } from "lucide-react";
 import { isClosedStage } from "../shared";
 import { api, ETAPAS, ROTULOS, isCliente, type Deal, type Etapa } from "./api";
 import { ContactForm, DealForm } from "./forms";
-import { DealControls, QuickContactForm, waMessage } from "./quick";
+import { DealContactButtons, DealPanel, QuickContactForm, waMessage } from "./quick";
+import { usePrefs } from "./prefs";
 import { Empty, ErrorBox, EtapaTag, History, PerfilTag, RetornoTag, Skeleton, dayDiff, fmtDate, fmtPhone, initials, useAction, useAuth, useLoad, waLink } from "./ui";
 
 export function DealRow({ d, hide, onChanged }: { d: Deal; hide?: "contato" | "fazenda"; onChanged: () => void }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="item" data-testid={`row-deal-${d.id}`}>
-      <div className="item-main">
-        <div className="item-title">
-          {hide === "contato" ? <Link to={`/fazendas/${d.fazenda_id}`}>{d.fazenda_titulo}</Link> : <Link to={`/contatos/${d.contato_id}`}>{d.contato_nome}</Link>}
+    <div className="deal" data-testid={`row-deal-${d.id}`}>
+      <div className="deal-top">
+        <div className="item-main">
+          <div className="item-title">
+            {hide === "contato" ? <Link to={`/fazendas/${d.fazenda_id}`}>{d.fazenda_titulo}</Link> : <Link to={`/contatos/${d.contato_id}`}>{d.contato_nome}</Link>}
+          </div>
+          <div className="item-sub">{hide ? `Atualizado ${fmtDate(d.atualizado_em)}` : d.fazenda_titulo}</div>
         </div>
-        <div className="item-sub">{hide ? `Atualizado ${fmtDate(d.atualizado_em)}` : d.fazenda_titulo}{d.observacoes ? ` · ${d.observacoes}` : ""}</div>
-        <div className="row" style={{ marginTop: 6 }}><EtapaTag e={d.etapa} /><RetornoTag iso={d.proximo_retorno} /></div>
-        <DealControls d={d} onChanged={onChanged} />
+        <DealContactButtons d={d} />
       </div>
+      {d.observacoes && <div className="deal-note">{d.observacoes}</div>}
+      <div className="deal-tags">
+        <EtapaTag e={d.etapa} /><RetornoTag iso={d.proximo_retorno} />
+        <button className="deal-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open} data-testid={`button-status-${d.id}`}>Status{open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
+      </div>
+      {open && <DealPanel d={d} onChanged={onChanged} />}
     </div>
   );
 }
@@ -28,6 +37,7 @@ export function Home() {
   const q = useLoad(() => api.deals(), []);
   const [quick, setQuick] = useState(false);
   const nav = useNavigate();
+  const prefs = usePrefs();
   const deals = q.data?.negociacoes ?? [];
   const ativas = deals.filter((d) => d.etapa !== "concluida" && d.etapa !== "nao_avancou");
   const retornos = ativas.filter((d) => d.proximo_retorno && dayDiff(d.proximo_retorno) <= 7).sort((a, b) => a.proximo_retorno!.localeCompare(b.proximo_retorno!));
@@ -46,19 +56,21 @@ export function Home() {
       <ErrorBox error={q.error} retry={q.reload} />
       {q.loading && !q.data ? <Skeleton /> : q.data && (
         <>
-          <div className="stats">
-            <Link className="stat hot" to="/negociacoes/todas?retorno=atrasado" data-testid="stat-overdue"><b>{atrasados}</b><span>Retornos atrasados</span></Link>
-            <Link className="stat" to="/negociacoes/todas?retorno=hoje" data-testid="stat-today"><b>{hoje}</b><span>Para hoje</span></Link>
-            <Link className="stat" to="/negociacoes/todas?retorno=sem" data-testid="stat-noreturn"><b>{semRetorno}</b><span>Ativas sem retorno</span></Link>
-            <Link className="stat" to="/negociacoes/todas" data-testid="stat-active"><b>{ativas.length}</b><span>Negociações ativas</span></Link>
-          </div>
-          <div className="grid2">
+          {prefs.resumo && (
+            <div className="mini-stats" data-testid="resumo">
+              <Link className={`mini ${atrasados ? "hot" : ""}`} to="/negociacoes/todas?retorno=atrasado" data-testid="stat-overdue"><b>{atrasados}</b><span>Atrasados</span></Link>
+              <Link className="mini" to="/negociacoes/todas?retorno=hoje" data-testid="stat-today"><b>{hoje}</b><span>Hoje</span></Link>
+              <Link className="mini" to="/negociacoes/todas?retorno=sem" data-testid="stat-noreturn"><b>{semRetorno}</b><span>Sem retorno</span></Link>
+              <Link className="mini" to="/negociacoes/todas" data-testid="stat-active"><b>{ativas.length}</b><span>Ativas</span></Link>
+            </div>
+          )}
+          <div className={prefs.porEtapa ? "grid2" : "stack"}>
             <section className="card">
-              <div className="card-h"><h2>Retornos até a próxima semana</h2><CalendarClock size={18} className="muted" /></div>
+              <div className="card-h"><h2>Retornos da semana</h2><CalendarClock size={18} className="muted" /></div>
               {retornos.length ? <div className="list">{retornos.map((d) => <DealRow key={d.id} d={d} onChanged={q.reload} />)}</div>
                 : <Empty title="Agenda livre">Nenhum retorno marcado até a próxima semana.</Empty>}
             </section>
-            <section className="card">
+            {prefs.porEtapa && <section className="card">
               <div className="card-h"><h2>Por etapa</h2></div>
               {deals.length === 0 ? <Empty title="Nenhuma negociação">Abra um contato e registre o primeiro interesse.</Empty> : (
                 <div className="stack" style={{ gap: 8 }}>
@@ -76,7 +88,7 @@ export function Home() {
                   })}
                 </div>
               )}
-            </section>
+            </section>}
           </div>
         </>
       )}
