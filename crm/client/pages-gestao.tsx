@@ -4,7 +4,7 @@ import { AlertTriangle, ArrowLeft, Download, ExternalLink, FileText, KeyRound, L
 import { api, key, type Access, type Deal, type User } from "./api";
 import { DealForm } from "./forms";
 import { DealRow } from "./pages-atendimento";
-import { PhotosCard, ShareDocButton, ShareLinkButton } from "./share";
+import { CATEGORIAS, DocsDownloadAll, PhotosCard, ShareDocButton, ShareLinkButton, groupDocs } from "./share";
 import { Empty, ErrorBox, History, Modal, Skeleton, fmtDate, fmtDateTime, fmtSize, initials, pdfUrl, publicUrl, useAction, useAuth, useDirty, useLoad } from "./ui";
 
 const LABELS: Record<string, string> = { car: "CAR", uf: "UF", preco: "Preço", notas_internas: "Notas internas", municipio: "Município", observacao: "Observação", publico: "Mostrar no site", valor_json: "Informação", agua: "Água", energia: "Energia", argila: "Argila", altitude: "Altitude", confirmado: "Confirmado", nao_informado: "Não informado", nao_detectado: "Não detectado", detectado: "Detectado", corretor: "Cadastro manual" };
@@ -70,6 +70,7 @@ function UploadForm({ farmId, onDone }: { farmId: number; onDone: () => void }) 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) { setLocal("Escolha um arquivo."); return; }
+    if (!categoria) { setLocal("Escolha o tipo de documento."); return; }
     if (!reqKey.current) reqKey.current = key();
     const r = await act.run(() => api.upload(farmId, file, categoria.trim(), descricao.trim(), reqKey.current!));
     if (r) { reqKey.current = null; clearDirty(); setFile(null); setDescricao(""); setCategoria(""); if (inputRef.current) inputRef.current.value = ""; onDone(); }
@@ -79,10 +80,13 @@ function UploadForm({ farmId, onDone }: { farmId: number; onDone: () => void }) 
       <fieldset className="form form-fields" disabled={act.busy}>
       <label className="f">Arquivo (PDF, JPEG ou PNG até 12 MB)<input ref={inputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" onChange={(e) => pick(e.target.files?.[0] ?? null)} data-testid="input-doc-file" /></label>
       <div className="form-2">
-        <label className="f">Categoria<input list="doc-cats" value={categoria} onChange={(e) => setCategoria(e.target.value)} required maxLength={80} data-testid="input-doc-category" />
-          <datalist id="doc-cats"><option value="Matrícula" /><option value="CAR" /><option value="CCIR" /><option value="ITR" /><option value="Georreferenciamento" /><option value="Mapa" /><option value="Outros" /></datalist>
-        </label>
-        <label className="f">Descrição<input value={descricao} maxLength={300} onChange={(e) => setDescricao(e.target.value)} data-testid="input-doc-description" /></label>
+        <div className="f" style={{ display: "grid", gap: 6, gridColumn: "1 / -1" }}>
+          <span className="small" style={{ fontWeight: 500, color: "hsl(var(--ink-2))" }}>Tipo de documento</span>
+          <div className="chips" role="group" aria-label="Tipo de documento">
+            {CATEGORIAS.map((c) => <button type="button" key={c} className={`chip ${categoria === c ? "on" : ""}`} onClick={() => setCategoria(c)} data-testid={`chip-doc-${c}`}>{c}</button>)}
+          </div>
+        </div>
+        <label className="f" style={{ gridColumn: "1 / -1" }}>Descrição (opcional)<input value={descricao} maxLength={300} onChange={(e) => setDescricao(e.target.value)} data-testid="input-doc-description" /></label>
       </div>
       {local && <div className="alert bad"><AlertTriangle size={17} />{local}</div>}
       <ErrorBox error={act.error} />
@@ -147,16 +151,16 @@ export function FarmDetail() {
         </div>
         <div className="stack">
           <section className="card">
-            <div className="card-h"><h2>Documentos</h2><span className="tag">{documentos.length}</span></div>
+            <div className="card-h"><h2>Documentos <span className="tag">{documentos.length}</span></h2><DocsDownloadAll docs={documentos} /></div>
             <ErrorBox error={del.error} />
-            {documentos.length ? <div className="list">{documentos.map((d) => (
+            {documentos.length ? <div className="list">{groupDocs(documentos).map(([cat, docs]) => (<Fragment key={cat}><div className="doc-group" data-testid={`group-doc-${cat}`}>{cat} · {docs.length}</div>{docs.map((d) => (
               <div className="item" key={d.id} data-testid={`row-doc-${d.id}`}>
                 <FileText size={18} className="muted" style={{ flex: "none" }} />
-                <div className="item-main"><div className="item-title">{d.nome}</div><div className="item-sub">{d.categoria}{d.descricao ? ` · ${d.descricao}` : ""} · {fmtSize(d.tamanho)} · {d.autor_nome}, {fmtDate(d.criado_em)}</div></div>
+                <div className="item-main"><div className="item-title">{d.nome}</div><div className="item-sub">{d.descricao ? `${d.descricao} · ` : ""}{fmtSize(d.tamanho)} · {d.autor_nome}, {fmtDate(d.criado_em)}</div></div>
                 <a className="btn sm" href={api.downloadUrl(d.id)} download={d.nome} aria-label="Baixar" data-testid={`link-download-${d.id}`}><Download size={14} /></a>
                 <ShareDocButton d={d} />
                 <button className="btn sm danger" onClick={() => removeDoc(d.id, d.nome)} disabled={del.busy} aria-label="Remover" data-testid={`button-delete-doc-${d.id}`}><Trash2 size={14} /></button>
-              </div>))}</div> : <Empty title="Nenhum documento">Matrícula, CAR, mapas: envie abaixo para a equipe achar rápido.</Empty>}
+              </div>))}</Fragment>))}</div> : <Empty title="Nenhum documento">Matrícula, CAR, mapas: envie abaixo para a equipe achar rápido.</Empty>}
             <UploadForm farmId={f.id} onDone={q.reload} />
           </section>
           <section className="card"><div className="card-h"><h2>Histórico</h2></div><History events={historico} /></section>
