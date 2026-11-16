@@ -110,6 +110,7 @@ export const pdfUrl = (site: string, slug: string) => `${site.replace(/\/$/, "")
 export const publicUrl = (site: string, slug: string) => `${site.replace(/\/$/, "")}/fazenda/${slug}`;
 
 /* ---------- components ---------- */
+export function PerfilTag({ cliente }: { cliente: boolean }) { return <span className={`tag ${cliente ? "ok" : ""}`} data-testid={cliente ? "tag-cliente" : "tag-contato"}>{cliente ? "Cliente" : "Só contato"}</span>; }
 export function EtapaTag({ e }: { e: Etapa }) { return <span className={`tag e-${e}`}>{ROTULOS[e] ?? e}</span>; }
 export function RetornoTag({ iso }: { iso: string | null }) {
   const r = retornoLabel(iso);

@@ -2,10 +2,10 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, CalendarClock, MessageCircle, Pencil, Phone, Plus, Search, Trash2, Mail } from "lucide-react";
 import { isClosedStage } from "../shared";
-import { api, ETAPAS, ROTULOS, type Deal, type Etapa } from "./api";
+import { api, ETAPAS, ROTULOS, isCliente, type Deal, type Etapa } from "./api";
 import { ContactForm, DealForm } from "./forms";
 import { DealActions, DoneForm, QuickContactForm, waMessage } from "./quick";
-import { Empty, ErrorBox, EtapaTag, History, RetornoTag, Skeleton, dayDiff, fmtDate, initials, useAction, useAuth, useLoad, waLink } from "./ui";
+import { Empty, ErrorBox, EtapaTag, History, PerfilTag, RetornoTag, Skeleton, dayDiff, fmtDate, initials, useAction, useAuth, useLoad, waLink } from "./ui";
 
 export function DealRow({ d, onEdit, hide, onDone }: { d: Deal; onEdit: (d: Deal) => void; hide?: "contato" | "fazenda"; onDone?: (d: Deal) => void }) {
   return (
@@ -94,9 +94,17 @@ export function Home() {
 export function Contacts() {
   const [q, setQ] = useState("");
   const [term, setTerm] = useState("");
-  const list = useLoad(() => api.contacts(term), [term]);
+  const list = useLoad(() => Promise.all([api.contacts(term), api.deals()]), [term]);
   const [creating, setCreating] = useState(false);
+  const [perfil, setPerfil] = useState<"todos" | "contatos" | "clientes">("todos");
+  const clientes = useMemo(() => {
+    const set = new Set<number>(); const por = new Map<number, string[]>();
+    for (const d of list.data?.[1].negociacoes ?? []) por.set(d.contato_id, [...(por.get(d.contato_id) ?? []), d.etapa]);
+    for (const [id, et] of por) if (isCliente(et)) set.add(id);
+    return set;
+  }, [list.data]);
   const nav = useNavigate();
+  const shownContacts = () => (list.data?.[0].contatos ?? []).filter((c) => perfil === "todos" || (perfil === "clientes") === clientes.has(c.id));
   return (
     <div className="page">
       <div className="head">
@@ -108,13 +116,17 @@ export function Contacts() {
         <button className="btn" data-testid="button-search">Buscar</button>
       </form>
       <ErrorBox error={list.error} retry={list.reload} />
-      {list.loading && !list.data ? <Skeleton rows={6} /> : list.data && (list.data.contatos.length === 0 ?
+      <div className="chips" role="group" aria-label="Perfil">
+        {([["todos", "Todos"], ["contatos", "Só contatos"], ["clientes", "Clientes"]] as const).map(([k, l]) => <button key={k} className={`chip ${perfil === k ? "on" : ""}`} onClick={() => setPerfil(k)} data-testid={`chip-perfil-${k}`}>{l}</button>)}
+      </div>
+      {list.loading && !list.data ? <Skeleton rows={6} /> : list.data && (shownContacts().length === 0 ?
         <Empty title={term ? "Ninguém encontrado" : "Carteira vazia"}>{term ? `Nada corresponde a "${term}".` : "Cadastre o primeiro contato para começar."}</Empty> : (
         <div className="list">
-          {list.data.contatos.map((c) => (
+          {shownContacts().map((c) => (
             <Link key={c.id} to={`/contatos/${c.id}`} className="item" data-testid={`row-contact-${c.id}`}>
               <span className="avatar">{initials(c.nome)}</span>
               <div className="item-main"><div className="item-title">{c.nome}</div><div className="item-sub"><span className="mono">{c.telefone}</span> · {c.responsavel_nome}</div></div>
+              <PerfilTag cliente={clientes.has(c.id)} />
               {c.fazenda_ids.length > 0 && <span className="tag">{c.fazenda_ids.length} faz.</span>}
             </Link>
           ))}
@@ -148,7 +160,7 @@ export function ContactDetail() {
       <div>
         <Link className="back" to="/contatos"><ArrowLeft size={14} />Contatos</Link>
         <div className="head">
-          <div style={{ minWidth: 0 }}><div className="eyebrow">Responsável: {c.responsavel_nome}</div><h1 data-testid="text-contact-name">{c.nome}</h1></div>
+          <div style={{ minWidth: 0 }}><div className="eyebrow">Responsável: {c.responsavel_nome}</div><h1 data-testid="text-contact-name">{c.nome}</h1><div style={{ marginTop: 6 }}><PerfilTag cliente={isCliente(negociacoes.map((d) => d.etapa))} /></div></div>
           <div className="row">
             <button className="btn" onClick={() => setEditing(true)} data-testid="button-edit-contact"><Pencil size={15} />Editar</button>
             <button className="btn danger" onClick={remove} disabled={del.busy} data-testid="button-delete-contact"><Trash2 size={15} />Remover</button>

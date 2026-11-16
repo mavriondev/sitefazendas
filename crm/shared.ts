@@ -29,3 +29,6 @@ export interface Document {
 }
 export interface Access { fazenda_ids: number[]; contato_ids: number[] }
 export interface SourceStatus { atualizado_em: string | null; erro: boolean; site_url: string }
+// Contato = só demonstrou interesse. Cliente = já aprofundou: alguma negociação passou de "Novo"
+// (em atendimento, visita, proposta ou concluída). "Não avançou" sozinho não torna cliente.
+export function isCliente(etapas: string[]) { return etapas.some((e) => e === "em_atendimento" || e === "visita_agendada" || e === "proposta" || e === "concluida"); }
