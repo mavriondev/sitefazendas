@@ -99,7 +99,7 @@ function UploadForm({ farmId, onDone }: { farmId: number; onDone: () => void }) 
 export function FarmDetail() {
   const id = Number(useParams().id);
   const q = useLoad(() => api.farm(id), [id]);
-  const [deal, setDeal] = useState<Deal | "new" | null>(null);
+  const [deal, setDeal] = useState(false);
   const del = useAction();
   if (q.loading && !q.data) return <div className="page"><Skeleton rows={5} /></div>;
   if (!q.data) return <div className="page"><Link className="back" to="/fazendas"><ArrowLeft size={14} />Fazendas</Link><ErrorBox error={q.error} retry={q.reload} /></div>;
@@ -146,8 +146,8 @@ export function FarmDetail() {
             </>)}
           </section>
           <section className="card">
-            <div className="card-h"><h2>Negociações</h2><button className="btn sm primary" onClick={() => setDeal("new")} disabled={!f.disponivel} data-testid="button-new-deal"><Plus size={14} />Nova</button></div>
-            {negociacoes.length ? <div className="list">{negociacoes.map((d) => <DealRow key={d.id} d={d} hide="fazenda" onEdit={setDeal} />)}</div> : <Empty title="Sem negociações">Ninguém em negociação por esta fazenda ainda.</Empty>}
+            <div className="card-h"><h2>Negociações</h2><button className="btn sm primary" onClick={() => setDeal(true)} disabled={!f.disponivel} data-testid="button-new-deal"><Plus size={14} />Nova</button></div>
+            {negociacoes.length ? <div className="list">{negociacoes.map((d) => <DealRow key={d.id} d={d} hide="fazenda" onChanged={q.reload} />)}</div> : <Empty title="Sem negociações">Ninguém em negociação por esta fazenda ainda.</Empty>}
           </section>
         </div>
         <div className="stack">
@@ -167,7 +167,7 @@ export function FarmDetail() {
           <section className="card"><div className="card-h"><h2>Histórico</h2></div><History events={historico} /></section>
         </div>
       </div>
-      {deal && <DealForm deal={deal === "new" ? null : deal} presetFazenda={f.id} onClose={() => setDeal(null)} onSaved={() => { setDeal(null); q.reload(); }} />}
+      {deal && <DealForm deal={null} presetFazenda={f.id} onClose={() => setDeal(false)} onSaved={() => { setDeal(false); q.reload(); }} />}
     </div>
   );
 }

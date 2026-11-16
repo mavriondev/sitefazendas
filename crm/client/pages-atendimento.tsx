@@ -4,10 +4,10 @@ import { ArrowLeft, CalendarClock, MessageCircle, Pencil, Phone, Plus, Search, T
 import { isClosedStage } from "../shared";
 import { api, ETAPAS, ROTULOS, isCliente, type Deal, type Etapa } from "./api";
 import { ContactForm, DealForm } from "./forms";
-import { DealActions, DoneForm, QuickContactForm, waMessage } from "./quick";
+import { DealControls, QuickContactForm, waMessage } from "./quick";
 import { Empty, ErrorBox, EtapaTag, History, PerfilTag, RetornoTag, Skeleton, dayDiff, fmtDate, initials, useAction, useAuth, useLoad, waLink } from "./ui";
 
-export function DealRow({ d, onEdit, hide, onDone }: { d: Deal; onEdit: (d: Deal) => void; hide?: "contato" | "fazenda"; onDone?: (d: Deal) => void }) {
+export function DealRow({ d, hide, onChanged }: { d: Deal; hide?: "contato" | "fazenda"; onChanged: () => void }) {
   return (
     <div className="item" data-testid={`row-deal-${d.id}`}>
       <div className="item-main">
@@ -16,9 +16,8 @@ export function DealRow({ d, onEdit, hide, onDone }: { d: Deal; onEdit: (d: Deal
         </div>
         <div className="item-sub">{hide ? `Atualizado ${fmtDate(d.atualizado_em)}` : d.fazenda_titulo}{d.observacoes ? ` · ${d.observacoes}` : ""}</div>
         <div className="row" style={{ marginTop: 6 }}><EtapaTag e={d.etapa} /><RetornoTag iso={d.proximo_retorno} /></div>
-        {onDone && <DealActions d={d} onDone={onDone} />}
+        <DealControls d={d} onChanged={onChanged} />
       </div>
-      <button className="btn sm" onClick={() => onEdit(d)} aria-label="Editar negociação" data-testid={`button-edit-deal-${d.id}`}><Pencil size={14} /></button>
     </div>
   );
 }
@@ -27,8 +26,6 @@ export function DealRow({ d, onEdit, hide, onDone }: { d: Deal; onEdit: (d: Deal
 export function Home() {
   const { user } = useAuth();
   const q = useLoad(() => api.deals(), []);
-  const [edit, setEdit] = useState<Deal | null>(null);
-  const [done, setDone] = useState<Deal | null>(null);
   const [quick, setQuick] = useState(false);
   const nav = useNavigate();
   const deals = q.data?.negociacoes ?? [];
@@ -58,7 +55,7 @@ export function Home() {
           <div className="grid2">
             <section className="card">
               <div className="card-h"><h2>Retornos até a próxima semana</h2><CalendarClock size={18} className="muted" /></div>
-              {retornos.length ? <div className="list">{retornos.map((d) => <DealRow key={d.id} d={d} onEdit={setEdit} onDone={setDone} />)}</div>
+              {retornos.length ? <div className="list">{retornos.map((d) => <DealRow key={d.id} d={d} onChanged={q.reload} />)}</div>
                 : <Empty title="Agenda livre">Nenhum retorno marcado até a próxima semana.</Empty>}
             </section>
             <section className="card">
@@ -83,8 +80,6 @@ export function Home() {
           </div>
         </>
       )}
-      {edit && <DealForm deal={edit} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); q.reload(); }} />}
-      {done && <DoneForm deal={done} onClose={() => setDone(null)} onSaved={() => { setDone(null); q.reload(); }} />}
       {quick && <QuickContactForm onClose={() => setQuick(false)} onSaved={(c) => { setQuick(false); nav(`/contatos/${c.id}`); }} />}
     </div>
   );
@@ -142,7 +137,7 @@ export function ContactDetail() {
   const nav = useNavigate();
   const q = useLoad(() => Promise.all([api.contact(id), api.farms()]), [id]);
   const [editing, setEditing] = useState(false);
-  const [deal, setDeal] = useState<Deal | "new" | null>(null);
+  const [deal, setDeal] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const del = useAction();
   if (q.loading && !q.data) return <div className="page"><Skeleton rows={5} /></div>;
@@ -191,8 +186,8 @@ export function ContactDetail() {
             </dl>
           </section>
           <section className="card">
-            <div className="card-h"><h2>Negociações</h2><button className="btn sm primary" onClick={() => setDeal("new")} data-testid="button-new-deal"><Plus size={14} />Nova</button></div>
-            {negociacoes.length ? <div className="list">{negociacoes.map((d) => <DealRow key={d.id} d={d} hide="contato" onEdit={setDeal} />)}</div> : <Empty title="Sem negociações">Registre o interesse deste contato em uma fazenda.</Empty>}
+            <div className="card-h"><h2>Negociações</h2><button className="btn sm primary" onClick={() => setDeal(true)} data-testid="button-new-deal"><Plus size={14} />Nova</button></div>
+            {negociacoes.length ? <div className="list">{negociacoes.map((d) => <DealRow key={d.id} d={d} hide="contato" onChanged={q.reload} />)}</div> : <Empty title="Sem negociações">Registre o interesse deste contato em uma fazenda.</Empty>}
           </section>
         </div>
         <div className="stack">
@@ -205,7 +200,7 @@ export function ContactDetail() {
         </div>
       </div>
       {editing && <ContactForm contact={c} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); q.reload(); }} />}
-      {deal && <DealForm deal={deal === "new" ? null : deal} presetContato={c.id} onClose={() => setDeal(null)} onSaved={() => { setDeal(null); q.reload(); }} />}
+      {deal && <DealForm deal={null} presetContato={c.id} onClose={() => setDeal(false)} onSaved={() => { setDeal(false); q.reload(); }} />}
     </div>
   );
 }
@@ -218,9 +213,8 @@ export function Deals() {
   const etapa = (sp.get("etapa") ?? "") as Etapa | "";
   const ret = (sp.get("retorno") ?? "todos") as Ret;
   const q = useLoad(() => api.deals(), []);
-  const [edit, setEdit] = useState<Deal | "new" | null>(sp.get("nova") ? "new" : null);
+  const [creating, setCreating] = useState(!!sp.get("nova"));
   const [text, setText] = useState("");
-  const [done, setDone] = useState<Deal | null>(null);
   const setParam = (k: string, v: string) => { const n = new URLSearchParams(sp); if (v) n.set(k, v); else n.delete(k); n.delete("nova"); setSp(n, { replace: true }); };
   const shown = useMemo(() => (q.data?.negociacoes ?? []).filter((d) => {
     if (etapa && d.etapa !== etapa) return false;
@@ -236,7 +230,7 @@ export function Deals() {
     <div className="page">
       <div className="head">
         <div><Link className="back" to="/negociacoes"><ArrowLeft size={14} />Por fazenda</Link><div className="eyebrow">Todas por retorno</div><h1>Negociações</h1></div>
-        <button className="btn primary" onClick={() => setEdit("new")} data-testid="button-new-deal"><Plus size={16} />Nova negociação</button>
+        <button className="btn primary" onClick={() => setCreating(true)} data-testid="button-new-deal"><Plus size={16} />Nova negociação</button>
       </div>
       <div className="stack" style={{ gap: 8 }}>
         <div className="chips" role="group" aria-label="Etapa">
@@ -250,10 +244,9 @@ export function Deals() {
       </div>
       <ErrorBox error={q.error} retry={q.reload} />
       {q.loading && !q.data ? <Skeleton rows={6} /> : q.data && (shown.length ?
-        <div className="list">{shown.map((d) => <DealRow key={d.id} d={d} onEdit={setEdit} onDone={isClosedStage(d.etapa) ? undefined : setDone} />)}</div> :
+        <div className="list">{shown.map((d) => <DealRow key={d.id} d={d} onChanged={q.reload} />)}</div> :
         <Empty title="Nada neste filtro">{q.data.negociacoes.length ? "Ajuste a etapa ou o retorno." : "Nenhuma negociação registrada ainda."}</Empty>)}
-      {edit && <DealForm deal={edit === "new" ? null : edit} onClose={() => { setEdit(null); setParam("nova", ""); }} onSaved={() => { setEdit(null); q.reload(); }} />}
-      {done && <DoneForm deal={done} onClose={() => setDone(null)} onSaved={() => { setDone(null); q.reload(); }} />}
+      {creating && <DealForm onClose={() => { setCreating(false); setParam("nova", ""); }} onSaved={() => { setCreating(false); q.reload(); }} />}
     </div>
   );
 }
