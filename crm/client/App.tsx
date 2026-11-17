@@ -1,12 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { AlertTriangle, CalendarClock, FolderDown, Handshake, KeyRound, LogOut, Map, Menu, RefreshCw, Upload, UserRound, UsersRound } from "lucide-react";
+import { AlertTriangle, CalendarClock, LogOut, Map, Menu, MoreHorizontal, RefreshCw, UserRound } from "lucide-react";
 import { api, type User } from "./api";
 import { AuthCtx, confirmLeave, resetDirty, useAction, useAuth, useNavigationGuard } from "./ui";
 import { ContactDetail, Contacts, Deals, Home } from "./pages-atendimento";
-import { Account, FarmDetail, Farms, Import, Team } from "./pages-gestao";
-import { Materiais, MateriaisFazenda } from "./materiais";
-import { NegociacoesFazenda, NegociacoesPorAtivo } from "./negociacoes";
+import { Account, FarmDetail, Farms, Import, More, Team } from "./pages-gestao";
+import { Materiais, MateriaisFazenda, NegociacaoFazendaRedirect } from "./materiais";
+import { NegociacoesPorAtivo } from "./negociacoes";
 import logoClaro from "../../client/public/images/gramogol/logo-gramogol-claro.png";
 import fotoLogin from "../../client/public/images/gramogol/grao-mogol-serra.jpg";
 
@@ -39,28 +39,25 @@ function ErrorLine({ error }: { error: Error | null }) {
 
 function Shell({ children, onLogout }: { children: ReactNode; onLogout: () => void }) {
   const { user } = useAuth();
-  const admin = user.papel === "admin";
   const [open, setOpen] = useState(false);
   const loc = useLocation();
   useEffect(() => setOpen(false), [loc.pathname]);
+  const isMore = ["/mais", "/negociacoes", "/equipe", "/importacao", "/conta"].some((p) => loc.pathname === p || loc.pathname.startsWith(p + "/"));
   const links = [
-    { to: "/", label: "Retornos", short: "Retornos", icon: CalendarClock, end: true },
+    { to: "/", label: "Hoje", short: "Hoje", icon: CalendarClock, end: true },
     { to: "/contatos", label: "Contatos", short: "Contatos", icon: UserRound },
-    { to: "/negociacoes", label: "Negociações", short: "Negócios", icon: Handshake },
     { to: "/fazendas", label: "Fazendas", short: "Fazendas", icon: Map },
-    { to: "/materiais", label: "Materiais", short: "Materiais", icon: FolderDown },
-    { to: "/equipe", label: "Equipe", short: "Equipe", icon: UsersRound },
-    ...(admin ? [{ to: "/importacao", label: "Importação", short: "Importar", icon: Upload }] : []),
-    { to: "/conta", label: "Minha conta", short: "Conta", icon: KeyRound },
+    { to: "/mais", label: "Mais", short: "Mais", icon: MoreHorizontal, more: true },
   ];
+  const cls = (l: { more?: boolean }) => ({ isActive }: { isActive: boolean }) => (isActive || (l.more && isMore) ? "active" : "");
   const side = (
     <aside className="side">
       <div className="brand"><img src={logoClaro} alt="Gramogol" /></div>
       <div className="brand-sub">CRM da equipe</div>
-      <nav className="nav">{links.map((l) => <NavLink key={l.to} to={l.to} end={l.end} data-testid={`nav-${l.to.slice(1) || "home"}`}><l.icon size={17} />{l.label}</NavLink>)}</nav>
+      <nav className="nav" aria-label="Principal">{links.map((l) => <NavLink key={l.to} to={l.to} end={l.end} className={cls(l)} data-testid={`nav-${l.to.slice(1) || "home"}`}><l.icon size={17} />{l.label}</NavLink>)}</nav>
       <div className="side-foot">
         <div style={{ fontWeight: 600 }}>{user.nome}</div>
-        <div style={{ opacity: .6 }}>{admin ? "Administrador" : "Membro"}</div>
+        <div style={{ opacity: .6 }}>{user.papel === "admin" ? "Administrador" : "Membro"}</div>
         <button onClick={onLogout} data-testid="button-logout"><LogOut size={15} />Sair</button>
       </div>
     </aside>
@@ -74,13 +71,13 @@ function Shell({ children, onLogout }: { children: ReactNode; onLogout: () => vo
       </header>
       {open && <div className="drawer" onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>{side}</div>}
       <main className="main">{children}</main>
-      <nav className="tabbar">{links.slice(0, 5).map((l) => <NavLink key={l.to} to={l.to} end={l.end}><l.icon size={19} />{l.short}</NavLink>)}</nav>
+      <nav className="tabbar" aria-label="Principal">{links.map((l) => <NavLink key={l.to} to={l.to} end={l.end} className={cls(l)} data-testid={`tab-nav-${l.to.slice(1) || "home"}`}><l.icon size={19} />{l.short}</NavLink>)}</nav>
     </div>
   );
 }
 
 function NotFound() {
-  return <div className="page"><div className="empty"><h3>Página não encontrada</h3><div className="small" style={{ marginBottom: 12 }}>O endereço não existe ou você não tem acesso.</div><Link className="btn" to="/">Voltar aos retornos</Link></div></div>;
+  return <div className="page"><div className="empty"><h3>Página não encontrada</h3><div className="small" style={{ marginBottom: 12 }}>O endereço não existe ou você não tem acesso.</div><Link className="btn" to="/">Voltar para Hoje</Link></div></div>;
 }
 
 function App() {
@@ -135,7 +132,8 @@ function App() {
           <Route path="/contatos/:id" element={<ContactDetail />} />
           <Route path="/negociacoes" element={<NegociacoesPorAtivo />} />
           <Route path="/negociacoes/todas" element={<Deals />} />
-          <Route path="/negociacoes/:id" element={<NegociacoesFazenda />} />
+          <Route path="/negociacoes/:id" element={<NegociacaoFazendaRedirect />} />
+          <Route path="/mais" element={<More onLogout={logout} />} />
           <Route path="/fazendas" element={<Farms />} />
           <Route path="/fazendas/:id" element={<FarmDetail />} />
           <Route path="/materiais" element={<Materiais />} />
