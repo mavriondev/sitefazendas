@@ -12,6 +12,7 @@ import type { Source } from "../server/source";
 import { publicUser } from "../server/security";
 import { migrar } from "../../server/schema";
 import { syntheticPhoto } from "./photo";
+import type { MaterialsOptions } from "../server/materials-storage";
 export const TEST_PASSWORD = "Senha-exclusiva-teste-2026";
 export const PHOTO = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png";
 export const PNG = syntheticPhoto();
@@ -23,7 +24,7 @@ export function wrap(pg: PGlite): Database {
   });
   return { ...query(pg), transaction: fn => pg.transaction(tx => fn(query(tx))) };
 }
-export async function fixture(clientDir?: string, limit = false) {
+export async function fixture(clientDir?: string, limit = false, materialsOptions: Omit<MaterialsOptions,"dir"> = {}) {
   const crmPg = new PGlite(), sitePg = new PGlite(); const db = wrap(crmPg), site = wrap(sitePg);
   await migrate(db); await migrar(site); await bootstrap(db, "gestor@crm.test", TEST_PASSWORD);
   await site.query(`INSERT INTO fazendas(id,slug,titulo,status,regiao_publica,area_ha,descricao_publica,notas_internas)
@@ -54,7 +55,8 @@ export async function fixture(clientDir?: string, limit = false) {
   await fs.mkdir(photosDir); await fs.writeFile(path.join(photosDir, PHOTO), PNG);
   await fs.mkdir(siteDocsDir); await fs.writeFile(path.join(siteDocsDir, DOC_FILE), PDF);
   const app = createCrm({ db, source, secret: "segredo-apenas-dos-testes-crm-isolados-2026", siteDocumentsDir: siteDocsDir,
-    siteUploadsDir: photosDir, siteUrl: "https://portal.test", production: false, clientDir, limit });
+    siteUploadsDir: photosDir, siteUrl: "https://portal.test", production: false, clientDir, limit,
+    materials:{dir:path.join(dir,"materials-private"),...materialsOptions} });
   const server = await new Promise<import("node:http").Server>(resolve => { const s = app.listen(0, "127.0.0.1", () => resolve(s)); });
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   function client() {

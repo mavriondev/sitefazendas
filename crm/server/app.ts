@@ -11,10 +11,13 @@ import { refresh, importContacts } from "./source";
 import { registerUsers } from "./users";
 import { registerContacts, deals, history } from "./contacts";
 import { documentRoutes, listDocuments } from "./documents";
+import { registerMaterials } from "./materials";
+import type { MaterialsOptions } from "./materials-storage";
 import { asyncRoute as route, who, publicUser, check, id, text, email, comparePassword, hashPassword, csrf, admin, canFarm, farmScope, Fault } from "./security";
 export interface Options {
   db: Database; source?: Source; secret: string; siteDocumentsDir?: string; siteUploadsDir?: string;
   production: boolean; siteUrl: string; sessionStore?: session.Store; clientDir?: string; limit?: boolean;
+  materials?: MaterialsOptions;
 }
 export function createCrm(o: Options) {
   check(o.secret.length >= 32, 500, "Defina um segredo próprio do CRM com ao menos 32 caracteres.");
@@ -25,6 +28,9 @@ export function createCrm(o: Options) {
     "frame-ancestors": o.production ? ["'none'"] : ["'self'", "https://replit.com", "https://*.replit.com", "https://*.replit.dev"],
     "upgrade-insecure-requests": o.production ? [] : null } }, frameguard: o.production ? { action: "deny" } : false, referrerPolicy: { policy: "no-referrer" } }));
   app.use("/crm", (_req, res, next) => { res.setHeader("Cache-Control", "private, no-store"); res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive"); next(); });
+  const materials=registerMaterials({db:o.db,source:o.source,siteDocumentsDir:o.siteDocumentsDir,siteUploadsDir:o.siteUploadsDir,siteUrl:o.siteUrl,...o.materials},o.secret,o.limit!==false);
+  materials.publicRoutes(app);
+  if(o.clientDir) app.get("/crm/compartilhar",(_req,res)=>res.sendFile(path.join(o.clientDir!,"compartilhar.html")));
   if (o.limit !== false) app.use("/crm/api", rateLimit({ windowMs: 60000, limit: 240, standardHeaders: true, legacyHeaders: false, message: { message: "Muitas requisições. Aguarde um minuto." } }));
   app.use("/crm/api", session({
     store: o.sessionStore, secret: o.secret, name: "gramogol.crm.sid", resave: false, saveUninitialized: false,
@@ -93,6 +99,7 @@ export function createCrm(o: Options) {
   app.post("/crm/api/source/refresh", route(async (req, res) => { admin(req); res.json(await refresh(o.db, o.source, who(req))); }));
   app.post("/crm/api/source/import", route(async (req, res) => { admin(req); res.json(await importContacts(o.db, o.source, who(req))); }));
   documentRoutes(app, o.db, o.source, o.siteDocumentsDir);
+  materials.privateRoutes(app);
   app.use("/crm/api", (_req, res) => res.status(404).json({ message: "Recurso não encontrado." }));
   if (o.clientDir && fs.existsSync(path.join(o.clientDir, "index.html"))) {
     app.use("/crm", express.static(o.clientDir, { index: false, maxAge: 0 }));
