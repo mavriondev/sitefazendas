@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { retornoSeguro } from "../../shared/navegacao";
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { AlertTriangle, CalendarClock, FolderDown, Handshake, KeyRound, LogOut, Map, Menu, RefreshCw, Upload, UserRound, UsersRound } from "lucide-react";
 import { api, type User } from "./api";
@@ -122,14 +123,16 @@ function App() {
   );
   if (!user) {
     if (loc.pathname !== "/login") return <Navigate to="/login" replace state={{ from: loc.pathname }} />;
-    return <Login expired={expired} onLogin={(u) => { setExpired(false); setUser(u); const from = (loc.state as { from?: string } | null)?.from; nav(from && from !== "/login" ? from : "/", { replace: true }); }} />;
+    return <Login expired={expired} onLogin={(u) => { setExpired(false); setUser(u); }} />;
   }
+  const from = (loc.state as { from?: unknown } | null)?.from;
+  const loginReturn = retornoSeguro(typeof from === "string" && from !== "/login" ? from : null);
   const admin = user.papel === "admin";
   return (
     <AuthCtx.Provider value={{ user, setUser }} key={`${user.id}-${epoch}`}>
       <Shell onLogout={logout}>
         <Routes>
-          <Route path="/login" element={<Navigate to="/" replace />} />
+          <Route path="/login" element={<Navigate to={loginReturn} replace />} />
           <Route path="/" element={<Home />} />
           <Route path="/contatos" element={<Contacts />} />
           <Route path="/contatos/:id" element={<ContactDetail />} />

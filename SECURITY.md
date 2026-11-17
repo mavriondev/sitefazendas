@@ -77,7 +77,12 @@ para ocultar os alertas.
 - Testes sintéticos: `npm test` (17 grupos) e `npm run crm:test`. Banco PGlite
   descartável, sem credenciais nem dados de produção no ambiente.
 - Builds: `npm run build` e `npm run crm:build`; ambos aprovados. Avisos de
-  chunks grandes são de desempenho, não falhas de compilação ou de segurança.
+  tamanho de bundle não substituem validação de segurança. Os builds finais
+  usam `NODE_ENV=production` com ambiente isolado, sem banco ou segredos reais.
+- Na migração, o teste de navegador encontrou dois redirecionamentos concorrentes
+  depois do login no CRM. O retorno agora é decidido somente pela rota
+  autenticada, usando a mesma validação de caminho interno do portal, em vez de
+  combinar navegação imperativa no login com um segundo redirecionamento.
 - Manter a validação estrita de destinos internos em futuras chamadas de
   `navigate`/`Link`, mesmo com o roteador atualizado.
 
