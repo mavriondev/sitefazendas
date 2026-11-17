@@ -47,7 +47,7 @@ export default function FazendaDetalhe() {
   return <><WhatsappFlutuante key={f.slug} fazendaSlug={f.slug} href={wa} rotulo={`Falar no WhatsApp sobre ${f.titulo}`}/><Secoes pagina="fazenda" blocos={{
     topo:<Banner titulo={f.titulo}/>,
     imovel:<section className="ga-detail" data-cms-secao="imovel"><div className="ga-wrap">
-      <div className="ga-detail-heading"><div><Eyebrow>{t(f.destaque?"imovel.destaque":"imovel.rotulo")}</Eyebrow><h2 className="ga-title">{f.titulo}</h2><p>{[f.regiao,f.area].filter(Boolean).join(" · ")}</p></div><div className="ga-detail-actions"><button className="ga-icon-button" onClick={()=>void compartilhar()}><Share2/>{t("imovel.compartilhar")}</button><Link className="ga-icon-button" to="/fazendas"><ArrowLeft/>{t("imovel.voltar")}</Link></div></div>
+      <div className="ga-detail-heading"><div><Eyebrow>{t("imovel.rotulo")}</Eyebrow><h2 className="ga-title">{f.titulo}</h2><p>{[f.regiao,f.area].filter(Boolean).join(" · ")}</p></div><div className="ga-detail-actions"><button className="ga-icon-button" onClick={()=>void compartilhar()}><Share2/>{t("imovel.compartilhar")}</button><Link className="ga-icon-button" to="/fazendas"><ArrowLeft/>{t("imovel.voltar")}</Link></div></div>
       <GaleriaFotos key={f.slug} fotos={f.fotos} titulo={f.titulo}/>
       <CardsFazenda cards={f.cards}/>
       <div className="ga-detail-grid"><div className="ga-detail-main"><h3>{t("imovel.sobre")}</h3>{f.descricao.split(/\n+/).filter(Boolean).map((p,i)=><p key={i}>{p}</p>)}

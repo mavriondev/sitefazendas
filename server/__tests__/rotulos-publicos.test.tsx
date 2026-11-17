@@ -5,10 +5,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { CardsFazenda } from "../../client/src/components/CardsFazenda";
 import { Caracteristicas } from "../../client/src/components/Caracteristicas";
 import { ItemFicha } from "../../client/src/pages/FazendaFicha";
-import type { AtributoPublico } from "../../client/src/api";
+import { CartaoFazenda } from "../../client/src/components/CartaoFazenda";
+import { MemoryRouter } from "react-router-dom";
+import type { AtributoPublico, FazendaPublica } from "../../client/src/api";
 import type { CardPublico } from "../../shared/cards";
 
-const proibidos = /(?:Texto|Informado|Confirmado|Informaç(?:ão|ões)) (?:do|pelo) corretor/i;
+const proibidos = /(?:Texto|Informad[oa]s?|Confirmad[oa]s?|Informaç(?:ão|ões)|Seleção) (?:do|pelo) corretor/i;
 const editorial: CardPublico = {
   id: "editorial", titulo: "Estrutura", informacao: "Galpão e curral",
   complemento: "Acesso interno", icone: "estrutura",
@@ -47,7 +49,7 @@ for (const origem of ["corretor", "oficial"] as const) {
       }
     }
     assert.match(caracteristica, /Disponibilidade cadastrada/);
-    assert.match(caracteristica, /verificação documental e em campo/);
+    assert.match(caracteristica, /verificação documental e em campo|não substituem documentos nem medição em campo/);
     assert.match(ficha, /Disponibilidade cadastrada/);
   }
 }
@@ -60,4 +62,13 @@ for (const html of [renderCard(semData), renderToStaticMarkup(<ItemFicha a={semD
   assert.doesNotMatch(html, /undefined|Invalid Date|atualizado em/);
 }
 assert.equal(renderToStaticMarkup(<Caracteristicas atributos={[]} />), "");
-console.log("ok   rótulos públicos, fontes, datas, cards editoriais e ficha/PDF");
+const fazenda: FazendaPublica = {
+  slug: "fazenda-sintetica", titulo: "Fazenda sintética", descricao: "", regiao: "Região ampla",
+  culturas: [], area: "Faixa pública", preco: null, destaque: true, capa: null, fotos: [],
+  atributos: [], forma: null, videos: [], regiao_mapa: null, whatsapp: null, cards: [],
+};
+const anuncio = renderToStaticMarkup(<MemoryRouter><CartaoFazenda f={fazenda} /></MemoryRouter>);
+assert.doesNotMatch(anuncio, proibidos);
+assert.doesNotMatch(anuncio, /ga-farm-tag/);
+assert.match(anuncio, /Fazenda sintética/);
+console.log("ok   rótulos públicos, fontes, datas, cards editoriais, anúncio e ficha/PDF");
