@@ -4,7 +4,9 @@ import { fixture, TEST_PASSWORD, PDF, PNG, PHOTO, DOC_FILE } from "./fixture";
 import { PgSource } from "../server/source";
 import type pg from "pg";
 import { flowReview } from "./flow-review";
+import { materialsReview } from "./materials";
 async function run() {
+  await materialsReview();
   await flowReview();
   const f = await fixture(); const admin = f.client(), anon = f.client();
   const before = await f.sourceFingerprint();

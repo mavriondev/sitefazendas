@@ -5,5 +5,6 @@ export default defineConfig({
   root: path.resolve(import.meta.dirname, "client"), base: "/crm/",
   plugins: [react()],
   esbuild: { supported: { destructuring: true } },
-  build: { outDir: path.resolve(import.meta.dirname, "../dist-crm/public"), emptyOutDir: true },
+  build: { outDir: path.resolve(import.meta.dirname, "../dist-crm/public"), emptyOutDir: true,
+    rollupOptions:{input:{crm:path.resolve(import.meta.dirname,"client/index.html"),compartilhar:path.resolve(import.meta.dirname,"client/compartilhar.html")}} },
 });

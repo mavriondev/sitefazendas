@@ -70,6 +70,25 @@ export const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS crm_source_status (
     id INTEGER PRIMARY KEY CHECK(id=1), atualizado_em TIMESTAMPTZ, erro BOOLEAN NOT NULL DEFAULT FALSE
   )`,
+  `CREATE TABLE IF NOT EXISTS crm_materials (
+    id SERIAL PRIMARY KEY, fazenda_id INTEGER NOT NULL REFERENCES crm_farms(id),
+    arquivo TEXT NOT NULL UNIQUE CHECK(arquivo ~ '^[a-f0-9]{48}[.](mp4|mov|webm|pdf|jpg|png)$'),
+    nome TEXT NOT NULL, mime TEXT NOT NULL, ext TEXT NOT NULL CHECK(ext IN ('mp4','mov','webm','pdf','jpg','png')),
+    kind TEXT NOT NULL CHECK(kind IN ('foto','video','documento')),
+    tamanho BIGINT NOT NULL CHECK(tamanho>0 AND tamanho<=2147483648), content_hash TEXT NOT NULL,
+    criado_por INTEGER NOT NULL REFERENCES crm_users(id), request_key UUID NOT NULL,
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now(), deleted_at TIMESTAMPTZ, UNIQUE(criado_por,request_key)
+  )`,
+  `CREATE INDEX IF NOT EXISTS crm_materials_farm_idx ON crm_materials(fazenda_id) WHERE deleted_at IS NULL`,
+  `CREATE TABLE IF NOT EXISTS crm_material_shares (
+    id SERIAL PRIMARY KEY, fazenda_id INTEGER NOT NULL REFERENCES crm_farms(id),
+    items JSONB NOT NULL CHECK(jsonb_typeof(items)='array' AND jsonb_array_length(items)>0 AND jsonb_array_length(items)<=100),
+    token_hash TEXT NOT NULL UNIQUE CHECK(length(token_hash)=64), request_hash TEXT NOT NULL,
+    criado_por INTEGER NOT NULL REFERENCES crm_users(id), owner_auth_version INTEGER NOT NULL,
+    request_key UUID NOT NULL, criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expira_em TIMESTAMPTZ NOT NULL, revogado_em TIMESTAMPTZ, UNIQUE(criado_por,request_key)
+  )`,
+  `CREATE INDEX IF NOT EXISTS crm_material_shares_farm_idx ON crm_material_shares(fazenda_id)`,
   `INSERT INTO crm_source_status(id) VALUES(1) ON CONFLICT DO NOTHING`,
 ];
 export async function migrate(db: Query) { for (const sql of SCHEMA) await db.query(sql); }

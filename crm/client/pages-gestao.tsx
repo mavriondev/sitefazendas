@@ -6,7 +6,8 @@ import { DealForm } from "./forms";
 import { FarmInterested } from "./negociacoes";
 import { MoreActions, NovoAtendimento, Tabs } from "./menu";
 import { Personalizar } from "./personalizar";
-import { DocsDownloadAll, DocsReadOnly, PhotosCard, ShareLinkButton } from "./share";
+import { PhotosCard, ShareLinkButton } from "./share";
+import { MaterialsPanel } from "./materials-panel";
 import { Empty, ErrorBox, History, Modal, Skeleton, fmtDate, fmtDateTime, initials, pdfUrl, publicUrl, useAction, useAuth, useDirty, useLoad } from "./ui";
 
 const LABELS: Record<string, string> = { car: "CAR", uf: "UF", preco: "Preço", notas_internas: "Notas internas", municipio: "Município", observacao: "Observação", publico: "Mostrar no site", valor_json: "Informação", agua: "Água", energia: "Energia", argila: "Argila", altitude: "Altitude", confirmado: "Confirmado", nao_informado: "Não informado", nao_detectado: "Não detectado", detectado: "Detectado", corretor: "Cadastro manual" };
@@ -65,7 +66,7 @@ export function FarmDetail() {
   const nav = useNavigate();
   if (q.loading && !q.data) return <div className="page"><Skeleton rows={5} /></div>;
   if (!q.data) return <div className="page"><Link className="back" to="/fazendas"><ArrowLeft size={14} />Fazendas</Link><ErrorBox error={q.error} retry={q.error?.status === 404 || q.error?.status === 403 ? undefined : q.reload} /></div>;
-  const { fazenda: f, documentos, negociacoes, historico, site_url } = q.data;
+  const { fazenda: f, negociacoes, historico, site_url } = q.data;
   const pub = f.disponivel && f.status === "publicada";
   const dados = Object.entries(f.dados ?? {});
   return (
@@ -90,7 +91,7 @@ export function FarmDetail() {
       <Tabs label="Seções da fazenda" value={aba} onChange={setAba} tabs={[
         { k: "resumo", label: "Resumo" },
         { k: "interessados", label: "Interessados", count: negociacoes.length },
-        { k: "arquivos", label: "Fotos e documentos", count: f.fotos.length + documentos.length },
+        { k: "arquivos", label: "Materiais" },
       ]} />
       <div role="tabpanel" id={`panel-${aba}`} aria-labelledby={`tab-${aba}`} className="tabpanel" key={aba}>
         {aba === "resumo" && (
@@ -115,12 +116,7 @@ export function FarmDetail() {
         {aba === "arquivos" && (
           <div className="stack">
             {f.fotos.length ? <PhotosCard f={f} /> : <section className="card"><div className="card-h"><h2>Fotos</h2></div><div className="muted small">Nenhuma foto nesta fazenda.</div></section>}
-            <section className="card">
-              <div className="card-h"><h2>Documentos <span className="tag">{documentos.length}</span></h2><DocsDownloadAll docs={documentos} /></div>
-              {q.data.documentos_erro && <div className="alert warn" style={{ marginBottom: 8 }}><AlertTriangle size={17} />Não foi possível ler os documentos do site agora. Tente de novo em instantes.</div>}
-              <DocsReadOnly docs={documentos} />
-              <p className="small muted" style={{ marginBottom: 0 }}>Os documentos são enviados no painel do site; aqui só dá para baixar.</p>
-            </section>
+            <MaterialsPanel farmId={f.id} />
           </div>
         )}
       </div>
