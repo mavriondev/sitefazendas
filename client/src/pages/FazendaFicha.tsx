@@ -18,6 +18,12 @@ export function telefoneBonito(numero?: string | null): string | null {
   return d.length >= 8 ? d : null;
 }
 
+export function ItemFicha({ a }: { a: FazendaPublica["atributos"][number] }) {
+  const Icon = ICONES[a.chave] || Info;
+  return <li className="ficha-item"><Icon aria-hidden="true" width={18} height={18} /><div><span>{a.rotulo}</span><strong>{a.texto}</strong>
+    {a.origem === "oficial" && <small>Fonte: {a.fonte}{dataBr(a.atualizado_em) ? ` · atualizado em ${dataBr(a.atualizado_em)}` : ""}</small>}</div></li>;
+}
+
 /** Ficha da fazenda para impressão / "Salvar como PDF". Usa SÓ a projeção pública (mesmo que a página da fazenda). */
 export default function FazendaFicha() {
   const { slug } = useParams();
@@ -58,11 +64,6 @@ export default function FazendaFicha() {
   const fontes = [...new Set(governo.map((a) => a.fonte).filter(Boolean))].join(", ");
   const paginasFotos = paginarFotos(f.fotos);
   const hoje = new Date().toLocaleDateString("pt-BR");
-  const Item = ({ a, gov }: { a: FazendaPublica["atributos"][number]; gov: boolean }) => {
-    const Icon = ICONES[a.chave] || Info;
-    return <li className="ficha-item"><Icon aria-hidden="true" width={18} height={18} /><div><span>{a.rotulo}</span><strong>{a.texto}</strong>
-      <small>{gov ? `Fonte: ${a.fonte}${dataBr(a.atualizado_em) ? ` · atualizado em ${dataBr(a.atualizado_em)}` : ""}` : a.confianca === "confirmado" ? "Confirmado pelo corretor" : "Informado pelo corretor"}</small></div></li>;
-  };
 
   return (
     <div className="ficha">
@@ -90,8 +91,8 @@ export default function FazendaFicha() {
           {[["Área", f.area || "Consultar"], ["Região", f.regiao || "—"], ["Vocação", f.culturas.join(" · ") || "Uso rural"], ["Valor", f.preco || "Sob consulta"]].map(([r, v]) => <div key={r}><span>{r}</span><strong>{v}</strong></div>)}
         </div>
         {f.descricao && <><h2>Sobre a propriedade</h2>{f.descricao.split(/\n+/).filter(Boolean).map((p, i) => <p key={i}>{p}</p>)}</>}
-        {corretor.length > 0 && <><h2>Informações do imóvel</h2><ul className="ficha-lista">{corretor.map((a) => <Item key={a.chave} a={a} gov={false} />)}</ul></>}
-        {governo.length > 0 && <><h2>Informações complementares</h2><ul className="ficha-lista">{governo.map((a) => <Item key={a.chave} a={a} gov />)}</ul>
+        {corretor.length > 0 && <><h2>Informações do imóvel</h2><ul className="ficha-lista">{corretor.map((a) => <ItemFicha key={a.chave} a={a} />)}</ul></>}
+        {governo.length > 0 && <><h2>Informações complementares</h2><ul className="ficha-lista">{governo.map((a) => <ItemFicha key={a.chave} a={a} />)}</ul>
           <p className="ficha-nota">Registros anteriores de {fontes}{ultima ? `; consulta registrada em ${ultima}` : ""}. Não são atualizados automaticamente e não substituem documentos nem medição em campo.</p></>}
         <footer className="ficha-rodape">
           <div className="ficha-fale"><strong>Fale com o corretor</strong>{contatos.map((c) => <span key={c}>{c}</span>)}</div>
