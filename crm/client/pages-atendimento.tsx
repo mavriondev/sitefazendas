@@ -1,12 +1,13 @@
-import { useMemo, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, CalendarClock, ChevronDown, ChevronUp, MessageCircle, Pencil, Phone, Plus, Search, Trash2, Mail } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { ArrowLeft, CheckCircle2, ChevronDown, Handshake, ListFilter, UserPlus, ChevronUp, MessageCircle, Pencil, Phone, Plus, Search, Trash2, Mail } from "lucide-react";
 import { isClosedStage } from "../shared";
 import { api, ETAPAS, ROTULOS, isCliente, type Deal, type Etapa } from "./api";
 import { ContactForm, DealForm } from "./forms";
-import { DealContactButtons, DealPanel, QuickContactForm, waMessage } from "./quick";
+import { DealContactButtons, DealPanel, waMessage } from "./quick";
+import { MoreActions, NovoAtendimento } from "./menu";
 import { usePrefs } from "./prefs";
-import { Empty, ErrorBox, EtapaTag, History, PerfilTag, RetornoTag, Skeleton, dayDiff, fmtDate, fmtPhone, initials, useAction, useAuth, useLoad, waLink } from "./ui";
+import { Empty, ErrorBox, EtapaTag, History, PerfilTag, RetornoTag, Skeleton, confirmLeave, dayDiff, fmtDate, fmtPhone, initials, useAction, useAuth, useLoad, waLink } from "./ui";
 
 export function DealRow({ d, hide, onChanged }: { d: Deal; hide?: "contato" | "fazenda"; onChanged: () => void }) {
   const [open, setOpen] = useState(false);
@@ -24,14 +25,22 @@ export function DealRow({ d, hide, onChanged }: { d: Deal; hide?: "contato" | "f
       {d.observacoes && <div className="deal-note">{d.observacoes}</div>}
       <div className="deal-tags">
         <EtapaTag e={d.etapa} /><RetornoTag iso={d.proximo_retorno} />
-        <button className="deal-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open} data-testid={`button-status-${d.id}`}>Status{open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
+        <button className="deal-toggle" onClick={() => { if (!open || confirmLeave()) setOpen((o) => !o); }} aria-expanded={open} data-testid={`button-status-${d.id}`}>Registrar retorno{open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
       </div>
       {open && <DealPanel d={d} onChanged={onChanged} />}
     </div>
   );
 }
 
-/* ---------- Visão geral ---------- */
+/* ---------- Hoje ---------- */
+function Bucket({ id, title, hint, deals, onChanged, tone }: { id: string; title: string; hint: string; deals: Deal[]; onChanged: () => void; tone?: "hot" }) {
+  return (
+    <section className={`card bucket ${tone ?? ""}`} aria-labelledby={`h-${id}`} data-testid={`section-${id}`}>
+      <div className="card-h"><h2 id={`h-${id}`}>{title} <span className={`tag ${tone === "hot" && deals.length ? "bad" : ""}`}>{deals.length}</span></h2></div>
+      {deals.length ? <div className="list">{deals.map((d) => <DealRow key={d.id} d={d} onChanged={onChanged} />)}</div> : <div className="small muted">{hint}</div>}
+    </section>
+  );
+}
 export function Home() {
   const { user } = useAuth();
   const q = useLoad(() => api.deals(), []);
@@ -39,40 +48,50 @@ export function Home() {
   const nav = useNavigate();
   const prefs = usePrefs();
   const deals = q.data?.negociacoes ?? [];
-  const ativas = deals.filter((d) => d.etapa !== "concluida" && d.etapa !== "nao_avancou");
-  const retornos = ativas.filter((d) => d.proximo_retorno && dayDiff(d.proximo_retorno) <= 7).sort((a, b) => a.proximo_retorno!.localeCompare(b.proximo_retorno!));
-  const atrasados = ativas.filter((d) => d.proximo_retorno && dayDiff(d.proximo_retorno) < 0).length;
-  const hoje = ativas.filter((d) => d.proximo_retorno && dayDiff(d.proximo_retorno) === 0).length;
-  const semRetorno = ativas.filter((d) => !d.proximo_retorno).length;
+  const ativas = deals.filter((d) => !isClosedStage(d.etapa));
+  const byDate = (a: Deal, b: Deal) => a.proximo_retorno!.localeCompare(b.proximo_retorno!);
+  const atrasados = ativas.filter((d) => d.proximo_retorno && dayDiff(d.proximo_retorno) < 0).sort(byDate);
+  const hoje = ativas.filter((d) => d.proximo_retorno && dayDiff(d.proximo_retorno) === 0).sort(byDate);
+  const proximos = ativas.filter((d) => d.proximo_retorno && dayDiff(d.proximo_retorno) > 0).sort(byDate);
+  const sem = ativas.filter((d) => !d.proximo_retorno);
   return (
     <div className="page">
       <div className="head">
-        <div><div className="eyebrow">Bom trabalho, {user.nome.split(" ")[0]}</div><h1>Retornos e negócios</h1></div>
+        <div><div className="eyebrow">Bom trabalho, {user.nome.split(" ")[0]}</div><h1>Hoje</h1></div>
         <div className="row">
-          <Link className="btn" to="/negociacoes/todas?nova=1" data-testid="link-new-deal"><Plus size={16} />Negociação</Link>
-          <button className="btn primary" onClick={() => setQuick(true)} data-testid="button-quick-contact"><Plus size={16} />Novo contato</button>
+          <button className="btn primary" onClick={() => setQuick(true)} data-testid="button-quick-contact"><Plus size={16} />Novo atendimento</button>
+          <MoreActions items={[
+            { label: "Nova negociação", icon: Handshake, to: "/negociacoes/todas?nova=1", testid: "link-new-deal" },
+            { label: "Todas as negociações", icon: ListFilter, to: "/negociacoes/todas", testid: "link-all-deals" },
+          ]} />
         </div>
       </div>
       <ErrorBox error={q.error} retry={q.reload} />
       {q.loading && !q.data ? <Skeleton /> : q.data && (
         <>
-          {prefs.resumo && (
-            <div className="mini-stats" data-testid="resumo">
-              <Link className={`mini ${atrasados ? "hot" : ""}`} to="/negociacoes/todas?retorno=atrasado" data-testid="stat-overdue"><b>{atrasados}</b><span>Atrasados</span></Link>
-              <Link className="mini" to="/negociacoes/todas?retorno=hoje" data-testid="stat-today"><b>{hoje}</b><span>Hoje</span></Link>
-              <Link className="mini" to="/negociacoes/todas?retorno=sem" data-testid="stat-noreturn"><b>{semRetorno}</b><span>Sem retorno</span></Link>
-              <Link className="mini" to="/negociacoes/todas" data-testid="stat-active"><b>{ativas.length}</b><span>Ativas</span></Link>
-            </div>
-          )}
-          <div className={prefs.porEtapa ? "grid2" : "stack"}>
-            <section className="card">
-              <div className="card-h"><h2>Retornos da semana</h2><CalendarClock size={18} className="muted" /></div>
-              {retornos.length ? <div className="list">{retornos.map((d) => <DealRow key={d.id} d={d} onChanged={q.reload} />)}</div>
-                : <Empty title="Agenda livre">Nenhum retorno marcado até a próxima semana.</Empty>}
-            </section>
-            {prefs.porEtapa && <section className="card">
-              <div className="card-h"><h2>Por etapa</h2></div>
-              {deals.length === 0 ? <Empty title="Nenhuma negociação">Abra um contato e registre o primeiro interesse.</Empty> : (
+          {ativas.length === 0 ? <Empty title="Nenhum retorno pendente">Registre um novo atendimento para começar o dia.</Empty> : (<>
+            <Bucket id="atrasados" title="Atrasados" tone="hot" hint="Nada atrasado." deals={atrasados} onChanged={q.reload} />
+            <Bucket id="hoje" title="Hoje" hint="Nenhum retorno marcado para hoje." deals={hoje} onChanged={q.reload} />
+            <Bucket id="proximos" title="Próximos" hint="Nenhum retorno futuro marcado." deals={proximos} onChanged={q.reload} />
+            {sem.length > 0 && (
+              <details className="card fold" data-testid="section-sem-retorno">
+                <summary>Sem retorno marcado <span className="tag warn">{sem.length}</span></summary>
+                <div className="list" style={{ marginTop: 10 }}>{sem.map((d) => <DealRow key={d.id} d={d} onChanged={q.reload} />)}</div>
+              </details>
+            )}
+          </>)}
+          <details className="card fold" data-testid="section-indicadores">
+            <summary>Indicadores e funil</summary>
+            <div className="stack" style={{ marginTop: 12 }}>
+              {prefs.resumo && (
+                <div className="mini-stats" data-testid="resumo">
+                  <Link className={`mini ${atrasados.length ? "hot" : ""}`} to="/negociacoes/todas?retorno=atrasado" data-testid="stat-overdue"><b>{atrasados.length}</b><span>Atrasados</span></Link>
+                  <Link className="mini" to="/negociacoes/todas?retorno=hoje" data-testid="stat-today"><b>{hoje.length}</b><span>Hoje</span></Link>
+                  <Link className="mini" to="/negociacoes/todas?retorno=sem" data-testid="stat-noreturn"><b>{sem.length}</b><span>Sem retorno</span></Link>
+                  <Link className="mini" to="/negociacoes/todas" data-testid="stat-active"><b>{ativas.length}</b><span>Ativas</span></Link>
+                </div>
+              )}
+              {prefs.porEtapa && (deals.length === 0 ? <div className="small muted">Nenhuma negociação ainda.</div> : (
                 <div className="stack" style={{ gap: 8 }}>
                   {ETAPAS.map((e) => {
                     const n = deals.filter((d) => d.etapa === e).length;
@@ -87,12 +106,14 @@ export function Home() {
                     );
                   })}
                 </div>
-              )}
-            </section>}
-          </div>
+              ))}
+              {!prefs.resumo && !prefs.porEtapa && <div className="small muted">Indicadores ocultos. Ative em <Link to="/conta">Minha conta</Link>.</div>}
+              <Link className="small" to="/negociacoes" data-testid="link-overview">Abrir visão geral das negociações</Link>
+            </div>
+          </details>
         </>
       )}
-      {quick && <QuickContactForm onClose={() => setQuick(false)} onSaved={(c) => { setQuick(false); nav(`/contatos/${c.id}`); }} />}
+      {quick && <NovoAtendimento onClose={() => setQuick(false)} onSaved={(c) => { setQuick(false); nav(`/contatos/${c.id}`, { state: { atendimentoSalvo: true } }); }} />}
     </div>
   );
 }
@@ -103,6 +124,7 @@ export function Contacts() {
   const [term, setTerm] = useState("");
   const list = useLoad(() => Promise.all([api.contacts(term), api.deals()]), [term]);
   const [creating, setCreating] = useState(false);
+  const [quick, setQuick] = useState(false);
   const [perfil, setPerfil] = useState<"todos" | "contatos" | "clientes">("todos");
   const clientes = useMemo(() => {
     const set = new Set<number>(); const por = new Map<number, string[]>();
@@ -116,7 +138,10 @@ export function Contacts() {
     <div className="page">
       <div className="head">
         <div><div className="eyebrow">Carteira</div><h1>Contatos</h1></div>
-        <button className="btn primary" onClick={() => setCreating(true)} data-testid="button-new-contact"><Plus size={16} />Novo contato</button>
+        <div className="row">
+          <button className="btn primary" onClick={() => setQuick(true)} data-testid="button-new-contact"><Plus size={16} />Novo atendimento</button>
+          <MoreActions items={[{ label: "Cadastro completo", icon: UserPlus, onSelect: () => setCreating(true), testid: "button-full-contact" }]} />
+        </div>
       </div>
       <form className="row" onSubmit={(e) => { e.preventDefault(); setTerm(q.trim()); }}>
         <div className="search"><Search size={16} /><input type="search" value={q} onChange={(e) => { setQ(e.target.value); if (!e.target.value) setTerm(""); }} placeholder="Nome, telefone ou e-mail" data-testid="input-search-contacts" /></div>
@@ -140,6 +165,7 @@ export function Contacts() {
         </div>
       ))}
       {creating && <ContactForm onClose={() => setCreating(false)} onSaved={(c) => { setCreating(false); nav(`/contatos/${c.id}`); }} />}
+      {quick && <NovoAtendimento onClose={() => setQuick(false)} onSaved={(c) => { setQuick(false); nav(`/contatos/${c.id}`, { state: { atendimentoSalvo: true } }); }} />}
     </div>
   );
 }
@@ -151,7 +177,17 @@ export function ContactDetail() {
   const [editing, setEditing] = useState(false);
   const [deal, setDeal] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [quick, setQuick] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const loc = useLocation();
   const del = useAction();
+  useEffect(() => { setSaved(false); }, [id]);
+  useEffect(() => {
+    if ((loc.state as { atendimentoSalvo?: boolean } | null)?.atendimentoSalvo) {
+      setSaved(true);
+      nav(loc.pathname + loc.search, { replace: true, state: null });
+    }
+  }, [loc.key]); // eslint-disable-line react-hooks/exhaustive-deps
   if (q.loading && !q.data) return <div className="page"><Skeleton rows={5} /></div>;
   if (!q.data) return <div className="page"><Link className="back" to="/contatos"><ArrowLeft size={14} />Contatos</Link><ErrorBox error={q.error} retry={q.error?.status === 404 || q.error?.status === 403 ? undefined : q.reload} /></div>;
   const [{ contato: c, negociacoes, historico }, { fazendas }] = q.data;
@@ -169,11 +205,16 @@ export function ContactDetail() {
         <div className="head">
           <div style={{ minWidth: 0 }}><div className="eyebrow">Responsável: {c.responsavel_nome}</div><h1 data-testid="text-contact-name">{c.nome}</h1><div style={{ marginTop: 6 }}><PerfilTag cliente={isCliente(negociacoes.map((d) => d.etapa))} /></div></div>
           <div className="row">
-            <button className="btn" onClick={() => setEditing(true)} data-testid="button-edit-contact"><Pencil size={15} />Editar</button>
-            <button className="btn danger" onClick={remove} disabled={del.busy} data-testid="button-delete-contact"><Trash2 size={15} />Remover</button>
+            <button className="btn primary" onClick={() => { setSaved(false); setQuick(true); }} data-testid="button-contact-novo-atendimento"><Plus size={16} />Novo atendimento</button>
+            <MoreActions items={[
+              { label: "Editar contato", icon: Pencil, onSelect: () => { setSaved(false); setEditing(true); }, testid: "button-edit-contact" },
+              { label: "Nova negociação", icon: Handshake, onSelect: () => { setSaved(false); setDeal(true); }, testid: "button-new-deal-menu" },
+              { label: "Remover contato", icon: Trash2, onSelect: remove, danger: true, disabled: del.busy, testid: "button-delete-contact" },
+            ]} />
           </div>
         </div>
       </div>
+      {saved && <div className="alert ok" role="status" data-testid="status-atendimento-salvo"><CheckCircle2 size={17} />Atendimento salvo.</div>}
       <ErrorBox error={q.error} retry={q.reload} />
       <ErrorBox error={del.error} />
       <div className="grid2">
@@ -212,6 +253,7 @@ export function ContactDetail() {
         </div>
       </div>
       {editing && <ContactForm contact={c} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); q.reload(); }} />}
+      {quick && <NovoAtendimento presetContato={c} onClose={() => setQuick(false)} onSaved={(n) => { setQuick(false); if (n.id === c.id) { q.reload(); setSaved(true); } else nav(`/contatos/${n.id}`, { state: { atendimentoSalvo: true } }); }} />}
       {deal && <DealForm deal={null} presetContato={c.id} onClose={() => setDeal(false)} onSaved={() => { setDeal(false); q.reload(); }} />}
     </div>
   );

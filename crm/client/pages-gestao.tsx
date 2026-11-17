@@ -1,12 +1,13 @@
 import { Fragment, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, FolderDown, Download, ExternalLink, FileText, KeyRound, Lock, Plus, RefreshCw, Search, ShieldCheck, Trash2, Unlock, Upload, UsersRound } from "lucide-react";
-import { api, key, type Access, type Deal, type User } from "./api";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { AlertTriangle, ArrowLeft, ChevronRight, ExternalLink, Handshake, LogOut, FileText, KeyRound, Lock, Plus, RefreshCw, Search, ShieldCheck, Trash2, Unlock, Upload, UsersRound } from "lucide-react";
+import { api, key, type Access, type User } from "./api";
 import { DealForm } from "./forms";
-import { DealRow } from "./pages-atendimento";
+import { FarmInterested } from "./negociacoes";
+import { MoreActions, NovoAtendimento, Tabs } from "./menu";
 import { Personalizar } from "./personalizar";
 import { DocsDownloadAll, DocsReadOnly, PhotosCard, ShareLinkButton } from "./share";
-import { Empty, ErrorBox, History, Modal, Skeleton, fmtDate, fmtDateTime, fmtSize, initials, pdfUrl, publicUrl, useAction, useAuth, useDirty, useLoad } from "./ui";
+import { Empty, ErrorBox, History, Modal, Skeleton, fmtDate, fmtDateTime, initials, pdfUrl, publicUrl, useAction, useAuth, useDirty, useLoad } from "./ui";
 
 const LABELS: Record<string, string> = { car: "CAR", uf: "UF", preco: "Preço", notas_internas: "Notas internas", municipio: "Município", observacao: "Observação", publico: "Mostrar no site", valor_json: "Informação", agua: "Água", energia: "Energia", argila: "Argila", altitude: "Altitude", confirmado: "Confirmado", nao_informado: "Não informado", nao_detectado: "Não detectado", detectado: "Detectado", corretor: "Cadastro manual" };
 export const humanKey = (k: string) => LABELS[k] ?? (k.charAt(0).toUpperCase() + k.slice(1)).replace(/_/g, " ");
@@ -51,12 +52,19 @@ export function Farms() {
   );
 }
 
+type Aba = "resumo" | "interessados" | "arquivos";
+const ABAS: Aba[] = ["resumo", "interessados", "arquivos"];
 export function FarmDetail() {
   const id = Number(useParams().id);
   const q = useLoad(() => api.farm(id), [id]);
+  const [sp, setSp] = useSearchParams();
+  const aba: Aba = ABAS.includes(sp.get("aba") as Aba) ? sp.get("aba") as Aba : "resumo";
+  const setAba = (k: Aba) => { const n = new URLSearchParams(sp); if (k === "resumo") n.delete("aba"); else n.set("aba", k); setSp(n, { replace: true }); };
   const [deal, setDeal] = useState(false);
+  const [quick, setQuick] = useState(false);
+  const nav = useNavigate();
   if (q.loading && !q.data) return <div className="page"><Skeleton rows={5} /></div>;
-  if (!q.data) return <div className="page"><Link className="back" to="/fazendas"><ArrowLeft size={14} />Fazendas</Link><ErrorBox error={q.error} retry={q.reload} /></div>;
+  if (!q.data) return <div className="page"><Link className="back" to="/fazendas"><ArrowLeft size={14} />Fazendas</Link><ErrorBox error={q.error} retry={q.error?.status === 404 || q.error?.status === 403 ? undefined : q.reload} /></div>;
   const { fazenda: f, documentos, negociacoes, historico, site_url } = q.data;
   const pub = f.disponivel && f.status === "publicada";
   const dados = Object.entries(f.dados ?? {});
@@ -65,51 +73,83 @@ export function FarmDetail() {
       <div>
         <Link className="back" to="/fazendas"><ArrowLeft size={14} />Fazendas</Link>
         <div className="head">
-          <div style={{ minWidth: 0 }}><div className="eyebrow">{[f.regiao, areaLabel(f.area)].filter(Boolean).join(" · ") || "Fazenda"}</div><h1 data-testid="text-farm-title">{f.titulo}</h1></div>
+          <div style={{ minWidth: 0 }}><div className="eyebrow">{[f.regiao, areaLabel(f.area)].filter(Boolean).join(" · ") || "Fazenda"}</div><h1 data-testid="text-farm-title">{f.titulo}</h1>
+            {!pub && <div style={{ marginTop: 6 }}><span className="tag warn">Status: {f.status}, sem link público</span></div>}</div>
           <div className="row">
-            <Link className="btn" to={`/materiais/${f.id}`} data-testid="link-farm-materiais"><FolderDown size={15} />Materiais</Link>
-            {pub ? (<>
-              <a className="btn accent" href={pdfUrl(site_url, f.slug)} target="_blank" rel="noopener noreferrer" data-testid="link-farm-pdf"><FileText size={15} />PDF</a>
-              <a className="btn" href={publicUrl(site_url, f.slug)} target="_blank" rel="noopener noreferrer" data-testid="link-farm-public"><ExternalLink size={15} />Página pública</a>
-              <ShareLinkButton f={f} url={publicUrl(site_url, f.slug)} />
-            </>) : <span className="tag warn">Status: {f.status} — sem link público</span>}
+            <button className="btn primary farm-new-attendance" onClick={() => setQuick(true)} disabled={!f.disponivel} data-testid="button-farm-novo-atendimento"><Plus size={16} />Novo atendimento</button>
+            {pub && <ShareLinkButton f={f} url={publicUrl(site_url, f.slug)} />}
+            <MoreActions items={[
+              ...(pub ? [{ label: "Abrir PDF", icon: FileText, href: pdfUrl(site_url, f.slug), testid: "link-farm-pdf" }, { label: "Página pública", icon: ExternalLink, href: publicUrl(site_url, f.slug), testid: "link-farm-public" }] : []),
+              { label: "Nova negociação", icon: Handshake, onSelect: () => setDeal(true), disabled: !f.disponivel, testid: "button-new-deal" },
+            ]} />
           </div>
         </div>
       </div>
       {!f.disponivel && <div className="alert warn"><AlertTriangle size={17} />Esta fazenda não aparece mais na origem. Os dados abaixo são a última cópia salva em {fmtDateTime(f.atualizado_em)}.</div>}
       <ErrorBox error={q.error} retry={q.reload} />
-      <div className="grid2">
-        <div className="stack">
-          <PhotosCard f={f} />
-          <section className="card">
-            <div className="card-h"><h2>Dados</h2><span className="small muted">Somente leitura · {fmtDate(f.atualizado_em)}</span></div>
-            {f.descricao && <p style={{ whiteSpace: "pre-wrap", marginTop: 0 }}>{f.descricao}</p>}
-            {dados.length ? <dl className="kv">{dados.map(([k, v]) => <Fragment key={k}><dt>{humanKey(k)}</dt><dd>{fmtVal(v)}</dd></Fragment>)}</dl> : !f.descricao && <div className="muted small">Sem dados detalhados.</div>}
-            {f.atributos.length > 0 && (<>
-              <h3 style={{ margin: "16px 0 8px" }}>Atributos</h3>
-              <div className="stack" style={{ gap: 8 }}>{f.atributos.map((a, i) => (
-                <dl className="kv" key={i} style={{ paddingTop: 8, borderTop: i ? "1px solid hsl(var(--line) / .6)" : 0 }}>
-                  <dt>Atributo</dt><dd><strong>{humanKey(String(a.chave ?? "Informação"))}</strong></dd>
-                  {Object.entries(a).filter(([k]) => !["id", "fazenda_id", "chave"].includes(k)).map(([k, v]) => <Fragment key={k}><dt>{humanKey(k)}</dt><dd>{fmtVal(v)}</dd></Fragment>)}
-                </dl>))}</div>
-            </>)}
-          </section>
-          <section className="card">
-            <div className="card-h"><h2>Negociações</h2><button className="btn sm primary" onClick={() => setDeal(true)} disabled={!f.disponivel} data-testid="button-new-deal"><Plus size={14} />Nova</button></div>
-            {negociacoes.length ? <div className="list">{negociacoes.map((d) => <DealRow key={d.id} d={d} hide="fazenda" onChanged={q.reload} />)}</div> : <Empty title="Sem negociações">Ninguém em negociação por esta fazenda ainda.</Empty>}
-          </section>
-        </div>
-        <div className="stack">
-          <section className="card">
-            <div className="card-h"><h2>Documentos <span className="tag">{documentos.length}</span></h2><DocsDownloadAll docs={documentos} /></div>
-            {q.data.documentos_erro && <div className="alert warn"><AlertTriangle size={17} />Não foi possível ler os documentos do site agora. Tente de novo em instantes.</div>}
-            <DocsReadOnly docs={documentos} />
-            <p className="small muted" style={{ marginBottom: 0 }}>Os documentos são enviados no painel do site; aqui só dá para baixar.</p>
-          </section>
-          <section className="card"><div className="card-h"><h2>Histórico</h2></div><History events={historico} /></section>
-        </div>
+      <Tabs label="Seções da fazenda" value={aba} onChange={setAba} tabs={[
+        { k: "resumo", label: "Resumo" },
+        { k: "interessados", label: "Interessados", count: negociacoes.length },
+        { k: "arquivos", label: "Fotos e documentos", count: f.fotos.length + documentos.length },
+      ]} />
+      <div role="tabpanel" id={`panel-${aba}`} aria-labelledby={`tab-${aba}`} className="tabpanel" key={aba}>
+        {aba === "resumo" && (
+          <div className="grid2">
+            <section className="card">
+              <div className="card-h"><h2>Dados</h2><span className="small muted">Somente leitura · {fmtDate(f.atualizado_em)}</span></div>
+              {f.descricao && <p style={{ whiteSpace: "pre-wrap", marginTop: 0 }}>{f.descricao}</p>}
+              {dados.length ? <dl className="kv">{dados.map(([k, v]) => <Fragment key={k}><dt>{humanKey(k)}</dt><dd>{fmtVal(v)}</dd></Fragment>)}</dl> : !f.descricao && <div className="muted small">Sem dados detalhados.</div>}
+              {f.atributos.length > 0 && (<>
+                <h3 style={{ margin: "16px 0 8px" }}>Atributos</h3>
+                <div className="stack" style={{ gap: 8 }}>{f.atributos.map((a, i) => (
+                  <dl className="kv" key={i} style={{ paddingTop: 8, borderTop: i ? "1px solid hsl(var(--line) / .6)" : 0 }}>
+                    <dt>Atributo</dt><dd><strong>{humanKey(String(a.chave ?? "Informação"))}</strong></dd>
+                    {Object.entries(a).filter(([k]) => !["id", "fazenda_id", "chave"].includes(k)).map(([k, v]) => <Fragment key={k}><dt>{humanKey(k)}</dt><dd>{fmtVal(v)}</dd></Fragment>)}
+                  </dl>))}</div>
+              </>)}
+            </section>
+            <section className="card"><div className="card-h"><h2>Histórico</h2></div><History events={historico} /></section>
+          </div>
+        )}
+        {aba === "interessados" && <FarmInterested negociacoes={negociacoes} onChanged={q.reload} />}
+        {aba === "arquivos" && (
+          <div className="stack">
+            {f.fotos.length ? <PhotosCard f={f} /> : <section className="card"><div className="card-h"><h2>Fotos</h2></div><div className="muted small">Nenhuma foto nesta fazenda.</div></section>}
+            <section className="card">
+              <div className="card-h"><h2>Documentos <span className="tag">{documentos.length}</span></h2><DocsDownloadAll docs={documentos} /></div>
+              {q.data.documentos_erro && <div className="alert warn" style={{ marginBottom: 8 }}><AlertTriangle size={17} />Não foi possível ler os documentos do site agora. Tente de novo em instantes.</div>}
+              <DocsReadOnly docs={documentos} />
+              <p className="small muted" style={{ marginBottom: 0 }}>Os documentos são enviados no painel do site; aqui só dá para baixar.</p>
+            </section>
+          </div>
+        )}
       </div>
       {deal && <DealForm deal={null} presetFazenda={f.id} onClose={() => setDeal(false)} onSaved={() => { setDeal(false); q.reload(); }} />}
+      {quick && <NovoAtendimento presetFazenda={f.id} onClose={() => setQuick(false)} onSaved={(c) => { setQuick(false); nav(`/contatos/${c.id}`, { state: { atendimentoSalvo: true } }); }} />}
+    </div>
+  );
+}
+
+/* ---------- Mais ---------- */
+export function More({ onLogout }: { onLogout: () => void }) {
+  const { user } = useAuth();
+  const admin = user.papel === "admin";
+  const links = [
+    { to: "/negociacoes", icon: Handshake, t: "Negociações", d: "Visão geral por fazenda e lista por retorno" },
+    { to: "/equipe", icon: UsersRound, t: "Equipe", d: admin ? "Contas, senhas e acessos" : "Quem faz parte da equipe" },
+    ...(admin ? [{ to: "/importacao", icon: Upload, t: "Importação", d: "Atualizar fazendas e trazer contatos do site" }] : []),
+    { to: "/conta", icon: KeyRound, t: "Minha conta", d: "Preferências da tela e senha" },
+  ];
+  return (
+    <div className="page" style={{ maxWidth: 640 }}>
+      <div><div className="eyebrow">{user.nome}</div><h1>Mais</h1></div>
+      <nav className="list" aria-label="Mais opções">{links.map((l) => (
+        <Link key={l.to} to={l.to} className="item" data-testid={`link-more-${l.to.slice(1)}`}>
+          <span className="avatar"><l.icon size={17} /></span>
+          <div className="item-main"><div className="item-title">{l.t}</div><div className="item-sub">{l.d}</div></div>
+          <ChevronRight size={18} className="muted" />
+        </Link>))}</nav>
+      <button className="btn" style={{ justifySelf: "start" }} onClick={onLogout} data-testid="button-logout-more"><LogOut size={15} />Sair</button>
     </div>
   );
 }
