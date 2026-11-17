@@ -11,6 +11,7 @@
     "test": "NODE_ENV=test tsx server/__tests__/run-all.ts",
     "crm:check": "tsc --noEmit --project crm/tsconfig.json",
     "crm:test": "NODE_ENV=test tsx crm/tests/run.ts",
+    "test:documents:integrated": "NODE_ENV=test tsx crm/tests/integrated-documents.ts",
     "crm:build": "vite build --config crm/vite.config.ts && esbuild crm/server/index.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-crm/server.js",
     "crm:start": "NODE_ENV=production node dist-crm/server.js",
     "crm:preview": "tsx crm/tests/preview.ts",
