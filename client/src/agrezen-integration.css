@@ -151,9 +151,9 @@
 .site-public .ga-farm-specs svg { margin-top: 2px; }
 .site-public .ga-farm-specs .ga-card-arrow { grid-column: 2; grid-row: 1 / span 2; align-self: center; margin: 0; }
 
-/* Características: ícone fixo, valor legível e selo alinhado no rodapé. */
+/* Características: ícone fixo, valor legível e fonte oficial apenas quando houver. */
 .site-public .ga-data-grid { grid-template-columns: repeat(3,minmax(0,1fr)); align-items: stretch; }
-.site-public .ga-data-item { display: grid; grid-template-rows: 47px auto 1fr auto; gap: 8px; min-width: 0; }
+.site-public .ga-data-item { display: grid; grid-template-rows: 47px auto 1fr; gap: 8px; min-width: 0; }
 .site-public .ga-data-label { margin: 2px 0 0; line-height: 1.4; }
 .site-public .ga-data-item strong { display: block; line-height: 1.5; overflow-wrap: break-word; }
 .site-public .ga-status { align-items: flex-start; margin-top: 4px; font-size: 11px; line-height: 1.5; }
@@ -228,8 +228,8 @@
   .site-public .ga-search-live > div:nth-child(-n+2) { grid-column: 1/-1; }
   .site-public .ga-data-panel { padding: 20px; }
   .site-public .ga-data-grid { grid-template-columns: minmax(0,1fr); }
-  .site-public .ga-data-item { grid-template-columns: 47px minmax(0,1fr); grid-template-rows: auto auto auto; gap: 4px 14px; padding: 18px; min-height: 0; }
-  .site-public .ga-data-icon { grid-column: 1; grid-row: 1 / span 3; }
+  .site-public .ga-data-item { grid-template-columns: 47px minmax(0,1fr); grid-template-rows: auto auto; gap: 4px 14px; padding: 18px; min-height: 0; }
+  .site-public .ga-data-icon { grid-column: 1; grid-row: 1 / span 2; }
   .site-public .ga-data-item > :not(.ga-data-icon) { grid-column: 2; }
   .site-public .ga-data-item .ga-status { margin-top: 6px; }
   .site-public .ga-sidebar { padding: 22px; }
