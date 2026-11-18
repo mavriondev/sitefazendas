@@ -1,4 +1,6 @@
 export {};
+await (await import("./home-compacta.test")).rodar();
+console.log("ok   home-compacta");
 const arquivos = ["unitarios", "api", "videos", "seguranca", "conteudo", "seo", "independencia", "filtros-publicos", "ficha", "rastreamento", "revisao", "apresentacao", "agro"];
 let falhas = 0;
 for (const a of arquivos) {

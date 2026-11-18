@@ -1,7 +1,8 @@
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { ArrowUpRight, Clock, Mail, MapPin, MessageCircle } from "lucide-react";
-import { useSite } from "../contexto";
+import { useSite, useParceiros } from "../contexto";
+import { destinoParceiros } from "../../../shared/parceiros";
 import { linkWhatsapp } from "../api";
 import { useConteudo, LinkConteudo, Secoes, fundoConteudo } from "./Conteudo";
 import { AccountDropdown } from "./AccountDropdown";
@@ -12,6 +13,7 @@ import { WhatsappFlutuante } from "./WhatsappFlutuante";
 import "../agrezen.css";
 import "../agrezen-integration.css";
 import "../conteudo-publico.css";
+import "../home-compacta.css";
 
 export function Layout() {
   const {config, usuario} = useSite();
@@ -24,7 +26,8 @@ export function Layout() {
   const zap = linkWhatsapp(config?.whatsapp_padrao,t("marca.mensagem_whatsapp"));
   const home = pathname === "/" && homeConteudo.ordem[0] === "hero";
   const detail = pathname.startsWith("/fazenda/") && fazendaConteudo.ordem[0] === "topo";
-  const menu=ordem.filter(id=>id.startsWith("menu_"));
+  const { disponiveis } = useParceiros();
+  const menu=ordem.filter(id=>id.startsWith("menu_") && (disponiveis || (id !== "menu_parceiros" && !destinoParceiros(t(`${id}.link`)))));
   return <div className={`gramogol-agrezen site-public ${home?"is-home":""} ${detail?"is-detail":""}`}>
     <SeoPagina/>
     <a className="pular-conteudo" href="#conteudo">Pular para o conteúdo</a>

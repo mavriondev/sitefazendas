@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight, ArrowUpRight, Droplets, Leaf, MapPin, ShieldCheck, Wheat } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Droplets, Leaf, MapPin, ShieldCheck, Wheat } from "lucide-react";
 import { api, linkWhatsapp, type FazendaPublica } from "../api";
-import { useSite } from "../contexto";
-import type { SlideItem } from "../components/Slider";
+import { useSite, useParceiros } from "../contexto";
 import { CartaoFazenda } from "../components/CartaoFazenda";
 import { BuscaRapida } from "../components/BuscaRapida";
-import { Botanical, Eyebrow, Seals } from "../components/Agrezen";
+import { Eyebrow } from "../components/Agrezen";
 import { NoticiasHome, CotacoesHome } from "../components/Mercado";
 import { Secoes, useConteudo, LinkConteudo, fundoConteudo } from "../components/Conteudo";
 
@@ -14,38 +13,21 @@ export default function Home() {
   const {config} = useSite();
   const {texto:t}=useConteudo("home");
   const {texto:g}=useConteudo("global");
-  const [dados,setDados] = useState<{slides: SlideItem[];destaques: FazendaPublica[]}|null>(null);
+  const [dados,setDados] = useState<{destaques: FazendaPublica[]}|null>(null);
   const [erro,setErro] = useState(false);
-  const [parceiros,setParceiros] = useState<Array<{id:number;nome:string;logo:string|null;url:string|null}>>([]);
-  const [indice,setIndice] = useState(0);
-  const [pausa,setPausa] = useState(false);
+  const { parceiros } = useParceiros();
   useEffect(()=>{
     let ativo=true;
     void api.get("/api/public/home").then(r=>{if(ativo)setDados(r);}).catch(()=>{if(ativo)setErro(true);});
-    void api.get("/api/public/parceiros").then(r=>{if(ativo)setParceiros(r.parceiros);}).catch(()=>{});
     return()=>{ativo=false;};
   },[config?.nome_site]);
-  const quantidade=dados?.slides.length || 0;
-  useEffect(()=>{
-    if(quantidade<2 || pausa || window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;
-    const t=window.setInterval(()=>setIndice(i=>(i+1)%quantidade),6000);
-    return()=>window.clearInterval(t);
-  },[quantidade,pausa]);
-  const slide=quantidade?dados!.slides[indice%quantidade]:null;
   const zap=linkWhatsapp(config?.whatsapp_padrao,"Olá! Gostaria de conversar sobre fazendas à venda.");
   return <Secoes pagina="home" blocos={{
-    hero:<section className="ga-hero" data-cms-secao="hero" aria-label="Fazendas à venda" aria-roledescription={quantidade>1?"carrossel":undefined} onMouseEnter={()=>setPausa(true)} onMouseLeave={()=>setPausa(false)} onFocus={()=>setPausa(true)} onBlur={()=>setPausa(false)}>
-      {(slide?.imagem || t("hero.imagem")) && <img className="ga-hero-photo" src={slide?.imagem || t("hero.imagem")} alt=""/>}
-      <div className="ga-wrap ga-hero-content"><div className="ga-hero-copy">
-        <Eyebrow>{[t("hero.rotulo"), config?.nome_site || "Gramogol"].filter(Boolean).join(" · ")}</Eyebrow>
-        <h1 className="ga-title">{slide?.titulo || config?.hero_titulo || "Fazendas à venda"}</h1>
-        <p>{slide?.subtitulo || config?.hero_subtitulo || "Consulte fotos e informações das fazendas. Atendimento pelo WhatsApp."}</p>
-        <div className="ga-hero-actions"><LinkConteudo className="ga-btn" href={slide?.link || t("hero.link")}>{slide?.link?(slide.link.startsWith("/")?t("hero.botao_slide"):t("hero.botao_externo")):t("hero.botao")} <ArrowUpRight/></LinkConteudo>
-          <LinkConteudo className="ga-btn ga-btn--glass" href={t("hero.link_sobre")}>{t("hero.botao_sobre")} <ArrowUpRight/></LinkConteudo>
-        </div></div><Seals/>
-      </div><Botanical/>
-      {!slide?.imagem && t("hero.legenda") && <span className="ga-hero-note">{t("hero.legenda")}</span>}
-      {quantidade>1 && <div className="ga-hero-controls"><button aria-label="Slide anterior" onClick={()=>setIndice(i=>(i-1+quantidade)%quantidade)}><ArrowLeft/></button><span>{indice%quantidade+1} / {quantidade}</span><button aria-label="Próximo slide" onClick={()=>setIndice(i=>(i+1)%quantidade)}><ArrowRight/></button><button onClick={()=>setPausa(v=>!v)} aria-label={pausa?"Reproduzir apresentação":"Pausar apresentação"}>{pausa?"Reproduzir":"Pausar"}</button></div>}
+    hero:<section className="ga-home-intro" data-cms-secao="hero" aria-label="Fazendas à venda">
+      <div className="ga-wrap">
+        <h1>{config?.hero_titulo || "Encontre sua próxima fazenda"}</h1>
+        <p>{config?.hero_subtitulo || "Conheça as fazendas disponíveis e veja os detalhes de cada imóvel."}</p>
+      </div>
     </section>,
     busca:<BuscaRapida/>,
     noticias:<NoticiasHome/>,

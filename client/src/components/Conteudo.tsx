@@ -1,6 +1,7 @@
 import { Fragment, type ReactNode, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
-import { useSite } from "../contexto";
+import { useSite, useParceiros } from "../contexto";
+import { destinoParceiros } from "../../../shared/parceiros";
 
 export function useConteudo(pagina: string) {
   const { conteudo } = useSite();
@@ -19,7 +20,8 @@ export function Secoes({ pagina, blocos }: { pagina: string; blocos: Record<stri
 
 /** Links vazios removem a ação; destinos externos nunca passam pelo router. */
 export function LinkConteudo({ href, children, className }: { href: string; children: ReactNode; className?: string }) {
-  if (!href) return null;
+  const { disponiveis } = useParceiros();
+  if (!href || (!disponiveis && destinoParceiros(href))) return null;
   return href.startsWith("/")
     ? <Link className={className} to={href}>{children}</Link>
     : <a className={className} href={href} target="_blank" rel="noopener noreferrer">{children}</a>;

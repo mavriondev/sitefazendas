@@ -24,7 +24,7 @@ export const PAGINAS_CONTEUDO: PaginaRegistro[] = [
     s("rodape_contatos", "Rodapé — contatos", [t("titulo", "Título da coluna", "Conversa direta")]),
     s("rodape_creditos", "Rodapé — direitos e créditos", [t("texto", "Complemento dos direitos autorais", "Intermediação de imóveis rurais")]),
   ] },
-  { id: "home", titulo: "Página inicial", rota: "/", nota: "Títulos, subtítulos e imagens de cada slide são gerenciados em Slides da home. O texto Sobre e os títulos alternativos sem slides ficam em Configurações.", secoes: [
+  { id: "home", titulo: "Página inicial", rota: "/", nota: "O título e o texto da faixa inicial ficam em Configurações. Slides e campos visuais antigos são preservados como histórico e não aparecem mais na home. Aqui você pode ocultar e ordenar as seções.", secoes: [
     s("hero", "Apresentação / slider", [t("rotulo", "Chamada acima do título", "Fazendas à venda"), i("imagem", "Imagem quando não há slide", "cerrado-soja-aerea.jpg"), t("botao", "Botão principal sem destino do slide", "Explorar fazendas"), l("link", "Destino principal", "/fazendas"), t("botao_slide", "Botão de um slide com link", "Conhecer propriedade"), t("botao_externo", "Botão de link externo", "Saiba mais"), t("botao_sobre", "Botão secundário", "Conheça a Gramogol"), l("link_sobre", "Destino secundário", "/sobre"), t("selo1", "Selo 1", "Terra produtiva e bem cuidada"), t("selo2", "Selo 2", "Negociação com discrição"), t("selo3", "Selo 3", "Atendimento próximo e direto"), t("legenda", "Legenda sem foto de slide", "")]),
     s("busca", "Busca de fazendas", [
       t("estado", "Estado", "Estado"), t("macrorregiao", "Macrorregião", "Macrorregião"),

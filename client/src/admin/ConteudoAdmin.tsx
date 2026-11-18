@@ -21,7 +21,7 @@ const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
 
 const LINKS: Record<string, { to: string; texto: string }[]> = {
   global: [{ to: "/admin/config", texto: "Configurações (nome, contatos, CRECI)" }],
-  home: [{ to: "/admin/slides", texto: "Slides da home" }, { to: "/admin/config", texto: "Configurações (Sobre e títulos alternativos)" }],
+  home: [{ to: "/admin/config", texto: "Configurações (título e texto da faixa inicial)" }, { to: "/admin/slides", texto: "Histórico de slides" }],
   sobre: [{ to: "/admin/config", texto: "Configurações (título e texto principal)" }],
   parceiros: [{ to: "/admin/parceiros", texto: "Parceiros" }],
   contato: [{ to: "/admin/config", texto: "Configurações (telefones, endereço, e-mail)" }],
@@ -44,7 +44,7 @@ function validar(pagina: PaginaRegistro, ordem: string[], ocultas: string[]): st
   if (pagina.id === "home") {
     const vis = ordem.filter(i => !ocultas.includes(i));
     const h = vis.indexOf("hero"), b = vis.indexOf("busca");
-    if (h >= 0 && b >= 0 && b < h) return "A busca de fazendas deve ficar depois do slider enquanto os dois estiverem visíveis.";
+    if (h >= 0 && b >= 0 && b < h) return "A busca de fazendas deve ficar depois da faixa inicial enquanto as duas estiverem visíveis.";
   }
   return null;
 }
@@ -218,8 +218,10 @@ export default function ConteudoAdmin() {
           {LINKS[pagina.id] && <p className="pequeno">Gerenciado em outras telas: {LINKS[pagina.id].map((l, i) => <span key={l.to + l.texto}>{i > 0 && " | "}<Link to={l.to}>{l.texto}</Link></span>)}</p>}
           {!organizar && <p className="suave pequeno">A ordem desta página é fixa.</p>}
           {dados.ordem.map(id => {
-            const sec = pagina.secoes.find(s => s.id === id);
-            if (!sec) return null;
+            const original = pagina.secoes.find(s => s.id === id);
+            if (!original) return null;
+            // Não apagar valores legados do documento ao esconder seus controles.
+            const sec = pagina.id === "home" && id === "hero" ? { ...original, titulo: "Faixa inicial", campos: [] } : original;
             const oculta = dados.ocultas.includes(id);
             const g = grupo(pagina, id);
             const movivel = organizar && !!g;
@@ -235,7 +237,7 @@ export default function ConteudoAdmin() {
                   </>}
                   {organizar && <button type="button" className="btn mini sec" onClick={() => alternar(id)} aria-pressed={oculta}>{oculta ? "Mostrar" : "Ocultar"}</button>}
                 </header>
-                {sec.campos.length === 0 ? <p className="suave pequeno" style={{ padding: "10px 16px", margin: 0 }}>Bloco sem textos editáveis aqui; apenas posição e visibilidade.</p> : (
+                {sec.campos.length === 0 ? <p className="suave pequeno" style={{ padding: "10px 16px", margin: 0 }}>{pagina.id === "home" && id === "hero" ? "Edite o título e o texto da faixa inicial em Configurações. Aqui você controla a posição e a visibilidade." : "Bloco sem textos editáveis aqui; apenas posição e visibilidade."}</p> : (
                   <div className="cd-corpo">
                     {sec.campos.map(c => {
                       const chave = `${sec.id}.${c.chave}`;
