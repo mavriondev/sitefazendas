@@ -1,0 +1,14 @@
+/* A home usa fluxo normal, inclusive quando o editor oculta/reordena a faixa. */
+.site-public.is-home .ga-head { position: relative; background: var(--ga-green-deep); }
+.site-public .ga-home-intro { background: var(--ga-green-deep); color: #fff; padding-block: 28px; }
+.site-public .ga-home-intro h1 { margin: 0 0 10px; font-size: clamp(28px,3.2vw,42px); line-height: 1.15; overflow-wrap: anywhere; }
+.site-public .ga-home-intro p { margin: 0; max-width: 900px; font-size: 16px; line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
+.site-public .ga-home-intro ~ .ga-search-band { padding-top: 20px; }
+.site-public [data-cms-secao=destaques] { padding-block: 32px 48px; }
+.site-public [data-cms-secao=destaques] .ga-section-head { margin-bottom: 24px; }
+.site-public [data-cms-secao=destaques] h2 { font-size: clamp(28px,3vw,40px); margin-top: 8px; }
+@media(max-width:760px) {
+  .site-public .ga-home-intro { padding-block: 22px; }
+  .site-public .ga-home-intro p { font-size: 15px; }
+  .site-public [data-cms-secao=destaques] .ga-section-head { gap: 12px; }
+}

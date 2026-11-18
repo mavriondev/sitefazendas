@@ -21,8 +21,8 @@ export const CONFIG_PADRAO: ConfigSite = {
   texto_creci: "",
   aviso_intermediacao:
     "As informações são indicativas, obtidas de fontes públicas e do vendedor, e não substituem a verificação documental. O acesso ao imóvel e aos dados completos é feito exclusivamente por intermediação.",
-  hero_titulo: "Fazendas selecionadas",
-  hero_subtitulo: "Terras com dados verificados e atendimento direto.",
+  hero_titulo: "Encontre sua próxima fazenda",
+  hero_subtitulo: "Conheça as fazendas disponíveis e veja os detalhes de cada imóvel.",
   sobre_titulo: "Sobre nós",
   sobre_texto:
     "Somos uma equipe especializada na intermediação de fazendas e propriedades rurais.\n\nApresentamos cada propriedade com dados claros e a indicação de onde cada informação vem: o que foi confirmado com o vendedor, em documento ou em visita, e o que vem de bases públicas e modelos.\n\nPor proteção dos proprietários, a localização exata, o código do CAR e os limites das propriedades só são informados em atendimento direto.",

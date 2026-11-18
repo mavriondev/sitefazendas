@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { api, linkWhatsapp } from "../api";
+import { linkWhatsapp } from "../api";
 import { useSite } from "../contexto";
 import { FormContato } from "../components/FormContato";
 import { Secoes, useConteudo, LinkConteudo, fundoConteudo } from "../components/Conteudo";
@@ -34,8 +33,7 @@ export function Sobre() {
 
 export function Parceiros() {
   const { texto:t } = useConteudo("parceiros");
-  const [lista,setLista]=useState<Array<{id:number;nome:string;logo:string|null;url:string|null}>|null>(null);
-  useEffect(()=>{void api.get("/api/public/parceiros").then(r=>setLista(r.parceiros)).catch(()=>setLista([]));},[]);
+  const { parceiros: lista } = useSite();
   return <div className="cms-institutional-grid"><Secoes pagina="parceiros" blocos={{
     topo:<TopoConteudo pagina="parceiros"/>,
     lista:<div className="cms-body" data-cms-secao="lista">

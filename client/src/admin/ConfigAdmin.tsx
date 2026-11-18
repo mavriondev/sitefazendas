@@ -47,8 +47,8 @@ export default function ConfigAdmin() {
         <h3>Site</h3>
         <Campo rotulo="Nome do site"><input value={c.nome_site} onChange={set("nome_site")} /></Campo>
         <Campo rotulo="WhatsApp padrão (com DDD)"><input value={c.whatsapp_padrao} onChange={set("whatsapp_padrao")} /></Campo>
-        <Campo rotulo="Título da home (sem slides)"><input value={c.hero_titulo} onChange={set("hero_titulo")} /></Campo>
-        <Campo rotulo="Subtítulo da home"><input value={c.hero_subtitulo} onChange={set("hero_subtitulo")} /></Campo>
+        <Campo rotulo="Título da faixa inicial"><input value={c.hero_titulo} onChange={set("hero_titulo")} /></Campo>
+        <Campo rotulo="Texto da faixa inicial"><input value={c.hero_subtitulo} onChange={set("hero_subtitulo")} /></Campo>
         <Campo rotulo="Texto do CRECI / identificação profissional"><input value={c.texto_creci} onChange={set("texto_creci")} placeholder="Ex.: Nome Completo — CRECI/UF 00000" /></Campo>
         {!c.texto_creci && <Aviso>Preencha o CRECI antes de divulgar o site: a intermediação de imóveis exige identificação do corretor.</Aviso>}
         <Campo rotulo="Aviso de intermediação (rodapé)"><textarea rows={3} value={c.aviso_intermediacao} onChange={set("aviso_intermediacao")} /></Campo>
